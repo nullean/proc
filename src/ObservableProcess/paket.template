@@ -1,29 +1,34 @@
 type file
 
-id ObservableProcess
+id Proc
 
 licenseUrl http://opensource.org/licenses/MIT
 title
-	ObservableProcess - wrap System.Diagnostic.Process out as IObservable
+	Proc - IObservable System.Diagnostic.Process and super handy static Proc class
 summary
-	Listening to the output buffers from System.Diagnostic.Process comes with quite a few caveats this library attempts to remedy those
+	Proc - IObservable System.Diagnostic.Process and super handy static Proc class
 description
-	Listening to the output buffers from System.Diagnostic.Process comes with quite a few caveats this library attempts to remedy those. If you 
-	use event based listeners its easy to exit before all buffers are read. A common fix for this is to first call WaitForExit with a timeout
-	then without but this does not cover all cases.
-	This library exposes the whatever is written to Standard Out and Error as a convenient observable.
-	
-authors Elastic and contributors
-owners Elastic
-licenseUrl https://github.com/elastic/elasticsearch-net-abstractions/blob/master/license.txt</licenseUrl>
-projectUrl https://github.com/elastic/elasticsearch-net-abstractions</projectUrl>
-iconUrl https://raw.githubusercontent.com/elastic/elasticsearch-net-abstractions/master/build/nuget-icon.png</iconUrl>
-releaseNotes See https://github.com/elastic/elasticsearch-net-abstractions/releases/tag/$version$</releaseNotes>
+	Proc - IObservable System.Diagnostic.Process and super handy static Proc class
+authors Proc contributors
+owners Proc contributors
+licenseUrl https://github.com/proc-net/proc/blob/master/license.txt</licenseUrl>
+projectUrl https://github.com/proc-net/proc</projectUrl>
+iconUrl https://raw.githubusercontent.com/proc-net/proc/master/build/nuget-icon.png</iconUrl>
+releaseNotes See https://github.com/elastic/proc-net/proc/releases/tag/$version$</releaseNotes>
 requireLicenseAcceptance false</requireLicenseAcceptance>
-copyright 2017 Elasticsearch BV
+copyright 2017 Proc contributors
 tags observable,process
 files
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.dll => lib
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.pdb => lib
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.xml => lib
-
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.dll => lib\netstandard1.3
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.pdb => lib\netstandard1.3
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.xml => lib\netstandard1.3
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.dll => lib\net45
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.pdb => lib\net45
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.xml => lib\net45
+dependencies
+  framework: net45
+    System.Reactive.Linq >= 3.1.1 < 4.0.0
+  framework: netstandard13
+    System.Diagnostics.Process 4.3.0 
+    System.Threading.Thread 4.3.0 
+    System.Reactive.Linq >= 3.1.1 < 4.0.0
