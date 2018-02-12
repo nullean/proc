@@ -56,13 +56,12 @@ namespace ProcNet
 		{
 			var published = this.OutStream.Publish();
 			var boundaries = published.Where(o => o.EndsWithNewLine);
-			var buffered = published.Buffer(boundaries)
+			var buffered = published.Buffer(boundaries);
+			var newlines = buffered
 				.Select(c => new LineOut(false, new string(c.SelectMany(o => o.Characters).ToArray()).TrimEnd(NewlineChars)))
 				.Subscribe(observer);
-
-			return published.Connect();
-
-			//this.OutStream.Select(LineOut.From).Subscribe(observer);
+			var connected = published.Connect();
+			return new CompositeDisposable(newlines, connected);
 		}
 
 		public IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError, Action onCompleted) =>
