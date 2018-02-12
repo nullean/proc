@@ -15,7 +15,7 @@ open Projects
 
 module Paths =
 
-    let Repository = "https://github.com/elastic/elasticsearch-net"
+    let Repository = "https://github.com/proc-net/proc"
 
     let BuildFolder = "build"
     let BuildOutput = sprintf "%s/output" BuildFolder
@@ -36,6 +36,6 @@ module Paths =
         let f = replace @"\" "/" folder
         sprintf "%s/%s/bin/Release" SourceFolder f
 
-    let SolutionFile = sprintf "%s/Elasticsearch.Net.Abstractions.sln" SourceFolder
+    let SolutionFile = sprintf "%s/Proc.sln" SourceFolder
 
     let PackageOutFolder = Output("_packages")

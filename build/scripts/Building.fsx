@@ -40,6 +40,10 @@ module Build =
                     sprintf "%sCurrentAssemblyFileVersion" name, (version.AssemblyFile.ToString());
                 ] 
             )
+            |> Seq.append [
+                "FakeBuild", "1";
+                "OutputPathBaseDir", Path.GetFullPath Paths.BuildOutput;
+            ]
             |> Seq.map (fun (p,v) -> sprintf "%s=%s" p v)
             |> String.concat ";"
             |> sprintf "/property:%s"

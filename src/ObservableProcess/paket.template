@@ -1,4 +1,4 @@
-type project
+type file
 
 id ObservableProcess
 
@@ -22,4 +22,8 @@ releaseNotes See https://github.com/elastic/elasticsearch-net-abstractions/relea
 requireLicenseAcceptance false</requireLicenseAcceptance>
 copyright 2017 Elasticsearch BV
 tags observable,process
+files
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.dll => lib
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.pdb => lib
+  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.xml => lib
 

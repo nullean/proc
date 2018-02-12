@@ -7,5 +7,4 @@
     <RootNamespace>Elastic.ProcessManagement.Tests.Binary</RootNamespace>
     <NoWarn>CS1701,CS1591</NoWarn>
   </PropertyGroup>
-  <Import Project="..\..\build\outputpath.props" />
 </Project>

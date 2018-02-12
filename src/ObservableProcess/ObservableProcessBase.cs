@@ -1,9 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
-using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,12 +42,6 @@ namespace Elastic.ProcessManagement
 		protected bool Started { get; set; }
 
 		public string Binary { get; }
-
-		public TimeSpan? WaitForExit
-		{
-			get => this._startArguments?.WaitForExit;
-			set => this._startArguments.WaitForExit = value;
-		}
 
 		public int? ExitCode { get; private set; }
 

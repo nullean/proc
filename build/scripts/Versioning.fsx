@@ -29,8 +29,6 @@ module Versioning =
     let private versionOf project =
         match project with
         | ObservableProcess -> globalJson.Versions.Observableprocess.Remove(0, 1)
-        | ElasticsearchNode -> globalJson.Versions.Elasticsearchnode.Remove(0, 1)
-        | ElasticsearchNodeRunner -> globalJson.Versions.ElasticsearchnodeRunner.Remove(0, 1)
 
     let private assemblyVersionOf v = sprintf "%i.0.0" v.Major |> parse
 
@@ -39,10 +37,8 @@ module Versioning =
     let writeVersionIntoGlobalJson project version =
         //write it with a leading v in the json, needed for the json type provider to keep things strings
         let pre (v: string) = match (v.StartsWith("v")) with | true -> v | _ -> sprintf "v%s" v
-        let observableProcessVersion = match project with | ObservableProcess -> pre version | _ -> pre <| globalJson.Versions.Observableprocess
-        let elasticsearchNodeVersion = match project with | ElasticsearchNode -> pre version | _ -> pre <| globalJson.Versions.Elasticsearchnode
-        let elasticsearchNodeRunnerVersion = match project with | ElasticsearchNodeRunner -> pre version | _ -> pre <| globalJson.Versions.ElasticsearchnodeRunner
-        let versionsNode = GlobalJson.Versions(observableProcessVersion, elasticsearchNodeVersion, elasticsearchNodeRunnerVersion)
+        let observableProcessVersion = pre version 
+        let versionsNode = GlobalJson.Versions(observableProcessVersion)
 
         let newGlobalJson = GlobalJson.Root (GlobalJson.Sdk(globalJson.Sdk.Version), versionsNode)
         use tw = new StreamWriter("global.json")

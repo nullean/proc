@@ -24,6 +24,8 @@ module Commandline =
     let private args = getBuildParamOrDefault "cmdline" "" |> split ' '
     let skipTests = args |> List.exists (fun x -> x = "skiptests")
     let private arguments = args |> List.filter (fun x -> x <> "skiptests")
+    
+   
 
     let private (|IsAProject|_|) candidate =
         let names = projectsStartingWith candidate 
