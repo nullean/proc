@@ -1,0 +1,25 @@
+type project
+
+id ObservableProcess
+
+licenseUrl http://opensource.org/licenses/MIT
+title
+	ObservableProcess - wrap System.Diagnostic.Process out as IObservable
+summary
+	Listening to the output buffers from System.Diagnostic.Process comes with quite a few caveats this library attempts to remedy those
+description
+	Listening to the output buffers from System.Diagnostic.Process comes with quite a few caveats this library attempts to remedy those. If you 
+	use event based listeners its easy to exit before all buffers are read. A common fix for this is to first call WaitForExit with a timeout
+	then without but this does not cover all cases.
+	This library exposes the whatever is written to Standard Out and Error as a convenient observable.
+	
+authors Elastic and contributors
+owners Elastic
+licenseUrl https://github.com/elastic/elasticsearch-net-abstractions/blob/master/license.txt</licenseUrl>
+projectUrl https://github.com/elastic/elasticsearch-net-abstractions</projectUrl>
+iconUrl https://raw.githubusercontent.com/elastic/elasticsearch-net-abstractions/master/build/nuget-icon.png</iconUrl>
+releaseNotes See https://github.com/elastic/elasticsearch-net-abstractions/releases/tag/$version$</releaseNotes>
+requireLicenseAcceptance false</requireLicenseAcceptance>
+copyright 2017 Elasticsearch BV
+tags observable,process
+

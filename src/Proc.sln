@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.0.0
+MinimumVisualStudioVersion = 10.0.0.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "files", "build", "{73A4EA23-1EB6-428F-8713-A37C09627DB3}"
+ProjectSection(SolutionItems) = preProject
+	..\paket.dependencies = ..\paket.dependencies
+	..\global.json = ..\global.json
+	..\build\Versioning.targets = ..\build\Versioning.targets
+	..\build\outputpath.props = ..\build\outputpath.props
+	..\.editorconfig = ..\.editorconfig
+	..\.gitignore = ..\.gitignore
+	..\build.bat = ..\build.bat
+	..\build.sh = ..\build.sh
+EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObservableProcess.Tests.Binary", "ObservableProcess.Tests.Binary\ObservableProcess.Tests.Binary.csproj", "{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObservableProcess.Tests", "ObservableProcess.Tests\ObservableProcess.Tests.csproj", "{BE04AF1C-20CB-497B-9725-518C0C8109ED}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObservableProcess", "ObservableProcess\ObservableProcess.csproj", "{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScratchPad", "ScratchPad\ScratchPad.csproj", "{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "scripts", "..\build\scripts\scripts.fsproj", "{D6997ADC-E933-418E-831C-DE1A78897493}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE04AF1C-20CB-497B-9725-518C0C8109ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE04AF1C-20CB-497B-9725-518C0C8109ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE04AF1C-20CB-497B-9725-518C0C8109ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE04AF1C-20CB-497B-9725-518C0C8109ED}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+	EndGlobalSection
+EndGlobal

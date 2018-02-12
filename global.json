@@ -1,0 +1,10 @@
+{
+  "sdk": {
+    "version": "2.0.3"
+  },
+  "versions": {
+    "observableprocess": "v0.0.8",
+    "elasticsearchnode": "v0.0.1",
+    "elasticsearchnode.runner": "v0.0.1"
+  }
+}
