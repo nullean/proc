@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -50,7 +51,19 @@ namespace ProcNet
 
 		public override IDisposable Subscribe(IObserver<CharactersOut> observer) => this.OutStream.Subscribe(observer);
 
-		public IDisposable Subscribe(IObserver<LineOut> observer) => this.OutStream.Select(LineOut.From).Subscribe(observer);
+		private static readonly char[] NewlineChars = Environment.NewLine.ToCharArray();
+		public IDisposable Subscribe(IObserver<LineOut> observer)
+		{
+			var published = this.OutStream.Publish();
+			var boundaries = published.Where(o => o.EndsWithNewLine);
+			var buffered = published.Buffer(boundaries)
+				.Select(c => new LineOut(false, new string(c.SelectMany(o => o.Characters).ToArray()).TrimEnd(NewlineChars)))
+				.Subscribe(observer);
+
+			return published.Connect();
+
+			//this.OutStream.Select(LineOut.From).Subscribe(observer);
+		}
 
 		public IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError, Action onCompleted) =>
 			this.Subscribe(Observer.Create(onNext, onError, onCompleted));

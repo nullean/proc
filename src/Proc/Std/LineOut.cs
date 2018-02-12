@@ -7,6 +7,8 @@ namespace ProcNet.Std
 	/// </summary>
 	public class LineOut : ConsoleOut
 	{
+		private static readonly char[] NewlineChars = Environment.NewLine.ToCharArray();
+
 		/// <summary>
 		/// Indicates if this messages originated from standard error output.
 		/// </summary>
@@ -32,7 +34,7 @@ namespace ProcNet.Std
 				default: return null;
 				case LineOut l: return l;
 				case CharactersOut c:
-					var s = new string(c.Characters, 0, c.Characters.Length).TrimEnd(Environment.NewLine.ToCharArray());
+					var s = new string(c.Characters, 0, c.Characters.Length).TrimEnd(NewlineChars);
 					return consoleOut.Error ? ErrorOut(s) : Out(s);
 			}
 		}

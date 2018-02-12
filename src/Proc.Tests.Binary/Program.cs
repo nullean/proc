@@ -26,6 +26,7 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(ReadKeyAfter).ToLowerInvariant()) return ReadKeyAfter();
 			if (testCase == nameof(ReadLineFirst).ToLowerInvariant()) return ReadLineFirst();
 			if (testCase == nameof(ReadLineAfter).ToLowerInvariant()) return ReadLineAfter();
+			if (testCase == nameof(MoreText).ToLowerInvariant()) return MoreText();
 
 			return 1;
 		}
@@ -76,6 +77,50 @@ namespace Proc.Tests.Binary
 			Console.ReadLine();
 			Console.Write(nameof(ReadLineAfter));
 			return 21;
+		}
+
+		private static int MoreText()
+		{
+			var output = @"
+Windows IP Configuration
+
+
+Ethernet adapter Ethernet 2:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . :
+
+Wireless LAN adapter Wi-Fi:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . :
+
+Ethernet adapter Ethernet 3:
+
+   Connection-specific DNS Suffix  . :
+   Link-local IPv6 Address . . . . . : fe80::e477:59c0:1f38:6cfa%16
+   IPv4 Address. . . . . . . . . . . : 10.2.20.225
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Default Gateway . . . . . . . . . : 10.2.20.1
+
+Wireless LAN adapter Local Area Connection* 3:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . :
+
+Wireless LAN adapter Local Area Connection* 4:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . :
+
+Ethernet adapter Bluetooth Network Connection:
+
+   Media State . . . . . . . . . . . : Media disconnected
+   Connection-specific DNS Suffix  . :
+";
+			Console.Write(output);
+
+			return 40;
 		}
 	}
 }

@@ -31,6 +31,7 @@ namespace ProcNet.Std
 			}
 		}
 
+
 		public static LineOut ErrorOut(string data) => new LineOut(true, data);
 		public static LineOut Out(string data) => new LineOut(false, data);
 

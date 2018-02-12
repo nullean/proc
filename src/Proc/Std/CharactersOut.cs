@@ -9,5 +9,8 @@ namespace ProcNet.Std
 			this.Error = error;
 			this.Characters = characters;
 		}
+
+		internal bool EndsWithNewLine =>
+			this.Characters.Length > 0 && this.Characters[this.Characters.Length - 1] == '\n';
 	}
 }
