@@ -135,6 +135,11 @@ namespace ProcNet
 			return p;
 		}
 
+		protected virtual WaitHandle[] CompletionHandles()
+		{
+			return new WaitHandle[] {this._completedHandle};
+		}
+
 		/// <summary>
 		/// Block until the process completes.
 		/// </summary>
@@ -142,8 +147,9 @@ namespace ProcNet
 		/// <exception cref="CleanExitException">an exception that indicates a problem early in the pipeline</exception>
 		public bool WaitForCompletion(TimeSpan timeout)
 		{
-			if (this._completedHandle.WaitOne(timeout))
-				return true;
+			if (WaitHandle.WaitAll(CompletionHandles(), timeout)) return true;
+
+			//if (this._completedHandle.WaitOne(timeout)) return true;
 
 			this.Stop();
 			return false;

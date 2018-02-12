@@ -27,6 +27,7 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(ReadLineFirst).ToLowerInvariant()) return ReadLineFirst();
 			if (testCase == nameof(ReadLineAfter).ToLowerInvariant()) return ReadLineAfter();
 			if (testCase == nameof(MoreText).ToLowerInvariant()) return MoreText();
+			if (testCase == nameof(TrailingLines).ToLowerInvariant()) return TrailingLines();
 
 			return 1;
 		}
@@ -77,6 +78,17 @@ namespace Proc.Tests.Binary
 			Console.ReadLine();
 			Console.Write(nameof(ReadLineAfter));
 			return 21;
+		}
+
+		private static int TrailingLines()
+		{
+			var output = @"Windows IP Configuration
+
+
+";
+			Console.Write(output);
+
+			return 60;
 		}
 
 		private static int MoreText()

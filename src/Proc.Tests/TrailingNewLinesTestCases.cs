@@ -9,52 +9,18 @@ using Xunit;
 
 namespace ProcNet.Tests
 {
-	public class LineOutputTestCases : TestsBase
+	public class TrailingNewLineTestCases : TestsBase
 	{
-		private static readonly string _expected = @"
-Windows IP Configuration
+		private static readonly string _expected = @"Windows IP Configuration
 
 
-Ethernet adapter Ethernet 2:
-
-   Media State . . . . . . . . . . . : Media disconnected
-   Connection-specific DNS Suffix  . :
-
-Wireless LAN adapter Wi-Fi:
-
-   Media State . . . . . . . . . . . : Media disconnected
-   Connection-specific DNS Suffix  . :
-
-Ethernet adapter Ethernet 3:
-
-   Connection-specific DNS Suffix  . :
-   Link-local IPv6 Address . . . . . : fe80::e477:59c0:1f38:6cfa%16
-   IPv4 Address. . . . . . . . . . . : 10.2.20.225
-   Subnet Mask . . . . . . . . . . . : 255.255.255.0
-   Default Gateway . . . . . . . . . : 10.2.20.1
-
-Wireless LAN adapter Local Area Connection* 3:
-
-   Media State . . . . . . . . . . . : Media disconnected
-   Connection-specific DNS Suffix  . :
-
-Wireless LAN adapter Local Area Connection* 4:
-
-   Media State . . . . . . . . . . . : Media disconnected
-   Connection-specific DNS Suffix  . :
-
-Ethernet adapter Bluetooth Network Connection:
-
-   Media State . . . . . . . . . . . : Media disconnected
-   Connection-specific DNS Suffix  . :
 ";
-
 		private readonly string[] _expectedLines = _expected.Split(Environment.NewLine.ToCharArray());
 
 		[Fact]
 		public void ProcSeesAllLines()
 		{
-			var args = TestCaseArguments("MoreText");
+			var args = TestCaseArguments("TrailingLines");
 			var result = Proc.Start(args, WaitTimeout);
 			result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expected.Count(c=>c=='\n'));
 			for (var i = 0; i < result.ConsoleOut.Count; i++)
@@ -64,7 +30,7 @@ Ethernet adapter Bluetooth Network Connection:
 		[Fact]
 		public void SubscribeLinesSeesAllLines()
 		{
-			var args = TestCaseArguments("MoreText");
+			var args = TestCaseArguments("TrailingLines");
 			var o = new ObservableProcess(args);
 			var seen = new List<LineOut>();
 			o.SubscribeLines(l => seen.Add(l));
@@ -77,7 +43,7 @@ Ethernet adapter Bluetooth Network Connection:
 		public void ConsoleWriterSeesAllLines()
 		{
 			var writer = new TestConsoleOutWriter();
-			var args = TestCaseArguments("MoreText");
+			var args = TestCaseArguments("TrailingLines");
 			var result = Proc.Start(args, WaitTimeout, writer);
 			var lines = writer.Lines;
 			lines.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);

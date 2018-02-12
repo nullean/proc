@@ -61,9 +61,9 @@ namespace ProcNet
 	{
 		public bool Completed { get; }
 		public int? ExitCode { get; }
-		public ICollection<LineOut> ConsoleOut { get; }
+		public IList<LineOut> ConsoleOut { get; }
 
-		public ProcessResult(bool completed, ICollection<LineOut> consoleOut, int? exitCode)
+		public ProcessResult(bool completed, IList<LineOut> consoleOut, int? exitCode)
 		{
 			this.Completed = completed;
 			this.ConsoleOut = consoleOut;

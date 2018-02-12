@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading;
 using ProcNet.Std;
 
 namespace ProcNet
@@ -52,14 +54,42 @@ namespace ProcNet
 		public override IDisposable Subscribe(IObserver<CharactersOut> observer) => this.OutStream.Subscribe(observer);
 
 		private static readonly char[] NewlineChars = Environment.NewLine.ToCharArray();
+
+		private readonly ManualResetEvent _subscribeWaitHandle = new ManualResetEvent(false);
+		private bool _waitLines;
+		protected override WaitHandle[] CompletionHandles()
+		{
+			if (!_waitLines) return base.CompletionHandles();
+			var waitHandles = base.CompletionHandles();
+			return new List<WaitHandle>(waitHandles) { this._subscribeWaitHandle }.ToArray();
+		}
+
 		public IDisposable Subscribe(IObserver<LineOut> observer)
 		{
+			this._waitLines = true;
 			var published = this.OutStream.Publish();
 			var boundaries = published.Where(o => o.EndsWithNewLine);
 			var buffered = published.Buffer(boundaries);
 			var newlines = buffered
-				.Select(c => new LineOut(false, new string(c.SelectMany(o => o.Characters).ToArray()).TrimEnd(NewlineChars)))
-				.Subscribe(observer);
+				.Select(c =>
+				{
+					if (c.Count == 0) return null;
+					var line = new string(c.SelectMany(o => o.Characters).ToArray());
+					return new LineOut(c.First().Error, line.TrimEnd(NewlineChars));
+				})
+				.Where(l=>l!= null)
+				.Subscribe(
+					observer.OnNext,
+					e =>
+					{
+						observer.OnError(e);
+						_subscribeWaitHandle.Set();
+					},
+					() =>
+					{
+						observer.OnCompleted();
+						_subscribeWaitHandle.Set();
+					});
 			var connected = published.Connect();
 			return new CompositeDisposable(newlines, connected);
 		}
