@@ -42,7 +42,7 @@ Target "Version" <| fun _ ->
     for v in Versioning.AllProjectVersions do
         traceImportant (sprintf "project %s has version %s from here on out" (v.Project.name) (v.Informational.ToString()))
 
-Target "Pack" <| fun _ -> 
+Target "Release" <| fun _ -> 
     Release.CreateNugetPackage Commandline.project
     Versioning.ValidateArtifacts Commandline.project
 
@@ -57,7 +57,7 @@ Target "Pack" <| fun _ ->
     ==> "Build"
 
 "Build"
-  ==> "Pack"
+  ==> "Release"
 
 RunTargetOrListTargets()
 
