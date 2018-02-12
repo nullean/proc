@@ -28,9 +28,11 @@ Target "Clean" Build.Clean
 
 Target "Restore" Build.Restore
 
-Target "FullBuild" <| fun _ -> Build.Compile false
+Target "FullBuild" Build.Compile
     
 Target "Test" Tests.RunUnitTests
+
+Target "InternalizeDependencies" Build.ILRepack
 
 Target "ChangeVersion" <| fun _ -> 
     let newVersion = getBuildParam "version"
@@ -51,6 +53,7 @@ Target "Release" <| fun _ ->
     ==> "Restore"
     ==> "FullBuild"
     =?> ("Test", (not Commandline.skipTests))
+    =?> ("InternalizeDependencies", (not isMono))
     ==> "Build"
 
 "Build"

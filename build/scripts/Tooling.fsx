@@ -87,6 +87,8 @@ module Tooling =
         member this.ExecIn workingDirectory arguments = execProcessInDirectory this.Path arguments workingDirectory
 
     let XUnit = new BuildTooling(Paths.Tool("xunit.runner.console/tools/xunit.console.exe"))
+    let ILRepack = new BuildTooling("packages/build/ILRepack/tools/ILRepack.exe")
+
 
     type DotNetTooling(exe) =
        member this.Exec arguments =

@@ -1,6 +1,10 @@
 source https://api.nuget.org/v3/index.json
 
 group build
-    source https://api.nuget.org/v3/index.json
-    nuget FAKE
-    nuget FSharp.Data
+    source https://www.nuget.org/api/v2
+
+    nuget FAKE prerelease
+    nuget FSharp.Data 2.3.2
+    nuget ILRepack prerelease
+    nuget Mono.Cecil prerelease
+

@@ -27,9 +27,6 @@ files
   ..\..\build\output\proc\netstandard1.3\proc.xml => lib\net45
 dependencies
   framework: net45
-    System.Reactive.Linq 4.0.0-preview00001
-    System.Reactive 4.0.0-preview00001
   framework: netstandard13
     System.Diagnostics.Process 4.3.0 
     System.Threading.Thread 4.3.0 
-    System.Reactive.Linq 4.0.0-preview00001
