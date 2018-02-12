@@ -4,6 +4,6 @@
     <TargetFramework>netcoreapp1.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ObservableProcess\ObservableProcess.csproj" />
+    <ProjectReference Include="..\Proc\Proc.csproj" />
   </ItemGroup>
 </Project>

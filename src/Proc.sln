@@ -15,11 +15,11 @@ ProjectSection(SolutionItems) = preProject
 	..\build.sh = ..\build.sh
 EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObservableProcess.Tests.Binary", "ObservableProcess.Tests.Binary\ObservableProcess.Tests.Binary.csproj", "{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.Tests.Binary", "Proc.Tests.Binary\Proc.Tests.Binary.csproj", "{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObservableProcess.Tests", "ObservableProcess.Tests\ObservableProcess.Tests.csproj", "{BE04AF1C-20CB-497B-9725-518C0C8109ED}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.Tests", "Proc.Tests\Proc.Tests.csproj", "{BE04AF1C-20CB-497B-9725-518C0C8109ED}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ObservableProcess", "ObservableProcess\ObservableProcess.csproj", "{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc", "Proc\Proc.csproj", "{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScratchPad", "ScratchPad\ScratchPad.csproj", "{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2}"
 EndProject

@@ -2,8 +2,6 @@
 using System.Diagnostics;
 using System.Reactive;
 using System.Threading;
-using Elastic.ProcessManagement;
-using Elastic.ProcessManagement.Std;
 
 namespace ScratchPad
 {
