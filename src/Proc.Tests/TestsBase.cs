@@ -2,7 +2,7 @@
 using System.IO;
 using System.Reflection;
 
-namespace Proc.Tests
+namespace ProcNet.Tests
 {
 	public abstract class TestsBase
 	{

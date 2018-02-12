@@ -4,9 +4,9 @@ using System.IO;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using Proc.Std;
+using ProcNet.Std;
 
-namespace Proc.Extensions
+namespace ProcNet.Extensions
 {
 	internal static class ObserveOutputExtensions
 	{

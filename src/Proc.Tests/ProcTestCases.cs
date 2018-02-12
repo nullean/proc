@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using FluentAssertions;
-using Proc.Std;
+using ProcNet.Std;
 using Xunit;
 
-namespace Proc.Tests
+namespace ProcNet.Tests
 {
 	public class ProcTestCases : TestsBase
 	{
@@ -24,7 +24,7 @@ namespace Proc.Tests
 		{
 			var args = TestCaseArguments(nameof(ReadKeyFirst));
 			var writer = new TestConsoleOutWriter();
-			var result = global::Proc.Proc.Start(args, WaitTimeout, writer, s => s.Write("y"));
+			var result = Proc.Start(args, WaitTimeout, writer, s => s.Write("y"));
 			result.Completed.Should().BeTrue("completed");
 			result.ExitCode.Should().HaveValue();
 			result.ConsoleOut.Should().NotBeEmpty();
@@ -36,7 +36,7 @@ namespace Proc.Tests
 		{
 			//Proc throws exceptions where as the observable does not.
 			var writer = new TestConsoleOutWriter();
-			Action call = () => global::Proc.Proc.Start("this-does-not-exist.exe");
+			Action call = () => Proc.Start("this-does-not-exist.exe");
 			var shouldThrow = call.ShouldThrow<ObservableProcessException>();
 			shouldThrow.And.InnerException.Message.Should().Contain("The system cannot");
 			shouldThrow.And.Message.Should().Contain("this-does-not-exist.exe");

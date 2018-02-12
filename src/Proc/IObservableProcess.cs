@@ -1,7 +1,7 @@
 using System;
-using Proc.Std;
+using ProcNet.Std;
 
-namespace Proc
+namespace ProcNet
 {
 	public interface ISubscribeLines
 	{

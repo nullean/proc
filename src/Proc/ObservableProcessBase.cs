@@ -5,9 +5,9 @@ using System.IO;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Proc.Std;
+using ProcNet.Std;
 
-namespace Proc
+namespace ProcNet
 {
 	public delegate void StartedHandler(StreamWriter standardInput);
 

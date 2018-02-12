@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using FluentAssertions;
 using Xunit;
 
-namespace Proc.Tests
+namespace ProcNet.Tests
 {
 	public class ReadLineTestCases : TestsBase
 	{

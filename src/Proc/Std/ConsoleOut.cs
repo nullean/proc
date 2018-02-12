@@ -1,6 +1,6 @@
 using System;
 
-namespace Proc.Std
+namespace ProcNet.Std
 {
 	public abstract class ConsoleOut
 	{

@@ -1,6 +1,6 @@
 using System;
 
-namespace Proc
+namespace ProcNet
 {
 	public class ObservableProcessException : CleanExitException
 	{

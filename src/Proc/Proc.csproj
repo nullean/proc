@@ -4,17 +4,17 @@
   <PropertyGroup>
     <AssemblyName>Proc</AssemblyName>
     <TargetFramework>netstandard1.3</TargetFramework>
-    <RootNamespace>Proc</RootNamespace>
-    <Version>$(ObservableProcessCurrentVersion)</Version>
-    <InformationalVersion>$(ObservableProcessCurrentVersion)</InformationalVersion>
-    <AssemblyVersion>$(ObservableProcessCurrentAssemblyVersion)</AssemblyVersion>
-    <FileVersion>$(ObservableProcessCurrentAssemblyFileVersion)</FileVersion>
+    <RootNamespace>ProcNet</RootNamespace>
+    <Version>$(ProcCurrentVersion)</Version>
+    <InformationalVersion>$(ProcCurrentVersion)</InformationalVersion>
+    <AssemblyVersion>$(ProcCurrentAssemblyVersion)</AssemblyVersion>
+    <FileVersion>$(ProcCurrentAssemblyFileVersion)</FileVersion>
     <CopyLocalLockFileAssemblies Condition="'$(FakeBuild)'=='1'">true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-    <PackageReference Include="System.Reactive.Linq" Version="3.1.1" />
+    <PackageReference Include="System.Reactive.Linq" Version="4.0.0-preview00001" />
   </ItemGroup>
   <Import Project="..\..\build\outputpath.props" />
 </Project>

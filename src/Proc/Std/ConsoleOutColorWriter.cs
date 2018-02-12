@@ -1,6 +1,6 @@
 using System;
 
-namespace Proc.Std
+namespace ProcNet.Std
 {
 	public class ConsoleOutColorWriter : ConsoleOutWriter
 	{

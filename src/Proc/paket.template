@@ -19,16 +19,17 @@ requireLicenseAcceptance false</requireLicenseAcceptance>
 copyright 2017 Proc contributors
 tags observable,process
 files
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.dll => lib\netstandard1.3
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.pdb => lib\netstandard1.3
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.xml => lib\netstandard1.3
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.dll => lib\net45
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.pdb => lib\net45
-  ..\..\build\output\observableprocess\netstandard1.3\observableprocess.xml => lib\net45
+  ..\..\build\output\proc\netstandard1.3\proc.dll => lib\netstandard1.3
+  ..\..\build\output\proc\netstandard1.3\proc.pdb => lib\netstandard1.3
+  ..\..\build\output\proc\netstandard1.3\proc.xml => lib\netstandard1.3
+  ..\..\build\output\proc\netstandard1.3\proc.dll => lib\net45
+  ..\..\build\output\proc\netstandard1.3\proc.pdb => lib\net45
+  ..\..\build\output\proc\netstandard1.3\proc.xml => lib\net45
 dependencies
   framework: net45
-    System.Reactive.Linq >= 3.1.1 < 4.0.0
+    System.Reactive.Linq 4.0.0-preview00001
+    System.Reactive 4.0.0-preview00001
   framework: netstandard13
     System.Diagnostics.Process 4.3.0 
     System.Threading.Thread 4.3.0 
-    System.Reactive.Linq >= 3.1.1 < 4.0.0
+    System.Reactive.Linq 4.0.0-preview00001

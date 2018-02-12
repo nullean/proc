@@ -4,10 +4,10 @@ using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using Proc.Extensions;
-using Proc.Std;
+using ProcNet.Extensions;
+using ProcNet.Std;
 
-namespace Proc
+namespace ProcNet
 {
 	/// <summary>
 	/// This implementation wraps over <see cref="Process.OutputDataReceived"/> and <see cref="Process.ErrorDataReceived"/>

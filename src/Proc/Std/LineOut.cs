@@ -1,6 +1,6 @@
 using System;
 
-namespace Proc.Std
+namespace ProcNet.Std
 {
 	/// <summary>
 	/// This class represents a single line that was printed on the console.

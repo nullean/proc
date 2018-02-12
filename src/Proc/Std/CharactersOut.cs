@@ -1,4 +1,4 @@
-namespace Proc.Std
+namespace ProcNet.Std
 {
 	public class CharactersOut : ConsoleOut
 	{

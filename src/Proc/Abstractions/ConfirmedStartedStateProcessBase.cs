@@ -2,9 +2,9 @@
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
-using Proc.Std;
+using ProcNet.Std;
 
-namespace Proc.Abstractions
+namespace ProcNet.Abstractions
 {
 	/// <summary>
 	/// An abstraction that allows you to wrap an <see cref="IObservableProcess{TConsoleOut}"/>

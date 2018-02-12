@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Runtime.ExceptionServices;
-using Proc.Std;
+using ProcNet.Std;
 
-namespace Proc
+namespace ProcNet
 {
 	public static class Proc
 	{

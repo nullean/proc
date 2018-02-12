@@ -28,7 +28,7 @@ module Versioning =
     let globalJson = GlobalJson.Load("../../global.json");
     let private versionOf project =
         match project with
-        | ObservableProcess -> globalJson.Versions.Observableprocess.Remove(0, 1)
+        | Proc -> globalJson.Versions.Proc.Remove(0, 1)
 
     let private assemblyVersionOf v = sprintf "%i.0.0" v.Major |> parse
 

@@ -8,15 +8,15 @@ open Fake
 module Projects = 
 
     type Project =
-        | ObservableProcess
+        | Proc
 
-        static member All = [ObservableProcess;]
+        static member All = [Proc;]
 
     type ProjectInfo = { name: string; project: Project}
 
     let nameOf project = 
         match project with
-        | ObservableProcess -> "ObservableProcess"
+        | Proc -> "Proc"
 
     let infoOf project = { name = project |> nameOf; project = project }
     let projectsStartingWith partial =
