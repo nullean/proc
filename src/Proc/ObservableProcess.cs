@@ -71,6 +71,7 @@ namespace ProcNet
 			var boundaries = published.Where(o => o.EndsWithNewLine);
 			var buffered = published.Buffer(boundaries);
 			var newlines = buffered
+				.TakeWhile(l => this.BufferLines)
 				.Select(c =>
 				{
 					if (c.Count == 0) return null;
@@ -93,6 +94,8 @@ namespace ProcNet
 			var connected = published.Connect();
 			return new CompositeDisposable(newlines, connected);
 		}
+
+		protected virtual bool BufferLines { get; set; } = true;
 
 		public IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError, Action onCompleted) =>
 			this.Subscribe(Observer.Create(onNext, onError, onCompleted));

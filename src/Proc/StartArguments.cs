@@ -39,6 +39,10 @@ namespace ProcNet
 		/// </summary>
 		public bool NoWrapInThread { get; set; }
 
+		internal bool CallingControlC { get; set; }
+
+		public bool SendControlCFirst { get; set; }
+
 		// ReSharper enable UnusedAutoPropertyAccessor.Global
 
 	}

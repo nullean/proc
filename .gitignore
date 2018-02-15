@@ -42,6 +42,8 @@ packages/*
 paket.exe
 paket-files/*.cached
 
+!src/Proc/Embedded/Proc.ControlC.exe
+
 build/*
 !build/tools
 !build/keys

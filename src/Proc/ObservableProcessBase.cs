@@ -1,8 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Reactive.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Std;
@@ -46,6 +48,10 @@ namespace ProcNet
 		public int? ExitCode { get; private set; }
 
 		public int? ProcessId => this.Process?.Id;
+		/// <summary>
+		/// the process id to send the control+c too.
+		/// </summary>
+		protected virtual int? ControlCProcessId => this.ProcessId;
 
 		protected IObservable<TConsoleOut> OutStream { get; private set; } = Observable.Empty<TConsoleOut>();
 
@@ -91,6 +97,8 @@ namespace ProcNet
 
 		protected virtual void OnCompleted(IObserver<TConsoleOut> observer) => observer.OnCompleted();
 
+		private readonly object _exitLock = new object();
+
 		protected void OnExit(IObserver<TConsoleOut> observer)
 		{
 			if (!this.Started) return;
@@ -101,10 +109,19 @@ namespace ProcNet
 			}
 			finally
 			{
-				if (!_isDisposing)
-				{
-					this.Stop(exitCode, observer);
-				}
+				ExitStop(observer, exitCode);
+			}
+		}
+
+		private void ExitStop(IObserver<TConsoleOut> observer, int? exitCode)
+		{
+			if (!this.Started) return;
+			if (_isDisposing) return;
+			lock (_exitLock)
+			{
+				if (!this.Started) return;
+
+				this.Stop(exitCode, observer);
 			}
 		}
 
@@ -123,7 +140,8 @@ namespace ProcNet
 				RedirectStandardInput = true
 			};
 			if (s.Environment != null)
-				foreach (var kv in s.Environment) processStartInfo.Environment[kv.Key] = kv.Value;
+				foreach (var kv in s.Environment)
+					processStartInfo.Environment[kv.Key] = kv.Value;
 
 			if (!string.IsNullOrWhiteSpace(s.WorkingDirectory)) processStartInfo.WorkingDirectory = s.WorkingDirectory;
 
@@ -149,10 +167,53 @@ namespace ProcNet
 		{
 			if (WaitHandle.WaitAll(CompletionHandles(), timeout)) return true;
 
-			//if (this._completedHandle.WaitOne(timeout)) return true;
-
 			this.Stop();
 			return false;
+		}
+
+		private readonly object _unpackLock = new object();
+		private readonly object _sendLock = new object();
+		private bool _sentControlC = false;
+
+		public void SendControlC()
+		{
+			if (_sentControlC) return;
+			if (!this.ControlCProcessId.HasValue) return;
+			var path = Path.Combine(Path.GetTempPath(), "proc-c.exe");
+			this.UnpackTempOutOfProcessSignalSender(path);
+			lock (_sendLock)
+			{
+				if (_sentControlC) return;
+				if (!this.ControlCProcessId.HasValue) return;
+				var args = new StartArguments(path, this.ControlCProcessId.Value.ToString(CultureInfo.InvariantCulture))
+				{
+					WaitForExit = null,
+					CallingControlC = true
+				};
+				var result = Proc.Start(args, TimeSpan.FromSeconds(2));
+				_sentControlC = true;
+			}
+		}
+
+		private void UnpackTempOutOfProcessSignalSender(string path)
+		{
+			if (File.Exists(path)) return;
+			var assembly = typeof(Proc).GetTypeInfo().Assembly;
+			try
+			{
+				lock (_unpackLock)
+				{
+					if (File.Exists(path)) return;
+					using (var stream = assembly.GetManifestResourceStream("ProcNet.Embedded.Proc.ControlC.exe"))
+					using (var fs = File.OpenWrite(path))
+						stream.CopyTo(fs);
+				}
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+				throw;
+			}
 		}
 
 		private void Stop(int? exitCode = null, IObserver<TConsoleOut> observer = null)
@@ -166,10 +227,21 @@ namespace ProcNet
 				{
 					if (this.Started && wait.HasValue)
 					{
-						this.Process?.Kill();
-						var exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds);
-						if (this.Process != null && !exitted.GetValueOrDefault(false))
-							this.HardWaitForExit(TimeSpan.FromSeconds(10));
+						bool exitted;
+						if (this._startArguments.SendControlCFirst)
+						{
+							this.SendControlC();
+							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
+							//still attempt to kill to process if control c failed
+							if (exitted) this.Process?.Kill();
+						}
+						else
+						{
+							this.Process?.Kill();
+							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
+						}
+						//if we haven't exited do a hard wait for exit by using the overload that does not timeout.
+						if (this.Process != null && !exitted) this.HardWaitForExit(TimeSpan.FromSeconds(10));
 					}
 					else if (this.Started)
 					{

@@ -16,5 +16,8 @@
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Reactive.Linq" Version="4.0.0-preview00001" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Embedded\Proc.ControlC.exe" />
+  </ItemGroup>
   <Import Project="..\..\build\outputpath.props" />
 </Project>
