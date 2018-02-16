@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security.Permissions;
 using static System.Diagnostics.Process;
@@ -10,7 +11,7 @@ namespace Proc.ControlC
 	{
 		private const int CTRL_C_EVENT = 0;
 
-		[DllImport("kernel32.dll")]
+		[DllImport("kernel32.dll", SetLastError = true)]
 		private static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
@@ -19,22 +20,22 @@ namespace Proc.ControlC
 		[DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
 		private static extern bool FreeConsole();
 
-		[DllImport("kernel32.dll")]
-		private static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate handlerRoutine, bool add);
+		[DllImport("kernel32.dll", SetLastError = true)]
+		private static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate HandlerRoutine, bool Add);
 
-		private delegate bool ConsoleCtrlDelegate(uint ctrlType);
+		private delegate bool ConsoleCtrlDelegate(uint CtrlType);
 
 		public static bool Send(int processId)
 		{
 			if (!IsAProcessAndIsRunning(processId)) return false;
 
-			FreeConsole();
-			if (!AttachConsole((uint) processId)) return false;
-			SetConsoleCtrlHandler(null, true);
+			if (!FreeConsole()) throw new Win32Exception();
+			if (!AttachConsole((uint) processId)) throw new Win32Exception();
+
+			if (!SetConsoleCtrlHandler(null, true)) throw new Win32Exception();
 			try
 			{
-				if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0))
-					return false;
+				if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0)) throw new Win32Exception();
 			}
 			finally
 			{
@@ -49,7 +50,8 @@ namespace Proc.ControlC
 			try
 			{
 				var p = GetProcessById(processId);
-				return !p.HasExited;
+				Console.WriteLine(p.ProcessName);
+				return true;
 			}
 			catch
 			{

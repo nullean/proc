@@ -26,6 +26,7 @@ namespace ProcNet
 	/// </summary>
 	public class BufferedObservableProcess : ObservableProcessBase<CharactersOut>
 	{
+
 		/// <summary>
 		/// How long we should wait for the output stream readers to finish when the process exits before we call
 		/// <see cref="ObservableProcessBase{TConsoleOut}.OnCompleted"/> is called. By default waits for 5 seconds.
@@ -74,16 +75,21 @@ namespace ProcNet
 
 			this.Process.Exited += (o, s) =>
 			{
-				if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout))
-					OnError(observer, new ObservableProcessException(
-						$"Waited {WaitForStreamReadersTimeout} unsuccesfully for stdout/err subscriptions to complete after the the process exited"
-					));
+				WaitForEndOfStreams(observer, stdOutSubscription, stdErrSubscription);
 
 				OnExit(observer);
 			};
 
-			Task.WhenAll(stdOutSubscription, stdErrSubscription)
-				.ContinueWith((t) => { OnExit(observer); });
+			//todo validate the need for this again
+			Task.WhenAll(stdOutSubscription, stdErrSubscription).ContinueWith(t => OnExit(observer));
+		}
+
+		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)
+		{
+			if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout))
+				OnError(observer, new ObservableProcessException(
+					$"Waited {WaitForStreamReadersTimeout} unsuccesfully for stdout/err subscriptions to complete after the the process exited"
+				));
 		}
 	}
 }

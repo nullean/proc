@@ -34,7 +34,9 @@ namespace ProcNet
 	public class ObservableProcess : BufferedObservableProcess, ISubscribeLines
 	{
 		private char[] _bufferStdOut = { };
+		private char[] _bufferStdOutRemainder = { };
 		private char[] _bufferStdErr = { };
+		private char[] _bufferStdErrRemainder = { };
 		private readonly object _copyLock = new object();
 
 		public ObservableProcess(string binary, params string[] arguments) : base(binary, arguments) { }
@@ -64,20 +66,45 @@ namespace ProcNet
 			return new List<WaitHandle>(waitHandles) { this._subscribeWaitHandle }.ToArray();
 		}
 
+		/// <summary>
+		/// Subclasses can implement this and return true to stop buffering lines.
+		/// This is great for long running processes to only buffer console output until
+		/// all information is parsed.
+		/// </summary>
+		/// <returns>True to end the buffering of char[] to lines of text</returns>
+		protected virtual bool KeepBufferingLines(LineOut l) => true;
+
+		/// <summary>
+		/// Create an buffer boundary by returning true. Useful if you want to force a line to be returned.
+		/// </summary>
+		protected virtual bool BufferBoundary(char[] stdOut, char[] stdErr)
+		{
+			if (!this.StopRequested) return false;
+			var s = new string(stdOut);
+			//bat files prompt to confirm which blocks the output, we auto confirm here
+			if (this.Process.ProcessName == "cmd" && s.EndsWith(" (Y/N)? "))
+			{
+				this.StandardInput.WriteLine("Y");
+				return true;
+			}
+			return false;
+		}
+
 		public IDisposable Subscribe(IObserver<LineOut> observer)
 		{
 			this._waitLines = true;
 			var published = this.OutStream.Publish();
-			var boundaries = published.Where(o => o.EndsWithNewLine);
+			var boundaries = published
+				.Where(o => o.EndsWithNewLine || this.BufferBoundary(_bufferStdOutRemainder, _bufferStdErrRemainder));
 			var buffered = published.Buffer(boundaries);
 			var newlines = buffered
-				.TakeWhile(l => this.BufferLines)
 				.Select(c =>
 				{
 					if (c.Count == 0) return null;
 					var line = new string(c.SelectMany(o => o.Characters).ToArray());
 					return new LineOut(c.First().Error, line.TrimEnd(NewlineChars));
 				})
+				.TakeWhile(KeepBufferingLines)
 				.Where(l=>l!= null)
 				.Subscribe(
 					observer.OnNext,
@@ -94,8 +121,6 @@ namespace ProcNet
 			var connected = published.Connect();
 			return new CompositeDisposable(newlines, connected);
 		}
-
-		protected virtual bool BufferLines { get; set; } = true;
 
 		public IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError, Action onCompleted) =>
 			this.Subscribe(Observer.Create(onNext, onError, onCompleted));
@@ -120,15 +145,17 @@ namespace ProcNet
 			c.OutOrErrrorCharacters(OutCharacters, ErrorCharacters);
 			if (c.Error)
 			{
-				YieldNewLinesToOnNext(ref _bufferStdErr, buffer => observer.OnNext(ConsoleOut.ErrorOut(buffer)));
-				FlushRemainder(ref _bufferStdErr, buffer => observer.OnNext(ConsoleOut.ErrorOut(buffer)));
+				YieldNewLinesToOnNext(ref _bufferStdErr, b => OnNext(b, observer, ConsoleOut.ErrorOut));
+				FlushRemainder(ref _bufferStdErr, ref _bufferStdErrRemainder, b => OnNext(b, observer, ConsoleOut.ErrorOut));
 			}
 			else
 			{
-				YieldNewLinesToOnNext(ref _bufferStdOut, buffer => observer.OnNext(ConsoleOut.Out(buffer)));
-				FlushRemainder(ref _bufferStdOut, buffer => observer.OnNext(ConsoleOut.Out(buffer)));
+				YieldNewLinesToOnNext(ref _bufferStdOut, b => OnNext(b, observer, ConsoleOut.Out));
+				FlushRemainder(ref _bufferStdOut, ref _bufferStdOutRemainder, b => OnNext(b, observer, ConsoleOut.Out));
 			}
 		}
+
+		private static void OnNext(char[] b, IObserver<CharactersOut> o, Func<char[], CharactersOut> c) => o.OnNext(c(b));
 
 		private static void OnNextFlush(CharactersOut c, IObserver<CharactersOut> observer) =>
 			observer.OnNext(c.Error ? ConsoleOut.ErrorOut(c.Characters) : ConsoleOut.Out(c.Characters));
@@ -147,15 +174,15 @@ namespace ProcNet
 
 		private void Flush(IObserver<CharactersOut> observer)
 		{
-			YieldNewLinesToOnNext(ref _bufferStdErr, buffer => observer.OnNext(ConsoleOut.ErrorOut(buffer)));
-			FlushRemainder(ref _bufferStdErr, buffer => observer.OnNext(ConsoleOut.ErrorOut(buffer)));
+			YieldNewLinesToOnNext(ref _bufferStdErr, b => OnNext(b, observer, ConsoleOut.ErrorOut));
+			FlushRemainder(ref _bufferStdErr, ref _bufferStdErrRemainder, b => OnNext(b, observer, ConsoleOut.ErrorOut));
 
-			YieldNewLinesToOnNext(ref _bufferStdOut, buffer => observer.OnNext(ConsoleOut.Out(buffer)));
-			FlushRemainder(ref _bufferStdOut, buffer => observer.OnNext(ConsoleOut.Out(buffer)));
+			YieldNewLinesToOnNext(ref _bufferStdOut, b => OnNext(b, observer, ConsoleOut.Out));
+			FlushRemainder(ref _bufferStdOut, ref _bufferStdOutRemainder, b => OnNext(b, observer, ConsoleOut.Out));
 		}
 
 		private bool Flushing { get; set; }
-		private void FlushRemainder(ref char[] buffer, Action<char[]> onNext)
+		private void FlushRemainder(ref char[] buffer, ref char[] remainder, Action<char[]> onNext)
 		{
 			if (buffer.Length <= 0) return;
 			var endOffSet = FindEndOffSet(buffer, 0);
@@ -163,6 +190,7 @@ namespace ProcNet
 			var ret = new char[endOffSet];
 			Array.Copy(buffer, 0, ret, 0, endOffSet);
 			buffer = new char[] {};
+			remainder = ret;
 			Flushing = true;
 			onNext(ret);
 			Flushing = false;

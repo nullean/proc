@@ -21,9 +21,7 @@ namespace ProcNet
 		protected bool NoWrapInThread { get; }
 
 		protected ObservableProcessBase(string binary, params string[] arguments)
-			: this(new StartArguments(binary, arguments))
-		{
-		}
+			: this(new StartArguments(binary, arguments)) { }
 
 		public StreamWriter StandardInput => this.Process.StandardInput;
 
@@ -47,11 +45,7 @@ namespace ProcNet
 
 		public int? ExitCode { get; private set; }
 
-		public int? ProcessId => this.Process?.Id;
-		/// <summary>
-		/// the process id to send the control+c too.
-		/// </summary>
-		protected virtual int? ControlCProcessId => this.ProcessId;
+		public virtual int? ProcessId => this.Process?.Id;
 
 		protected IObservable<TConsoleOut> OutStream { get; private set; } = Observable.Empty<TConsoleOut>();
 
@@ -87,7 +81,7 @@ namespace ProcNet
 			}
 			finally
 			{
-				if (!started) this._completedHandle.Set();
+				if (!started) this.SetCompletedHandle();
 			}
 
 			return false;
@@ -178,14 +172,14 @@ namespace ProcNet
 		public void SendControlC()
 		{
 			if (_sentControlC) return;
-			if (!this.ControlCProcessId.HasValue) return;
+			if (!this.ProcessId.HasValue) return;
 			var path = Path.Combine(Path.GetTempPath(), "proc-c.exe");
 			this.UnpackTempOutOfProcessSignalSender(path);
 			lock (_sendLock)
 			{
 				if (_sentControlC) return;
-				if (!this.ControlCProcessId.HasValue) return;
-				var args = new StartArguments(path, this.ControlCProcessId.Value.ToString(CultureInfo.InvariantCulture))
+				if (!this.ProcessId.HasValue) return;
+				var args = new StartArguments(path, this.ProcessId.Value.ToString(CultureInfo.InvariantCulture))
 				{
 					WaitForExit = null,
 					CallingControlC = true
@@ -216,10 +210,13 @@ namespace ProcNet
 			}
 		}
 
+		protected bool StopRequested => _stopRequested || _sentControlC;
+		private bool _stopRequested;
 		private void Stop(int? exitCode = null, IObserver<TConsoleOut> observer = null)
 		{
 			try
 			{
+				this._stopRequested = true;
 				if (this.Process == null) return;
 
 				var wait = this._startArguments.WaitForExit;
@@ -233,13 +230,14 @@ namespace ProcNet
 							this.SendControlC();
 							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
 							//still attempt to kill to process if control c failed
-							if (exitted) this.Process?.Kill();
+							if (!exitted) this.Process?.Kill();
 						}
 						else
 						{
 							this.Process?.Kill();
 							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
 						}
+
 						//if we haven't exited do a hard wait for exit by using the overload that does not timeout.
 						if (this.Process != null && !exitted) this.HardWaitForExit(TimeSpan.FromSeconds(10));
 					}
@@ -273,9 +271,22 @@ namespace ProcNet
 
 				this.Started = false;
 				if (observer != null) OnCompleted(observer);
-				this._completedHandle.Set();
+				this.SetCompletedHandle();
 			}
 		}
+
+		private void SetCompletedHandle()
+		{
+			OnBeforeSetCompletedHandle();
+			this._completedHandle.Set();
+		}
+
+		protected virtual void OnBeforeSetCompletedHandle()
+		{
+
+		}
+
+
 
 		private bool HardWaitForExit(TimeSpan timeSpan)
 		{
