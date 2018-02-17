@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace Proc.Tests.Binary
@@ -28,6 +29,8 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(ReadLineAfter).ToLowerInvariant()) return ReadLineAfter();
 			if (testCase == nameof(MoreText).ToLowerInvariant()) return MoreText();
 			if (testCase == nameof(TrailingLines).ToLowerInvariant()) return TrailingLines();
+			if (testCase == nameof(ControlC).ToLowerInvariant()) return ControlC();
+			if (testCase == nameof(ControlCNoWait).ToLowerInvariant()) return ControlCNoWait();
 
 			return 1;
 		}
@@ -78,6 +81,25 @@ namespace Proc.Tests.Binary
 			Console.ReadLine();
 			Console.Write(nameof(ReadLineAfter));
 			return 21;
+		}
+		private static int ControlC()
+		{
+			Console.WriteLine("Written before control+c");
+			Console.CancelKeyPress += (sender, args) =>
+			{
+				Console.WriteLine("Written after control+c");
+			};
+			Console.ReadLine();
+			return 70;
+		}
+		private static int ControlCNoWait()
+		{
+			Console.WriteLine("Written before control+c");
+			Console.CancelKeyPress += (sender, args) =>
+			{
+				Console.WriteLine("Written after control+c");
+			};
+			return 71;
 		}
 
 		private static int TrailingLines()

@@ -60,6 +60,15 @@ module Build =
                     AdditionalArgs = [props]
                 }
             ) |> ignore
+    let private buildEmbeddable () = 
+        DotNetCli.Publish
+            (fun p -> 
+                { p with
+                    Configuration = "Release"
+                    Project = Paths.Source("Proc.ControlC") 
+                }
+            )
+        File.Copy (@"src\Proc.ControlC\bin\release\net40\publish\Proc.ControlC.exe", @"src\Proc\Embedded\Proc.ControlC.exe", true)
 
     let Restore() =
         DotNetCli.Restore
@@ -71,7 +80,8 @@ module Build =
             ) |> ignore
         
     let Compile () = 
-        compileCore ()
+        buildEmbeddable()
+        compileCore()
 
     let Clean() =
         CleanDir Paths.BuildOutput
