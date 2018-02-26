@@ -31,6 +31,7 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(TrailingLines).ToLowerInvariant()) return TrailingLines();
 			if (testCase == nameof(ControlC).ToLowerInvariant()) return ControlC();
 			if (testCase == nameof(ControlCNoWait).ToLowerInvariant()) return ControlCNoWait();
+			if (testCase == nameof(OverwriteLines).ToLowerInvariant()) return OverwriteLines();
 
 			return 1;
 		}
@@ -55,6 +56,16 @@ namespace Proc.Tests.Binary
 		{
 			Console.WriteLine(nameof(SingleLine));
 			return 0;
+		}
+		private static int OverwriteLines()
+		{
+			for (var i = 0; i < 10; i++)
+			{
+
+				Console.Write($"\r{nameof(OverwriteLines)} {i}");
+				Thread.Sleep(100);
+			}
+			return 102;
 		}
 		private static int ReadKeyFirst()
 		{

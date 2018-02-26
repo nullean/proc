@@ -95,7 +95,7 @@ namespace ProcNet
 			this._waitLines = true;
 			var published = this.OutStream.Publish();
 			var boundaries = published
-				.Where(o => o.EndsWithNewLine || this.BufferBoundary(_bufferStdOutRemainder, _bufferStdErrRemainder));
+				.Where(o => o.EndsWithNewLine || o.StartsWithCarriage || this.BufferBoundary(_bufferStdOutRemainder, _bufferStdErrRemainder));
 			var buffered = published.Buffer(boundaries);
 			var newlines = buffered
 				.Select(c =>

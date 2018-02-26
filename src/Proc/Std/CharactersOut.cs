@@ -12,5 +12,8 @@ namespace ProcNet.Std
 
 		internal bool EndsWithNewLine =>
 			this.Characters.Length > 0 && this.Characters[this.Characters.Length - 1] == '\n';
+
+		internal bool StartsWithCarriage =>
+			this.Characters.Length > 0 && this.Characters[0] == '\r';
 	}
 }

@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Reactive;
-using System.Threading;
+using ProcNet;
 
 namespace ScratchPad
 {
@@ -9,59 +7,35 @@ namespace ScratchPad
 	{
 		public static int Main()
 		{
-//			var es = @"c:\Data\elasticsearch-5.4.1\bin\elasticsearch.bat";
-//			using (var elasticsearch = new ElasticsearchNode(es))
-//			{
-//				elasticsearch.Start();
-//				Console.ReadKey();
-//			}
+			var args = new StartArguments("ipconfig", "/all")
+			{
+				SendControlCFirst = true
+			};
 
-//			using (var p = new ObservableProcess("ipconfig", "/all"))
-//			{
-//				p.Subscribe(c => Console.Write(c.Characters));
-//
-//				p.WaitForCompletion(TimeSpan.FromSeconds(2));
-//			}
+			using (var p = new ObservableProcess(args))
+			{
+				p.Subscribe(c => Console.Write(c.Characters));
+				p.SubscribeLines(l => Console.WriteLine(l.Line));
 
-//			var handle = new ManualResetEvent(false);
-//
-//			var process = new Process()
-//			{
-//				StartInfo = new ProcessStartInfo
-//				{
-//					Arguments = "/all",
-//					FileName = "ipconfig",
-//					RedirectStandardError = true,
-//					RedirectStandardOutput = true,
-//					CreateNoWindow = true,
-//					UseShellExecute = false
-//				},
-//				EnableRaisingEvents = true
-//			};
-//			process.OutputDataReceived += (e,s) => Console.WriteLine(s.Data);
-//			process.ErrorDataReceived += (e, s) => Console.Error.WriteLine(s.Data);
-//			process.Exited += (e, s) =>
-//			{
-//				process.WaitForExit(5000);
-//				process.WaitForExit();
-//				process.Dispose();
-//				handle.Set();
-//			};
-//			process.Start();
-//			process.BeginOutputReadLine();
-//			process.BeginErrorReadLine();
-//
-//			handle.WaitOne();
+				p.WaitForCompletion(TimeSpan.FromSeconds(2));
 
-//			using (var cluster = new ElasticsearchCluster("5.5.1", instanceCount: 3))
-//			{
-//				cluster.Start();
-//
-//				Console.ReadKey();
-//			}
+			}
+			Console.WriteLine("done");
 
 			return 0;
 		}
 
+	}
+
+	public class MyProcObservable : ObservableProcess
+	{
+		public MyProcObservable(string binary, params string[] arguments) : base(binary, arguments) { }
+
+		public MyProcObservable(StartArguments startArguments) : base(startArguments) { }
+
+		protected override bool BufferBoundary(char[] stdOut, char[] stdErr)
+		{
+			return base.BufferBoundary(stdOut, stdErr);
+		}
 	}
 }

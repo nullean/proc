@@ -8,6 +8,17 @@ using Xunit;
 
 namespace ProcNet.Tests
 {
+	public class CharacterOutputTestCases : TestsBase
+	{
+		[Fact]
+		public void OverwriteLines()
+		{
+			var args = TestCaseArguments(nameof(OverwriteLines));
+			var result = Proc.Start(args, WaitTimeout);
+		}
+	}
+
+
 	public class LineOutputTestCases : TestsBase
 	{
 		private static readonly string _expected = @"

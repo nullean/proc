@@ -15,8 +15,6 @@ namespace ProcNet.Tests
 		{
 			var directoryInfo = new DirectoryInfo(Directory.GetCurrentDirectory());
 
-			// If running the classic .NET solution, tests run from bin/{config} directory,
-			// but when running DNX solution, tests run from the test project root
 			var root = (directoryInfo.Name == "Proc.Tests"
 			            && directoryInfo.Parent != null
 			            && directoryInfo.Parent.Name == "src")
