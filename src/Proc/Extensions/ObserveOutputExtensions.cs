@@ -43,13 +43,13 @@ namespace ProcNet.Extensions
 		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize)
 		{
 			var reader = process.StandardError;
-			return BufferedRead(reader, observer, bufferSize, ConsoleOut.ErrorOut);
+			return Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, ConsoleOut.ErrorOut), TaskCreationOptions.LongRunning);
 		}
 
 		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize)
 		{
 			var reader = process.StandardOutput;
-			return BufferedRead(reader, observer, bufferSize, ConsoleOut.Out);
+			return Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, ConsoleOut.Out), TaskCreationOptions.LongRunning);
 		}
 
 		private static async Task BufferedRead(StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m)

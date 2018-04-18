@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Proc.Tests.Binary
 {
@@ -32,6 +33,7 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(ControlC).ToLowerInvariant()) return ControlC();
 			if (testCase == nameof(ControlCNoWait).ToLowerInvariant()) return ControlCNoWait();
 			if (testCase == nameof(OverwriteLines).ToLowerInvariant()) return OverwriteLines();
+			if (testCase == nameof(InterMixedOutAndError).ToLowerInvariant()) return InterMixedOutAndError();
 
 			return 1;
 		}
@@ -50,6 +52,16 @@ namespace Proc.Tests.Binary
 		{
 			Console.Write(nameof(TwoWrites));
 			Console.Write(nameof(TwoWrites));
+			return 0;
+		}
+		private static int InterMixedOutAndError()
+		{
+			for (var i = 0; i < 200; i += 2)
+			{
+                Console.Out.WriteLine(new string(i.ToString()[0], 10));
+                Console.Error.WriteLine(new string((i + 1).ToString()[0], 10));
+				Task.Delay(1).Wait();
+			}
 			return 0;
 		}
 		private static int SingleLine()

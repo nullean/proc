@@ -7,20 +7,12 @@ namespace ScratchPad
 	{
 		public static int Main()
 		{
-			var args = new StartArguments("ipconfig", "/all")
+			var result = Proc.Start(new StartArguments("dotnet", "run", "intermixedoutanderror")
 			{
-				SendControlCFirst = true
-			};
+				WorkingDirectory = @"c:\Projects\proc\src\Proc.Tests.Binary"
+			});
 
-			using (var p = new ObservableProcess(args))
-			{
-				p.Subscribe(c => Console.Write(c.Characters));
-				p.SubscribeLines(l => Console.WriteLine(l.Line));
-
-				p.WaitForCompletion(TimeSpan.FromSeconds(2));
-
-			}
-			Console.WriteLine("done");
+			Console.WriteLine(result);
 
 			return 0;
 		}

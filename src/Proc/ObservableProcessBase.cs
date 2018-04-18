@@ -96,18 +96,10 @@ namespace ProcNet
 		protected void OnExit(IObserver<TConsoleOut> observer)
 		{
 			if (!this.Started) return;
-			int? exitCode = null;
-			try
-			{
-				exitCode = this.Process.ExitCode;
-			}
-			finally
-			{
-				ExitStop(observer, exitCode);
-			}
+			ExitStop(observer);
 		}
 
-		private void ExitStop(IObserver<TConsoleOut> observer, int? exitCode)
+		private void ExitStop(IObserver<TConsoleOut> observer)
 		{
 			if (!this.Started) return;
 			if (_isDisposing) return;
@@ -115,7 +107,7 @@ namespace ProcNet
 			{
 				if (!this.Started) return;
 
-				this.Stop(exitCode, observer);
+				this.Stop(observer);
 			}
 		}
 
@@ -212,7 +204,7 @@ namespace ProcNet
 
 		protected bool StopRequested => _stopRequested || _sentControlC;
 		private bool _stopRequested;
-		private void Stop(int? exitCode = null, IObserver<TConsoleOut> observer = null)
+		private void Stop(IObserver<TConsoleOut> observer = null)
 		{
 			try
 			{
@@ -238,12 +230,17 @@ namespace ProcNet
 							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
 						}
 
-						//if we haven't exited do a hard wait for exit by using the overload that does not timeout.
-						if (this.Process != null && !exitted) this.HardWaitForExit(TimeSpan.FromSeconds(10));
+						//we always need to do a hard wait for exit because the exit code might not be available otherwise
+						//see: https://msdn.microsoft.com/en-us/library/system.diagnostics.process.exitcode(v=vs.110).aspx
+						if (this.Process != null) this.HardWaitForExit(TimeSpan.FromSeconds(10));
+
 					}
 					else if (this.Started)
 					{
 						this.Process?.Kill();
+						//we always need to do a hard wait for exit because the exit code might not be available otherwise
+						//see: https://msdn.microsoft.com/en-us/library/system.diagnostics.process.exitcode(v=vs.110).aspx
+						if (this.Process != null) this.HardWaitForExit(TimeSpan.FromSeconds(10));
 					}
 				}
 				//Access denied usually means the program is already terminating.
@@ -254,6 +251,9 @@ namespace ProcNet
 				catch (InvalidOperationException)
 				{
 				}
+
+				var process = this.Process;
+				if (!this.ExitCode.HasValue) this.ExitCode = process?.ExitCode;
 
 				try
 				{
@@ -266,9 +266,6 @@ namespace ProcNet
 			}
 			finally
 			{
-				if (this.Started && exitCode.HasValue)
-					this.ExitCode = exitCode.Value;
-
 				this.Started = false;
 				if (observer != null) OnCompleted(observer);
 				this.SetCompletedHandle();
