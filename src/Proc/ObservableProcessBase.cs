@@ -96,10 +96,18 @@ namespace ProcNet
 		protected void OnExit(IObserver<TConsoleOut> observer)
 		{
 			if (!this.Started) return;
-			ExitStop(observer);
+			int? exitCode = null;
+			try
+			{
+				exitCode = this.Process.ExitCode;
+			}
+			finally
+			{
+				ExitStop(observer, exitCode);
+			}
 		}
 
-		private void ExitStop(IObserver<TConsoleOut> observer)
+		private void ExitStop(IObserver<TConsoleOut> observer, int? exitCode)
 		{
 			if (!this.Started) return;
 			if (_isDisposing) return;
@@ -107,7 +115,7 @@ namespace ProcNet
 			{
 				if (!this.Started) return;
 
-				this.Stop(observer);
+				this.Stop(exitCode, observer);
 			}
 		}
 
@@ -204,7 +212,7 @@ namespace ProcNet
 
 		protected bool StopRequested => _stopRequested || _sentControlC;
 		private bool _stopRequested;
-		private void Stop(IObserver<TConsoleOut> observer = null)
+		private void Stop(int? exitCode = null, IObserver<TConsoleOut> observer = null)
 		{
 			try
 			{
@@ -230,42 +238,33 @@ namespace ProcNet
 							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
 						}
 
-						//we always need to do a hard wait for exit because the exit code might not be available otherwise
-						//see: https://msdn.microsoft.com/en-us/library/system.diagnostics.process.exitcode(v=vs.110).aspx
-						if (this.Process != null) this.HardWaitForExit(TimeSpan.FromSeconds(10));
-
+						//if we haven't exited do a hard wait for exit by using the overload that does not timeout.
+						if (this.Process != null && !exitted) this.HardWaitForExit(TimeSpan.FromSeconds(10));
 					}
 					else if (this.Started)
 					{
 						this.Process?.Kill();
-						//we always need to do a hard wait for exit because the exit code might not be available otherwise
-						//see: https://msdn.microsoft.com/en-us/library/system.diagnostics.process.exitcode(v=vs.110).aspx
-						if (this.Process != null) this.HardWaitForExit(TimeSpan.FromSeconds(10));
 					}
 				}
 				//Access denied usually means the program is already terminating.
-				catch (Win32Exception)
-				{
-				}
+				catch (Win32Exception) { }
 				//This usually indiciates the process is already terminated
 				catch (InvalidOperationException)
 				{
 				}
-
-				var process = this.Process;
-				if (!this.ExitCode.HasValue) this.ExitCode = process?.ExitCode;
 
 				try
 				{
 					this.Process?.Dispose();
 				}
 				//the underlying call to .Close() can throw an NRE if you dispose too fast after starting
-				catch (NullReferenceException)
-				{
-				}
+				catch (NullReferenceException) { }
 			}
 			finally
 			{
+				if (this.Started && exitCode.HasValue)
+					this.ExitCode = exitCode.Value;
+
 				this.Started = false;
 				if (observer != null) OnCompleted(observer);
 				this.SetCompletedHandle();
