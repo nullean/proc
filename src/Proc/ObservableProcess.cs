@@ -122,13 +122,13 @@ namespace ProcNet
 			return new CompositeDisposable(newlines, connected);
 		}
 
-		public IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError, Action onCompleted) =>
+		public virtual IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError, Action onCompleted) =>
 			this.Subscribe(Observer.Create(onNext, onError, onCompleted));
 
-		public IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError) =>
+		public virtual IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError) =>
 			this.Subscribe(Observer.Create(onNext, onError, delegate { }));
 
-		public IDisposable SubscribeLines(Action<LineOut> onNext) =>
+		public virtual IDisposable SubscribeLines(Action<LineOut> onNext) =>
 			this.Subscribe(Observer.Create(onNext, delegate { }, delegate { }));
 
 		private void OnNextConsoleOut(CharactersOut c, IObserver<CharactersOut> observer)

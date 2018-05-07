@@ -101,6 +101,8 @@ namespace ProcNet
 			{
 				exitCode = this.Process.ExitCode;
 			}
+			//ExitCode and HasExited are all trigger happy. We are aware the process may or may not have an exit code.
+			catch (InvalidOperationException) { }
 			finally
 			{
 				ExitStop(observer, exitCode);
@@ -249,10 +251,7 @@ namespace ProcNet
 				//Access denied usually means the program is already terminating.
 				catch (Win32Exception) { }
 				//This usually indiciates the process is already terminated
-				catch (InvalidOperationException)
-				{
-				}
-
+				catch (InvalidOperationException) { }
 				try
 				{
 					this.Process?.Dispose();
