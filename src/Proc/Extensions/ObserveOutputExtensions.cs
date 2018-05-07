@@ -3,8 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Std;
+using static System.Threading.CancellationToken;
+using static System.Threading.Tasks.TaskCreationOptions;
 
 namespace ProcNet.Extensions
 {
@@ -40,17 +43,16 @@ namespace ProcNet.Extensions
 			});
 		}
 
-		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering)
-		{
-			var reader = process.StandardError;
-			return Task.Run(async () => await BufferedRead(reader, observer, bufferSize, ConsoleOut.ErrorOut, keepBuffering));
-		}
+		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering) =>
+			RunBufferedRead(observer, bufferSize, keepBuffering, ConsoleOut.ErrorOut, process.StandardError);
 
-		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool>  keepBuffering)
-		{
-			var reader = process.StandardOutput;
-			return Task.Run(async () => await BufferedRead(reader, observer, bufferSize, ConsoleOut.Out, keepBuffering));
-		}
+		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool>  keepBuffering) =>
+			RunBufferedRead(observer, bufferSize, keepBuffering, ConsoleOut.Out, process.StandardOutput);
+
+		private static Task RunBufferedRead(IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, Func<char[], CharactersOut> m, StreamReader reader) =>
+			Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, m, keepBuffering), CancellationToken.None, DenyChildAttach | LongRunning, TaskScheduler.Default)
+			.Unwrap();
+
 
 		private static async Task BufferedRead(StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering)
 		{
