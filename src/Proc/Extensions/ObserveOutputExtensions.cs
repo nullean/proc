@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Std;
@@ -44,28 +45,58 @@ namespace ProcNet.Extensions
 		}
 
 		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering) =>
-			RunBufferedRead(observer, bufferSize, keepBuffering, ConsoleOut.ErrorOut, process.StandardError);
+			RunBufferedRead(process, observer, bufferSize, keepBuffering, ConsoleOut.ErrorOut, process.StandardError);
 
-		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool>  keepBuffering) =>
-			RunBufferedRead(observer, bufferSize, keepBuffering, ConsoleOut.Out, process.StandardOutput);
+		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering) =>
+			RunBufferedRead(process, observer, bufferSize, keepBuffering, ConsoleOut.Out, process.StandardOutput);
 
-		private static Task RunBufferedRead(IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, Func<char[], CharactersOut> m, StreamReader reader) =>
-			Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, m, keepBuffering), LongRunning);
+		private static Task RunBufferedRead(Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, Func<char[], CharactersOut> m, StreamReader reader) =>
+			Task.Factory.StartNew(() => BufferedRead(process, reader, observer, bufferSize, m, keepBuffering), LongRunning);
 
-
-
-		private static async Task BufferedRead(StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering)
+		private static async Task BufferedRead(Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering)
 		{
-			while (!r.EndOfStream && keepBuffering())
+			while (keepBuffering() && !r.EndOfStream)
 			{
 				var buffer = new char[b];
-				var read = await r.ReadAsync(buffer, 0, buffer.Length);
+				var read = await r.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
 				if (read > 0)
 					o.OnNext(m(buffer));
 				else
-					await Task.Delay(10);
+					await Task.Delay(10).ConfigureAwait(false);
 			}
 		}
+
+		//attempt at a routine that uses a cancellable ReadAsync..
+		private static async Task BufferedRead2(Process process, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering)
+		{
+			var readZeroAfterExited = 0;
+			while (keepBuffering())
+			{
+				if (readZeroAfterExited > 10) break;
+
+				var ctx  = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+				var buffer = new byte[b];
+				var read = await r.BaseStream.ReadAsync(buffer, 0, buffer.Length, ctx.Token).ConfigureAwait(false);
+				if (read > 0)
+				{
+					var charCount = Encoding.UTF8.GetCharCount(buffer);
+					if (charCount != 256)
+					{
+
+					}
+					var chars = Encoding.UTF8.GetChars(buffer);
+
+					o.OnNext(m(chars));
+				}
+				else if (read == 0 && (readZeroAfterExited > 0 || process.HasExited))
+				{
+					readZeroAfterExited++;
+				}
+				else
+					await Task.Delay(10).ConfigureAwait(false);
+			}
+		}
+
 
 
 	}

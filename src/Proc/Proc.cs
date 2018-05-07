@@ -36,6 +36,10 @@ namespace ProcNet
 			{
 				var process = new ObservableProcess(arguments);
 				if (started != null) process.ProcessStarted += started;
+
+				if (arguments.WaitForStreamReadersTimeout.HasValue)
+					process.WaitForStreamReadersTimeout = arguments.WaitForStreamReadersTimeout.Value;
+
 				Exception seenException = null;
 				var consoleOut = new List<LineOut>();
 				composite.Add(process);

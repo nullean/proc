@@ -85,6 +85,7 @@ namespace ProcNet
 
 				OnExit(observer);
 			};
+
 		}
 
 		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)

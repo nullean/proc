@@ -1,5 +1,6 @@
 ﻿using System;
 using ProcNet;
+using ProcNet.Std;
 
 namespace ScratchPad
 {
@@ -7,12 +8,11 @@ namespace ScratchPad
 	{
 		public static int Main()
 		{
-			var result = Proc.Start(new StartArguments("dotnet", "run", "intermixedoutanderror")
+			var result = Proc.Start(new StartArguments("ipconfig", "/all")
 			{
-				WorkingDirectory = @"c:\Projects\proc\src\Proc.Tests.Binary"
-			});
-
-			Console.WriteLine(result);
+				WorkingDirectory = @"c:\Projects\proc\src\Proc.Tests.Binary",
+				WaitForStreamReadersTimeout = TimeSpan.FromMinutes(4)
+			}, TimeSpan.FromMinutes(1), new ConsoleOutColorWriter());
 
 			return 0;
 		}

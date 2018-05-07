@@ -43,6 +43,12 @@ namespace ProcNet
 
 		public bool SendControlCFirst { get; set; }
 
+		/// <summary>
+		/// How long we should wait for the output stream readers to finish when the process exits before we call
+		/// <see cref="ObservableProcessBase{TConsoleOut}.OnCompleted"/> is called. By default waits for 5 seconds.
+		/// </summary>
+		public TimeSpan? WaitForStreamReadersTimeout { get; set; }
+
 		// ReSharper enable UnusedAutoPropertyAccessor.Global
 
 	}
