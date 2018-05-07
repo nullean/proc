@@ -58,6 +58,12 @@ namespace ProcNet
 			});
 		}
 
+		/// <summary>
+		/// Expert setting, subclasses can return true if a certain condition is met to break out of the async readers on StandardOut and StandardError
+		/// </summary>
+		/// <returns></returns>
+		protected virtual bool ContinueReadingFromProcessReaders() => true;
+
 		private void KickOff(IObserver<CharactersOut> observer)
 		{
 			if (!this.StartProcess(observer)) return;
@@ -70,8 +76,8 @@ namespace ProcNet
 				return;
 			}
 
-			var stdOutSubscription = this.Process.ObserveStandardOutBuffered(observer, BufferSize);
-			var stdErrSubscription = this.Process.ObserveErrorOutBuffered(observer, BufferSize);
+			var stdOutSubscription = this.Process.ObserveStandardOutBuffered(observer, BufferSize, ContinueReadingFromProcessReaders);
+			var stdErrSubscription = this.Process.ObserveErrorOutBuffered(observer, BufferSize, ContinueReadingFromProcessReaders);
 
 			this.Process.Exited += (o, s) =>
 			{
@@ -79,9 +85,6 @@ namespace ProcNet
 
 				OnExit(observer);
 			};
-
-			//todo validate the need for this again
-			Task.WhenAll(stdOutSubscription, stdErrSubscription).ContinueWith(t => OnExit(observer));
 		}
 
 		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)

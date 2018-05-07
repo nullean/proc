@@ -40,21 +40,21 @@ namespace ProcNet.Extensions
 			});
 		}
 
-		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize)
+		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering)
 		{
 			var reader = process.StandardError;
-			return Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, ConsoleOut.ErrorOut), TaskCreationOptions.LongRunning);
+			return Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, ConsoleOut.ErrorOut, keepBuffering), TaskCreationOptions.LongRunning);
 		}
 
-		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize)
+		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool>  keepBuffering)
 		{
 			var reader = process.StandardOutput;
-			return Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, ConsoleOut.Out), TaskCreationOptions.LongRunning);
+			return Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, ConsoleOut.Out, keepBuffering), TaskCreationOptions.LongRunning);
 		}
 
-		private static async Task BufferedRead(StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m)
+		private static async Task BufferedRead(StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering)
 		{
-			while (!r.EndOfStream)
+			while (!r.EndOfStream && keepBuffering())
 			{
 				var buffer = new char[b];
 				var read = await r.ReadAsync(buffer, 0, buffer.Length);
