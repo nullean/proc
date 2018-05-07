@@ -50,8 +50,8 @@ namespace ProcNet.Extensions
 			RunBufferedRead(observer, bufferSize, keepBuffering, ConsoleOut.Out, process.StandardOutput);
 
 		private static Task RunBufferedRead(IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, Func<char[], CharactersOut> m, StreamReader reader) =>
-			Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, m, keepBuffering), CancellationToken.None, DenyChildAttach | LongRunning, TaskScheduler.Default)
-			.Unwrap();
+			Task.Factory.StartNew(() => BufferedRead(reader, observer, bufferSize, m, keepBuffering), LongRunning);
+
 
 
 		private static async Task BufferedRead(StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering)
