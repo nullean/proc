@@ -99,11 +99,10 @@ module Build =
             | ex -> 
                 AssemblyDefinition.ReadAssembly(Path.Combine(folder, "Elasticsearch.Net.dll"));
 
-    let private rewriteNamespace () = 
+    let private rewriteNamespace tfm = 
         trace "Rewriting namespaces"
-        let f = "netstandard1.3"
         let proc = nameOf Project.Proc
-        let folder = sprintf "%s/%s" (Paths.Output proc) f
+        let folder = sprintf "%s/%s" (Paths.Output proc) tfm
         let dll = sprintf "%s/%s.dll" folder proc
 
         use resolver = new CustomResolver(folder)
@@ -161,12 +160,11 @@ module Build =
         let kp = StrongNameKeyPair(key)
         let wp = WriterParameters ( StrongNameKeyPair = kp);
         assembly.Write(wp) |> ignore;
-        trace "Finished rewriting namespaces"
+        tracefn "Finished rewriting namespaces for %s" tfm
         
-    let private ilRepackInternal() =
-        let f = "netstandard1.3"
+    let private ilRepackInternal tfm =
         let proc = nameOf Project.Proc
-        let folder = sprintf "%s/%s" (Paths.Output proc) f
+        let folder = sprintf "%s/%s" (Paths.Output proc) tfm
         let dll = sprintf "%s/%s.dll" folder proc
         let systemReactive = sprintf "%s/System.Reactive.dll" folder
         let systemReactiveLinq = sprintf "%s/System.Reactive.Linq.dll" folder
@@ -183,11 +181,15 @@ module Build =
         let args = [dll; systemReactive; systemReactiveLinq] |> List.append options;
                     
         Tooling.ILRepack.Exec args |> ignore
-        rewriteNamespace() |> ignore
+        rewriteNamespace tfm |> ignore
             
     let ILRepack() = 
         //ilrepack on mono crashes pretty hard on my machine
         match isMono with
         | true -> ignore()
-        | false -> ilRepackInternal()
+        | false -> 
+            ilRepackInternal "netstandard1.3"
+            ilRepackInternal "net46"
+            ignore()
+        
 
