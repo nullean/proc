@@ -289,14 +289,12 @@ namespace ProcNet
 			return (Task.WaitAny(task, Task.Delay(timeSpan)) == 0);
 		}
 
-		private bool _isDisposed;
 		private bool _isDisposing;
 
 		public void Dispose()
 		{
 			this._isDisposing = true;
 			this.Stop();
-			this._isDisposed = true;
 			this._isDisposing = false;
 		}
 	}

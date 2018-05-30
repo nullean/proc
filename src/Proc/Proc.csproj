@@ -3,7 +3,7 @@
   <Import Project="..\..\build\Versioning.targets" />
   <PropertyGroup>
     <AssemblyName>Proc</AssemblyName>
-    <TargetFramework>netstandard1.3</TargetFramework>
+    <TargetFrameworks>netstandard1.3;net46</TargetFrameworks>
     <RootNamespace>ProcNet</RootNamespace>
     <Version>$(ProcCurrentVersion)</Version>
     <InformationalVersion>$(ProcCurrentVersion)</InformationalVersion>

@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Std;
-using static System.Threading.CancellationToken;
 using static System.Threading.Tasks.TaskCreationOptions;
 
 namespace ProcNet.Extensions
