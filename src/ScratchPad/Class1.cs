@@ -9,7 +9,7 @@ namespace ScratchPad
 	{
 		public static int Main()
 		{
-			var tessCase = TestBinary.TestCaseArguments("MoreText");
+			var tessCase = TestBinary.TestCaseArguments("SlowOutput");
 			var process = new ObservableProcess(tessCase);
 			process.SubscribeLines(c =>
 			{

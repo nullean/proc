@@ -54,15 +54,15 @@ namespace ProcNet.Extensions
 			Task.Factory.StartNew(() => BufferedRead(process, reader, observer, bufferSize, m, keepBuffering, token), token, LongRunning, TaskScheduler.Current);
 
 
-		public class ObservableProcessAsyncReadCancelledException : Exception
-		{
-
-		}
-
 		private static async Task BufferedRead(Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering,
 			CancellationToken token)
 		{
-			using(token.Register(()=> throw new ObservableProcessAsyncReadCancelledException(), useSynchronizationContext: false))
+			using(token.Register(() =>
+			{
+				// this breaks out of the ReadAsync below causing it to throw a cancellation exception
+				// on the next line
+				r.DiscardBufferedData();
+			}, useSynchronizationContext: false))
 			while (keepBuffering() && !r.EndOfStream)
 			{
 				var buffer = new char[b];

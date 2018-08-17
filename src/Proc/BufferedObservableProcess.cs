@@ -119,10 +119,6 @@ namespace ProcNet
 				{
 					this._ctx.Cancel();
 				}
-				catch (ObserveOutputExtensions.ObservableProcessAsyncReadCancelledException) { }
-				catch (AggregateException ae) when (ae.InnerException is ObserveOutputExtensions.ObservableProcessAsyncReadCancelledException)
-				{
-				}
 				finally
 				{
 					this._ctx = new CancellationTokenSource();
