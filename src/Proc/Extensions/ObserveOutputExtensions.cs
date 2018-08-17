@@ -43,21 +43,31 @@ namespace ProcNet.Extensions
 			});
 		}
 
-		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering) =>
-			RunBufferedRead(process, observer, bufferSize, keepBuffering, ConsoleOut.ErrorOut, process.StandardError);
+		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, CancellationToken token) =>
+			RunBufferedRead(process, observer, bufferSize, keepBuffering, ConsoleOut.ErrorOut, process.StandardError, token);
 
-		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering) =>
-			RunBufferedRead(process, observer, bufferSize, keepBuffering, ConsoleOut.Out, process.StandardOutput);
+		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, CancellationToken token) =>
+			RunBufferedRead(process, observer, bufferSize, keepBuffering, ConsoleOut.Out, process.StandardOutput, token);
 
-		private static Task RunBufferedRead(Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, Func<char[], CharactersOut> m, StreamReader reader) =>
-			Task.Factory.StartNew(() => BufferedRead(process, reader, observer, bufferSize, m, keepBuffering), LongRunning);
+		private static Task RunBufferedRead(Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, Func<char[], CharactersOut> m,
+			StreamReader reader, CancellationToken token) =>
+			Task.Factory.StartNew(() => BufferedRead(process, reader, observer, bufferSize, m, keepBuffering, token), token, LongRunning, TaskScheduler.Current);
 
-		private static async Task BufferedRead(Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering)
+
+		public class ObservableProcessAsyncReadCancelledException : Exception
 		{
+
+		}
+
+		private static async Task BufferedRead(Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering,
+			CancellationToken token)
+		{
+			using(token.Register(()=> throw new ObservableProcessAsyncReadCancelledException(), useSynchronizationContext: false))
 			while (keepBuffering() && !r.EndOfStream)
 			{
 				var buffer = new char[b];
 				var read = await r.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
+				token.ThrowIfCancellationRequested();
 				if (read > 0)
 					o.OnNext(m(buffer));
 				else

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using ProcNet;
 using ProcNet.Std;
 
@@ -8,11 +9,31 @@ namespace ScratchPad
 	{
 		public static int Main()
 		{
-			var result = Proc.Start(new StartArguments("ipconfig", "/all")
+			var tessCase = TestBinary.TestCaseArguments("SlowOutput");
+			var process = new ObservableProcess(tessCase);
+			process.SubscribeLines(c =>
 			{
-				WorkingDirectory = @"c:\Projects\proc\src\Proc.Tests.Binary",
-				WaitForStreamReadersTimeout = TimeSpan.FromMinutes(4)
-			}, TimeSpan.FromMinutes(1), new ConsoleOutColorWriter());
+				if (c.Line.EndsWith("3"))
+				{
+					process.CancelAsyncReads();
+					Task.Run(async () =>
+					{
+						await Task.Delay(TimeSpan.FromSeconds(4));
+						process.StartAsyncReads();
+					});
+				}
+				Console.WriteLine(c.Line);
+			}, e=> Console.Error.WriteLine(e));
+
+
+			process.WaitForCompletion(TimeSpan.FromSeconds(20));
+			Console.WriteLine("exitCode:" + process.ExitCode);
+
+//			var result = Proc.Start(new StartArguments("ipconfig", "/all")
+//			{
+//				WorkingDirectory = @"c:\Projects\proc\src\Proc.Tests.Binary",
+//				WaitForStreamReadersTimeout = TimeSpan.FromMinutes(4)
+//			}, TimeSpan.FromMinutes(1), new ConsoleOutColorWriter());
 
 			return 0;
 		}
