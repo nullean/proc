@@ -102,9 +102,13 @@ namespace ProcNet
 			return disposable;
 		}
 
-		private object _lock = new object();
+		private readonly object _lock = new object();
 		private bool _reading = false;
 
+		/// <summary>
+		/// Allows you to stop reading the console output after subscribing on the observable while leaving the underlying
+		/// process running.
+		/// </summary>
 		public void CancelAsyncReads()
 		{
 			if (!this._reading) return;
@@ -127,14 +131,18 @@ namespace ProcNet
 			}
 		}
 
+		/// <summary>
+		/// Start reading the console output again after calling <see cref="CancelAsyncReads"/>
+		/// </summary>
 		public void StartAsyncReads()
 		{
 			if (this._reading) return;
 			lock (_lock)
 			{
 				if (this._reading) return;
-                this._stdOutSubscription = this.Process.ObserveStandardOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
-                this._stdErrSubscription = this.Process.ObserveErrorOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
+
+				this._stdOutSubscription = this.Process.ObserveStandardOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
+				this._stdErrSubscription = this.Process.ObserveErrorOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
 				this._reading = true;
 			}
 		}
