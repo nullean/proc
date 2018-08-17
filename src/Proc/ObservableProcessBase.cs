@@ -276,12 +276,7 @@ namespace ProcNet
 			this._completedHandle.Set();
 		}
 
-		protected virtual void OnBeforeSetCompletedHandle()
-		{
-
-		}
-
-
+		protected virtual void OnBeforeSetCompletedHandle() { }
 
 		private bool HardWaitForExit(TimeSpan timeSpan)
 		{

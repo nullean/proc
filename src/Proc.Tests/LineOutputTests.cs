@@ -56,17 +56,16 @@ Wireless LAN adapter Local Area Connection* 4:
 Ethernet adapter Bluetooth Network Connection:
 
    Media State . . . . . . . . . . . : Media disconnected
-   Connection-specific DNS Suffix  . :
-";
+   Connection-specific DNS Suffix  . :";
 
-		private readonly string[] _expectedLines = _expected.Split(Environment.NewLine.ToCharArray());
+		private readonly string[] _expectedLines = _expected.Split(new [] {Environment.NewLine}, StringSplitOptions.None);
 
 		[Fact]
 		public void ProcSeesAllLines()
 		{
 			var args = TestCaseArguments("MoreText");
 			var result = Proc.Start(args, WaitTimeout);
-			result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expected.Count(c=>c=='\n'));
+			result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
 			for (var i = 0; i < result.ConsoleOut.Count; i++)
 				result.ConsoleOut[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}
@@ -79,7 +78,7 @@ Ethernet adapter Bluetooth Network Connection:
 			var seen = new List<LineOut>();
 			o.SubscribeLines(l => seen.Add(l));
 			o.WaitForCompletion(WaitTimeout);
-			seen.Should().NotBeEmpty().And.HaveCount(_expected.Count(c=>c=='\n'));
+			seen.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
 			for (var i = 0; i < seen.Count; i++)
 				seen[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}
@@ -90,15 +89,15 @@ Ethernet adapter Bluetooth Network Connection:
 			var args = TestCaseArguments("MoreText");
 			var result = Proc.Start(args, WaitTimeout, writer);
 			var lines = writer.Lines;
-			lines.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
-			for (var i = 0; i < lines.Length; i++)
+			lines.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length + 1);
+			for (var i = 0; i < lines.Length - 1; i++)
 				lines[i].Should().Be(_expectedLines[i], i.ToString());
 		}
 
 		public class TestConsoleOutWriter : IConsoleOutWriter
 		{
 			private readonly StringBuilder _sb = new StringBuilder();
-			public string[] Lines => _sb.ToString().Split(Environment.NewLine.ToCharArray());
+			public string[] Lines => _sb.ToString().Split(new [] {Environment.NewLine}, StringSplitOptions.None);
 			public string Text => _sb.ToString();
 
 			public void Write(Exception e) => throw e;

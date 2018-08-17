@@ -9,7 +9,7 @@ namespace ScratchPad
 	{
 		public static int Main()
 		{
-			var tessCase = TestBinary.TestCaseArguments("SlowOutput");
+			var tessCase = TestBinary.TestCaseArguments("MoreText");
 			var process = new ObservableProcess(tessCase);
 			process.SubscribeLines(c =>
 			{
@@ -18,7 +18,7 @@ namespace ScratchPad
 					process.CancelAsyncReads();
 					Task.Run(async () =>
 					{
-						await Task.Delay(TimeSpan.FromSeconds(4));
+						await Task.Delay(TimeSpan.FromSeconds(2));
 						process.StartAsyncReads();
 					});
 				}

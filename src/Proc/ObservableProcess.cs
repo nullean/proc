@@ -209,13 +209,19 @@ namespace ProcNet
 		private static void CopyRemainderToGlobalBuffer(ref char[] buffer, int endOfArrayOffset, int newLineOffset)
 		{
 			var remainder = endOfArrayOffset - newLineOffset;
-			if (remainder <= 1) //prevent an array of a single '\0'.
+			if (remainder < 1)
 			{
 				buffer = new char[0];
 				return;
 			}
 			var newBuffer = new char[remainder];
 			Array.Copy(buffer, newLineOffset, newBuffer, 0, remainder);
+			//prevent an array of a single '\0'.
+			if (newBuffer.Length == 1 && newBuffer[0] == '\0')
+			{
+				buffer = new char[0];
+				return;
+			}
 			buffer = newBuffer;
 		}
 
