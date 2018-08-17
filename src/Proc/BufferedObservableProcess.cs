@@ -1,8 +1,11 @@
 using System;
+using System.CodeDom;
 using System.Diagnostics;
 using System.IO;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Extensions;
 using ProcNet.Std;
@@ -26,7 +29,6 @@ namespace ProcNet
 	/// </summary>
 	public class BufferedObservableProcess : ObservableProcessBase<CharactersOut>
 	{
-
 		/// <summary>
 		/// How long we should wait for the output stream readers to finish when the process exits before we call
 		/// <see cref="ObservableProcessBase{TConsoleOut}.OnCompleted"/> is called. By default waits for 5 seconds.
@@ -42,19 +44,24 @@ namespace ProcNet
 
 		public BufferedObservableProcess(StartArguments startArguments) : base(startArguments) { }
 
+		private CancellationTokenSource _ctx = new CancellationTokenSource();
+		private Task _stdOutSubscription;
+		private Task _stdErrSubscription;
+		private IObserver<CharactersOut> _observer;
+
 		protected override IObservable<CharactersOut> CreateConsoleOutObservable()
 		{
 			if (this.NoWrapInThread)
 				return Observable.Create<CharactersOut>(observer =>
 				{
-					KickOff(observer);
-					return Disposable.Empty;
+					var disposable = KickOff(observer);
+					return disposable;
 				});
 
 			return Observable.Create<CharactersOut>(async observer =>
 			{
-				await Task.Run(() => KickOff(observer));
-				return Disposable.Empty;
+				var disposable = await Task.Run(() => KickOff(observer));
+				return disposable;
 			});
 		}
 
@@ -64,28 +71,72 @@ namespace ProcNet
 		/// <returns></returns>
 		protected virtual bool ContinueReadingFromProcessReaders() => true;
 
-		private void KickOff(IObserver<CharactersOut> observer)
+		private IDisposable KickOff(IObserver<CharactersOut> observer)
 		{
-			if (!this.StartProcess(observer)) return;
+			if (!this.StartProcess(observer)) return Disposable.Empty;
 
 			this.Started = true;
 
 			if (this.Process.HasExited)
 			{
 				OnExit(observer);
-				return;
+				return Disposable.Empty;
 			}
 
-			var stdOutSubscription = this.Process.ObserveStandardOutBuffered(observer, BufferSize, ContinueReadingFromProcessReaders);
-			var stdErrSubscription = this.Process.ObserveErrorOutBuffered(observer, BufferSize, ContinueReadingFromProcessReaders);
+			this._observer = observer;
+			this.StartAsyncReads();
 
 			this.Process.Exited += (o, s) =>
 			{
-				WaitForEndOfStreams(observer, stdOutSubscription, stdErrSubscription);
-
+				WaitForEndOfStreams(observer, _stdOutSubscription, _stdErrSubscription);
 				OnExit(observer);
 			};
 
+			var disposable = Disposable.Create(() =>
+			{
+				if (this.Started && !this.StopRequested)
+					_ctx.Cancel();
+				_ctx.Dispose();
+			});
+
+			return disposable;
+		}
+
+		private object _lock = new object();
+		private bool _reading = false;
+
+		public void CancelAsyncReads()
+		{
+			if (!this._reading) return;
+			lock (_lock)
+			{
+				if (!this._reading) return;
+				try
+				{
+					this._ctx.Cancel();
+				}
+				catch (ObserveOutputExtensions.ObservableProcessAsyncReadCancelledException) { }
+				catch (AggregateException ae) when (ae.InnerException is ObserveOutputExtensions.ObservableProcessAsyncReadCancelledException)
+				{
+				}
+				finally
+				{
+					this._ctx = new CancellationTokenSource();
+					this._reading = false;
+				}
+			}
+		}
+
+		public void StartAsyncReads()
+		{
+			if (this._reading) return;
+			lock (_lock)
+			{
+				if (this._reading) return;
+                this._stdOutSubscription = this.Process.ObserveStandardOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
+                this._stdErrSubscription = this.Process.ObserveErrorOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
+				this._reading = true;
+			}
 		}
 
 		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)

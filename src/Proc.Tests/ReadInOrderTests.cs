@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using FluentAssertions;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Serialization;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Host;
+﻿using FluentAssertions;
 using Xunit;
 
 namespace ProcNet.Tests

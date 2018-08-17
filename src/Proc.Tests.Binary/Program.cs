@@ -26,6 +26,7 @@ namespace Proc.Tests.Binary
 
 			if (testCase == nameof(ReadKeyFirst).ToLowerInvariant()) return ReadKeyFirst();
 			if (testCase == nameof(ReadKeyAfter).ToLowerInvariant()) return ReadKeyAfter();
+			if (testCase == nameof(SlowOutput).ToLowerInvariant()) return SlowOutput();
 			if (testCase == nameof(ReadLineFirst).ToLowerInvariant()) return ReadLineFirst();
 			if (testCase == nameof(ReadLineAfter).ToLowerInvariant()) return ReadLineAfter();
 			if (testCase == nameof(MoreText).ToLowerInvariant()) return MoreText();
@@ -91,6 +92,15 @@ namespace Proc.Tests.Binary
 			Console.Read();
 			Console.Write(nameof(ReadKeyAfter));
 			return 21;
+		}
+		private static int SlowOutput()
+		{
+			for (var i = 1; i <= 10; i++)
+			{
+				Console.WriteLine("x:" + i);
+				Thread.Sleep(500);
+			}
+			return 121;
 		}
 		private static int ReadLineFirst()
 		{
