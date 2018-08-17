@@ -149,6 +149,7 @@ namespace ProcNet
 
 		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)
 		{
+			if (!this._reading) return;
 			if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout))
 				OnError(observer, new ObservableProcessException(
 					$"Waited {WaitForStreamReadersTimeout} unsuccesfully for stdout/err subscriptions to complete after the the process exited"
