@@ -42,7 +42,11 @@ namespace ProcNet
 
 		public BufferedObservableProcess(string binary, params string[] arguments) : base(binary, arguments) { }
 
-		public BufferedObservableProcess(StartArguments startArguments) : base(startArguments) { }
+		public BufferedObservableProcess(StartArguments startArguments) : base(startArguments)
+		{
+			if (startArguments.WaitForStreamReadersTimeout.HasValue)
+				this.WaitForStreamReadersTimeout = startArguments.WaitForStreamReadersTimeout.Value;
+		}
 
 		private CancellationTokenSource _ctx = new CancellationTokenSource();
 		private Task _stdOutSubscription;
@@ -94,9 +98,6 @@ namespace ProcNet
 
 			var disposable = Disposable.Create(() =>
 			{
-				if (this.Started && !this.StopRequested)
-					_ctx.Cancel();
-				_ctx.Dispose();
 			});
 
 			return disposable;
@@ -118,6 +119,8 @@ namespace ProcNet
 				try
 				{
 					this._ctx.Cancel();
+					this.Process.StandardOutput.BaseStream.Flush();
+					this.Process.StandardError.BaseStream.Flush();
 				}
 				finally
 				{
@@ -126,6 +129,10 @@ namespace ProcNet
 				}
 			}
 		}
+
+		public bool IsActivelyReading => IsNotCompletedTask(this._stdOutSubscription) && IsNotCompletedTask(this._stdErrSubscription);
+
+		private static bool IsNotCompletedTask(Task t) => t.Status != TaskStatus.Canceled && t.Status != TaskStatus.RanToCompletion && t.Status != TaskStatus.Faulted;
 
 		/// <summary>
 		/// Start reading the console output again after calling <see cref="CancelAsyncReads"/>
@@ -137,6 +144,9 @@ namespace ProcNet
 			{
 				if (this._reading) return;
 
+				this.Process.StandardOutput.BaseStream.Flush();
+				this.Process.StandardError.BaseStream.Flush();
+
 				this._stdOutSubscription = this.Process.ObserveStandardOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
 				this._stdErrSubscription = this.Process.ObserveErrorOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
 				this._reading = true;
@@ -146,10 +156,14 @@ namespace ProcNet
 		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)
 		{
 			if (!this._reading) return;
+			this.SendYesForBatPrompt();
 			if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout))
+			{
+				this.CancelAsyncReads();
 				OnError(observer, new ObservableProcessException(
 					$"Waited {WaitForStreamReadersTimeout} unsuccesfully for stdout/err subscriptions to complete after the the process exited"
 				));
+			}
 		}
 	}
 }

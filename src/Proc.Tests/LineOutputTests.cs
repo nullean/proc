@@ -78,7 +78,7 @@ Ethernet adapter Bluetooth Network Connection:
 			var seen = new List<LineOut>();
 			o.SubscribeLines(l => seen.Add(l));
 			o.WaitForCompletion(WaitTimeout);
-			seen.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
+			seen.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length, string.Join("\r\n", seen.Select(s=>s.Line)));
 			for (var i = 0; i < seen.Count; i++)
 				seen[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}

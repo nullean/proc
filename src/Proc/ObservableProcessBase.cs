@@ -42,6 +42,7 @@ namespace ProcNet
 		protected bool Started { get; set; }
 
 		public string Binary { get; }
+		protected string ProcessName { get; private set; }
 
 		public int? ExitCode { get; private set; }
 
@@ -68,6 +69,7 @@ namespace ProcNet
 				started = this.Process.Start();
 				if (started)
 				{
+					this.ProcessName = this.Process.ProcessName;
 					this.ProcessStarted(this.Process.StandardInput);
 					return true;
 				}
@@ -188,7 +190,14 @@ namespace ProcNet
 				};
 				var result = Proc.Start(args, TimeSpan.FromSeconds(2));
 				_sentControlC = true;
+				this.SendYesForBatPrompt();
 			}
+		}
+
+		protected void SendYesForBatPrompt()
+		{
+			if (!this.StopRequested) return;
+			if (this.ProcessName == "cmd") this.StandardInput.WriteLine("Y");
 		}
 
 		private void UnpackTempOutOfProcessSignalSender(string path)

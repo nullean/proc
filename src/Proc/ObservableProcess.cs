@@ -74,6 +74,7 @@ namespace ProcNet
 		/// <returns>True to end the buffering of char[] to lines of text</returns>
 		protected virtual bool KeepBufferingLines(LineOut l) => true;
 
+
 		/// <summary>
 		/// Create an buffer boundary by returning true. Useful if you want to force a line to be returned.
 		/// </summary>
@@ -82,9 +83,9 @@ namespace ProcNet
 			if (!this.StopRequested) return false;
 			var s = new string(stdOut);
 			//bat files prompt to confirm which blocks the output, we auto confirm here
-			if (this.Process.ProcessName == "cmd" && s.EndsWith(" (Y/N)? "))
+			if (this.ProcessName == "cmd" && s.EndsWith(" (Y/N)? "))
 			{
-				this.StandardInput.WriteLine("Y");
+				SendYesForBatPrompt();
 				return true;
 			}
 			return false;

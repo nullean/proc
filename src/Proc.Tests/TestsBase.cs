@@ -8,8 +8,8 @@ namespace ProcNet.Tests
 	{
 		private static string _procTestBinary = "Proc.Tests.Binary";
 
-		//increase this if you are using the debugger
 		protected static TimeSpan WaitTimeout { get; } = TimeSpan.FromSeconds(5);
+		protected static TimeSpan WaitTimeoutDebug { get; } = TimeSpan.FromMinutes(5);
 
 		private static string GetWorkingDir()
 		{
@@ -28,7 +28,7 @@ namespace ProcNet.Tests
 		protected static StartArguments TestCaseArguments(string testcase) =>
 			new StartArguments("dotnet", GetDll(), testcase)
 			{
-				WorkingDirectory = GetWorkingDir()
+				WorkingDirectory = GetWorkingDir(),
 			};
 
 		private static string GetDll()
