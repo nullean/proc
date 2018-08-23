@@ -45,18 +45,10 @@ namespace ProcNet.Extensions
 		}
 
 		public static Task ObserveErrorOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, CancellationToken token) =>
-			RunBufferedRead(process, observer, bufferSize, keepBuffering, ConsoleOut.ErrorOut, process.StandardError, token);
+			BufferedRead(process, process.StandardError, observer, bufferSize, ConsoleOut.ErrorOut, keepBuffering, token);
 
 		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, CancellationToken token) =>
-			RunBufferedRead(process, observer, bufferSize, keepBuffering, ConsoleOut.Out, process.StandardOutput, token);
-
-		private static Task RunBufferedRead(Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, Func<char[], CharactersOut> m,
-			StreamReader reader, CancellationToken token) =>
-			Task.Run(async () =>
-			{
-				await BufferedRead(process, reader, observer, bufferSize, m, keepBuffering, token);
-			}, token);
-
+			BufferedRead(process, process.StandardOutput, observer, bufferSize, ConsoleOut.Out, keepBuffering, token);
 
 		private static async Task BufferedRead(Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering,
 			CancellationToken token)
@@ -66,16 +58,14 @@ namespace ProcNet.Extensions
 			{
 				var buffer = new char[b];
 				var read = await sr.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(true);
-				if (token.IsCancellationRequested)
-					break;
+				if (token.IsCancellationRequested) break;
 
 				token.ThrowIfCancellationRequested();
 				if (read > 0)
 					o.OnNext(m(buffer));
 				else
 				{
-					if (await sr.EndOfStreamAsync())
-						break;
+					if (await sr.EndOfStreamAsync()) break;
 					await Task.Delay(10, token).ConfigureAwait(false);
 				}
 			}
