@@ -197,7 +197,15 @@ namespace ProcNet
 		protected void SendYesForBatPrompt()
 		{
 			if (!this.StopRequested) return;
-			if (this.ProcessName == "cmd") this.StandardInput.WriteLine("Y");
+			if (this.ProcessName == "cmd")
+			{
+				try
+				{
+					this.StandardInput.WriteLine("Y");
+				}
+				//best effort
+				catch (InvalidOperationException) { }
+			}
 		}
 
 		private void UnpackTempOutOfProcessSignalSender(string path)

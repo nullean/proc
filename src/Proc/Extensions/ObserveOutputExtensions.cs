@@ -61,17 +61,11 @@ namespace ProcNet.Extensions
 		private static async Task BufferedRead(Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering,
 			CancellationToken token)
 		{
-#if DEBUG
-			Thread.CurrentThread.Name = "BufferedRead";
-#endif
 			using (var sr = new CancellableStreamReader(r.BaseStream, Encoding.UTF8, true, b, true, token))
 			while (keepBuffering())
 			{
 				var buffer = new char[b];
 				var read = await sr.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(true);
-#if DEBUG
-				Thread.CurrentThread.Name = "BufferedRead";
-#endif
 				if (token.IsCancellationRequested)
 					break;
 
