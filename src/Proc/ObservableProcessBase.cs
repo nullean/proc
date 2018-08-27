@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Reactive.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Std;
@@ -16,20 +17,12 @@ namespace ProcNet
 	public abstract class ObservableProcessBase<TConsoleOut> : IObservableProcess<TConsoleOut>
 		where TConsoleOut : ConsoleOut
 	{
-		private readonly StartArguments _startArguments;
-		private readonly ManualResetEvent _completedHandle = new ManualResetEvent(false);
-		protected bool NoWrapInThread { get; }
-
 		protected ObservableProcessBase(string binary, params string[] arguments)
 			: this(new StartArguments(binary, arguments)) { }
 
-		public StreamWriter StandardInput => this.Process.StandardInput;
-
 		protected ObservableProcessBase(StartArguments startArguments)
 		{
-			this._startArguments = startArguments;
-			this.NoWrapInThread = startArguments.NoWrapInThread;
-			this.Binary = this._startArguments.Binary;
+			this.StartArguments = startArguments ?? throw new ArgumentNullException(nameof(startArguments));
 			this.Process = CreateProcess();
 			this.CreateObservable();
 		}
@@ -38,15 +31,19 @@ namespace ProcNet
 
 		public IDisposable Subscribe(IConsoleOutWriter writer) => this.OutStream.Subscribe(writer.Write, writer.Write, delegate { });
 
-		protected Process Process { get; }
-		protected bool Started { get; set; }
+		private readonly ManualResetEvent _completedHandle = new ManualResetEvent(false);
 
-		public string Binary { get; }
-		protected string ProcessName { get; private set; }
-
+		public StreamWriter StandardInput => this.Process.StandardInput;
+		public string Binary => this.StartArguments.Binary;
+		public virtual int? ProcessId => this.Process?.Id;
 		public int? ExitCode { get; private set; }
 
-		public virtual int? ProcessId => this.Process?.Id;
+		protected StartArguments StartArguments { get; }
+		protected Process Process { get; }
+		protected bool Started { get; set; }
+		protected string ProcessName { get; private set; }
+
+		protected bool NoWrapInThread => this.StartArguments.NoWrapInThread;
 
 		protected IObservable<TConsoleOut> OutStream { get; private set; } = Observable.Empty<TConsoleOut>();
 
@@ -125,7 +122,7 @@ namespace ProcNet
 
 		private Process CreateProcess()
 		{
-			var s = this._startArguments;
+			var s = this.StartArguments;
 			var args = s.Args;
 			var processStartInfo = new ProcessStartInfo
 			{
@@ -186,7 +183,6 @@ namespace ProcNet
 				var args = new StartArguments(path, this.ProcessId.Value.ToString(CultureInfo.InvariantCulture))
 				{
 					WaitForExit = null,
-					CallingControlC = true
 				};
 				var result = Proc.Start(args, TimeSpan.FromSeconds(2));
 				_sentControlC = true;
@@ -238,13 +234,13 @@ namespace ProcNet
 				this._stopRequested = true;
 				if (this.Process == null) return;
 
-				var wait = this._startArguments.WaitForExit;
+				var wait = this.StartArguments.WaitForExit;
 				try
 				{
 					if (this.Started && wait.HasValue)
 					{
 						bool exitted;
-						if (this._startArguments.SendControlCFirst)
+						if (this.StartArguments.SendControlCFirst)
 						{
 							this.SendControlC();
 							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;

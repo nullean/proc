@@ -74,7 +74,6 @@ namespace ProcNet
 		/// <returns>True to end the buffering of char[] to lines of text</returns>
 		protected virtual bool KeepBufferingLines(LineOut l) => true;
 
-
 		/// <summary>
 		/// Create an buffer boundary by returning true. Useful if you want to force a line to be returned.
 		/// </summary>
