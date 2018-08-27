@@ -86,7 +86,11 @@ namespace ProcNet
 			return false;
 		}
 
-		protected virtual void OnError(IObserver<TConsoleOut> observer, Exception e) => observer.OnError(e);
+		protected virtual void OnError(IObserver<TConsoleOut> observer, Exception e)
+		{
+			this.HardKill();
+			observer.OnError(e);
+		}
 
 		protected virtual void OnCompleted(IObserver<TConsoleOut> observer) => observer.OnCompleted();
 
@@ -282,6 +286,28 @@ namespace ProcNet
 				this.SetCompletedHandle();
 			}
 		}
+
+		protected void HardKill()
+		{
+			try
+			{
+				this.Process?.Kill();
+			}
+			catch (Exception)
+			{
+				// ignored
+			}
+			finally
+			{
+				try
+				{
+					this.Process?.Dispose();
+				}
+				//the underlying call to .Close() can throw an NRE if you dispose too fast after starting
+				catch (NullReferenceException) { }
+			}
+		}
+
 
 		private void SetCompletedHandle()
 		{

@@ -54,6 +54,6 @@ namespace ProcNet
 		}
 
 		private IDisposable CreateProcessExitSubscription(IObservable<EventPattern<object>> processExited, IObserver<LineOut> observer) =>
-			processExited.Subscribe(args => { OnExit(observer); }, e => OnCompleted(observer), ()=> OnCompleted(observer));
+			processExited.Subscribe(args => { OnExit(observer); }, e => OnError(observer, e), ()=> OnCompleted(observer));
 	}
 }
