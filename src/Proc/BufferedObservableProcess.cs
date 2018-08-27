@@ -145,6 +145,8 @@ namespace ProcNet
 			}
 		}
 
+		protected virtual void OnBeforeWaitForEndOfStreamsError(TimeSpan waited) { }
+
 		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)
 		{
 			if (!this._reading) return;
@@ -152,9 +154,8 @@ namespace ProcNet
 			if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout))
 			{
 				this.CancelAsyncReads();
-				OnError(observer, new ObservableProcessException(
-					$"Waited {WaitForStreamReadersTimeout} unsuccesfully for stdout/err subscriptions to complete after the the process exited"
-				));
+				this.OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout);
+				OnError(observer, new WaitForEndOfStreamsTimeoutException(WaitForStreamReadersTimeout));
 			}
 		}
 	}

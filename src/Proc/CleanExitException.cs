@@ -2,6 +2,13 @@ using System;
 
 namespace ProcNet
 {
+
+	public class WaitForEndOfStreamsTimeoutException : ObservableProcessException
+	{
+		public WaitForEndOfStreamsTimeoutException(TimeSpan wait)
+			: base($"Waited {wait} unsuccesfully for stdout/err subscriptions to complete after the the process exited") { }
+	}
+
 	public class ObservableProcessException : CleanExitException
 	{
 		public ObservableProcessException(string message) : base(message) { }
