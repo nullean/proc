@@ -35,7 +35,6 @@ namespace ProcNet
 
 		public StreamWriter StandardInput => this.Process.StandardInput;
 		public string Binary => this.StartArguments.Binary;
-		public virtual int? ProcessId => this.Process?.Id;
 		public int? ExitCode { get; private set; }
 
 		protected StartArguments StartArguments { get; }
@@ -44,6 +43,8 @@ namespace ProcNet
 		protected string ProcessName { get; private set; }
 
 		protected bool NoWrapInThread => this.StartArguments.NoWrapInThread;
+		private int? _processId;
+		public virtual int? ProcessId => _processId;
 
 		protected IObservable<TConsoleOut> OutStream { get; private set; } = Observable.Empty<TConsoleOut>();
 
@@ -66,7 +67,16 @@ namespace ProcNet
 				started = this.Process.Start();
 				if (started)
 				{
-					this.ProcessName = this.Process.ProcessName;
+					try
+					{
+						this._processId = this.Process.Id;
+						this.ProcessName = this.Process.ProcessName;
+					}
+					catch (InvalidOperationException)
+					{
+						// best effort, Process could have finished before even attempting to read .Id and .ProcessName
+						// which can throw if the process exits in between
+					}
 					this.ProcessStarted(this.Process.StandardInput);
 					return true;
 				}
@@ -287,7 +297,7 @@ namespace ProcNet
 			}
 		}
 
-		protected void HardKill()
+		private void HardKill()
 		{
 			try
 			{
@@ -303,8 +313,10 @@ namespace ProcNet
 				{
 					this.Process?.Dispose();
 				}
-				//the underlying call to .Close() can throw an NRE if you dispose too fast after starting
-				catch (NullReferenceException) { }
+				catch (Exception)
+				{
+					// ignored
+				}
 			}
 		}
 
