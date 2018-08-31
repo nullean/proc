@@ -24,8 +24,8 @@ open SemVerHelper
 open Commandline
 
 module Versioning =
-    type private GlobalJson = JsonProvider<"../../global.json">
-    let globalJson = GlobalJson.Load("../../global.json");
+    type private VersionsJson = JsonProvider<"../../versions.json">
+    let globalJson = VersionsJson.Load("../../versions.json");
     let private versionOf project =
         match project with
         | Proc -> globalJson.Versions.Proc.Remove(0, 1)
@@ -34,16 +34,16 @@ module Versioning =
 
     let private assemblyFileVersionOf v = sprintf "%i.%i.%i.0" v.Major v.Minor v.Patch |> parse
 
-    let writeVersionIntoGlobalJson project version =
+    let writeVersionIntoVersionsJson project version =
         //write it with a leading v in the json, needed for the json type provider to keep things strings
         let pre (v: string) = match (v.StartsWith("v")) with | true -> v | _ -> sprintf "v%s" v
         let observableProcessVersion = pre version 
-        let versionsNode = GlobalJson.Versions(observableProcessVersion)
+        let versionsNode = VersionsJson.Versions(observableProcessVersion)
 
-        let newGlobalJson = GlobalJson.Root (GlobalJson.Sdk(globalJson.Sdk.Version), versionsNode)
-        use tw = new StreamWriter("global.json")
-        newGlobalJson.JsonValue.WriteTo(tw, JsonSaveOptions.None)
-        traceImportant <| sprintf "Written (%O) to global.json as the current version will use this version from now on as current in the build" version
+        let newVersionsJson = VersionsJson.Root (versionsNode)
+        use tw = new StreamWriter("versions.json")
+        newVersionsJson.JsonValue.WriteTo(tw, JsonSaveOptions.None)
+        traceImportant <| sprintf "Written (%O) to versions.json as the current version will use this version from now on as current in the build" version
 
     type AssemblyVersionInfo = { Informational: SemVerInfo; Assembly: SemVerInfo; AssemblyFile: SemVerInfo; Project: ProjectInfo }
     let VersionInfo project =
@@ -53,7 +53,7 @@ module Versioning =
             match (Commandline.project) with 
             | p when p = project -> if (isNullOrEmpty bv) then None else Some(parse(bv))
             | _ -> Some(parse(versionOf project))
-        let target =getBuildParam "target"
+        let target = getBuildParam "target"
         let isCurrentProject = project = Commandline.project
         match (target, buildVersion, isCurrentProject) with
         | ("release", None, _) -> failwithf "can not run release because no explicit version number was passed on the command line"
@@ -61,7 +61,7 @@ module Versioning =
             if (currentVersion >= v) then failwithf "tried to create release %O for project %O but current version is already at %O" v project currentVersion
             { Informational= v; Assembly= assemblyVersionOf v; AssemblyFile = assemblyFileVersionOf v; Project = infoOf project }
         | _ ->
-            tracefn "Not running 'release' target or %O is not the release current release target (%O) so using version in global.json (%O) as current" project (Commandline.project) currentVersion
+            tracefn "Not running 'release' target or %O is not the release current release target (%O) so using version in versions.json (%O) as current" project (Commandline.project) currentVersion
             { Informational= currentVersion; Assembly= assemblyVersionOf currentVersion; AssemblyFile = assemblyFileVersionOf currentVersion; Project = infoOf project}
 
     let AllProjectVersions = Project.All |> Seq.map VersionInfo

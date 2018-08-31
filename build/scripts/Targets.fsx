@@ -36,7 +36,7 @@ Target "InternalizeDependencies" Build.ILRepack
 
 Target "ChangeVersion" <| fun _ -> 
     let newVersion = getBuildParam "version"
-    Versioning.writeVersionIntoGlobalJson Commandline.project newVersion
+    Versioning.writeVersionIntoVersionsJson Commandline.project newVersion
 
 Target "Version" <| fun _ -> 
     for v in Versioning.AllProjectVersions do

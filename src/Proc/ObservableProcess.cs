@@ -57,15 +57,6 @@ namespace ProcNet
 
 		private static readonly char[] NewlineChars = Environment.NewLine.ToCharArray();
 
-		private readonly ManualResetEvent _subscribeWaitHandle = new ManualResetEvent(false);
-		private bool _waitLines;
-		protected override WaitHandle[] CompletionHandles()
-		{
-			if (!_waitLines) return base.CompletionHandles();
-			var waitHandles = base.CompletionHandles();
-			return new List<WaitHandle>(waitHandles) { this._subscribeWaitHandle }.ToArray();
-		}
-
 		/// <summary>
 		/// Subclasses can implement this and return true to stop buffering lines.
 		/// This is great for long running processes to only buffer console output until
@@ -92,7 +83,6 @@ namespace ProcNet
 
 		public IDisposable Subscribe(IObserver<LineOut> observer)
 		{
-			this._waitLines = true;
 			var published = this.OutStream.Publish();
 			var boundaries = published
 				.Where(o => o.EndsWithNewLine || o.StartsWithCarriage || this.BufferBoundary(_bufferStdOutRemainder, _bufferStdErrRemainder));
@@ -111,12 +101,12 @@ namespace ProcNet
 					e =>
 					{
 						observer.OnError(e);
-						_subscribeWaitHandle.Set();
+						SetCompletedHandle();
 					},
 					() =>
 					{
 						observer.OnCompleted();
-						_subscribeWaitHandle.Set();
+						SetCompletedHandle();
 					});
 			var connected = published.Connect();
 			return new CompositeDisposable(newlines, connected);

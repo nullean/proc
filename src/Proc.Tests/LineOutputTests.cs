@@ -58,13 +58,15 @@ Ethernet adapter Bluetooth Network Connection:
    Media State . . . . . . . . . . . : Media disconnected
    Connection-specific DNS Suffix  . :";
 
-		private readonly string[] _expectedLines = _expected.Split(new [] {Environment.NewLine}, StringSplitOptions.None);
+		private readonly string[] _expectedLines = _expected.Replace("\r\n", "\n").Split(new [] {"\n"}, StringSplitOptions.None);
 
 		[Fact]
 		public void ProcSeesAllLines()
 		{
 			var args = TestCaseArguments("MoreText");
 			var result = Proc.Start(args, WaitTimeout);
+			result.ExitCode.Should().HaveValue();
+			result.Completed.Should().BeTrue();
 			result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
 			for (var i = 0; i < result.ConsoleOut.Count; i++)
 				result.ConsoleOut[i].Line.Should().Be(_expectedLines[i], i.ToString());
@@ -88,6 +90,8 @@ Ethernet adapter Bluetooth Network Connection:
 			var writer = new TestConsoleOutWriter();
 			var args = TestCaseArguments("MoreText");
 			var result = Proc.Start(args, WaitTimeout, writer);
+			result.ExitCode.Should().HaveValue();
+			result.Completed.Should().BeTrue();
 			var lines = writer.Lines;
 			lines.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length + 1);
 			for (var i = 0; i < lines.Length - 1; i++)
@@ -97,7 +101,7 @@ Ethernet adapter Bluetooth Network Connection:
 		public class TestConsoleOutWriter : IConsoleOutWriter
 		{
 			private readonly StringBuilder _sb = new StringBuilder();
-			public string[] Lines => _sb.ToString().Split(new [] {Environment.NewLine}, StringSplitOptions.None);
+			public string[] Lines => _sb.ToString().Replace("\r\n", "\n").Split(new [] {"\n"}, StringSplitOptions.None);
 			public string Text => _sb.ToString();
 
 			public void Write(Exception e) => throw e;

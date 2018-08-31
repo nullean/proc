@@ -19,5 +19,5 @@
   <ItemGroup>
     <EmbeddedResource Include="Embedded\Proc.ControlC.exe" />
   </ItemGroup>
-  <Import Project="..\..\build\outputpath.props" />
+  <Import Project="..\outputpath.props" />
 </Project>

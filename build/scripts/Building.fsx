@@ -24,7 +24,7 @@ open Versioning
 
 module Build =
 
-    type private GlobalJson = JsonProvider<"../../global.json">
+    type private GlobalJson = JsonProvider<"../../global.json", InferTypesFromValues = false>
     let private pinnedSdkVersion = GlobalJson.GetSample().Sdk.Version
 
     let private compileCore () =

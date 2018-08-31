@@ -139,8 +139,8 @@ namespace ProcNet
 				this.Process.StandardOutput.BaseStream.Flush();
 				this.Process.StandardError.BaseStream.Flush();
 
-				this._stdOutSubscription = this.Process.ObserveStandardOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
-				this._stdErrSubscription = this.Process.ObserveErrorOutBuffered(_observer, BufferSize, ContinueReadingFromProcessReaders, _ctx.Token);
+				this._stdOutSubscription = this.Process.ObserveStandardOutBuffered(_observer, BufferSize, () => this.ContinueReadingFromProcessReaders(), _ctx.Token);
+				this._stdErrSubscription = this.Process.ObserveErrorOutBuffered(_observer, BufferSize, () => this.ContinueReadingFromProcessReaders(), _ctx.Token);
 				this._reading = true;
 			}
 		}

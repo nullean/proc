@@ -8,13 +8,13 @@ ProjectSection(SolutionItems) = preProject
 	..\paket.dependencies = ..\paket.dependencies
 	..\global.json = ..\global.json
 	..\build\Versioning.targets = ..\build\Versioning.targets
-	..\build\outputpath.props = ..\build\outputpath.props
 	..\.editorconfig = ..\.editorconfig
 	..\.gitignore = ..\.gitignore
 	..\build.bat = ..\build.bat
 	..\build.sh = ..\build.sh
 	..\readme.md = ..\readme.md
-	..\nuget.config = ..\nuget.config
+	..\versions.json = ..\versions.json
+	outputpath.props = outputpath.props
 EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.Tests.Binary", "Proc.Tests.Binary\Proc.Tests.Binary.csproj", "{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}"
