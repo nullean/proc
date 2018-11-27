@@ -1,29 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProcNet
 {
-	public class StartArguments
+	/// <summary> Encompasses all the options you can specify to start Proc processes </summary>
+	public class StartArguments : ExecArguments
 	{
-		public string Binary { get; }
-		public IEnumerable<string> Args { get; }
+		public StartArguments(string binary, IEnumerable<string> args) : base(binary, args) { }
 
-		public StartArguments(string binary, IEnumerable<string> args) : this(binary, args?.ToArray()) { }
-
-		public StartArguments(string binary, params string[] args)
-		{
-			this.Binary = binary;
-			this.Args = args;
-		}
+		public StartArguments(string binary, params string[] args) : base(binary, args) { }
 
 		// ReSharper disable UnusedAutoPropertyAccessor.Global
 
-		/// <summary>Provide environment variable scoped to the process being executed</summary>
-		public IDictionary<string, string> Environment { get; set; }
-
-		/// <summary> Set the current working directory</summary>
-		public string WorkingDirectory { get; set; }
 
 		/// <summary>
 		/// By default processes are started in a threadpool thread assuming you start multiple from the same thread.
@@ -33,13 +21,14 @@ namespace ProcNet
 		/// </summary>
 		public bool NoWrapInThread { get; set; }
 
+		/// <summary> Attempts to send control+c (SIGINT) to the process first </summary>
 		public bool SendControlCFirst { get; set; }
 
 		private static readonly TimeSpan DefaultWaitForExit = TimeSpan.FromSeconds(10);
 
 		/// <summary>
 		/// By default when we kill the process we wait for its completion with a timeout of `10s`.
-		/// By specifying `null` you omit the wait for completion alltogether.
+		/// By specifying `null` you omit the wait for completion all together.
 		/// </summary>
 		public TimeSpan? WaitForExit { get; set; } = DefaultWaitForExit;
 

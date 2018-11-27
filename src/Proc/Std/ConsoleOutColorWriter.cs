@@ -1,9 +1,12 @@
 using System;
+using System.Reactive.Concurrency;
 
 namespace ProcNet.Std
 {
 	public class ConsoleOutColorWriter : ConsoleOutWriter
 	{
+		public static ConsoleOutColorWriter Default { get; } = new ConsoleOutColorWriter();
+
 		private readonly object _lock = new object();
 		public override void Write(ConsoleOut consoleOut)
 		{
