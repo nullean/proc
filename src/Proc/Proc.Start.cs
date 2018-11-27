@@ -90,12 +90,13 @@ namespace ProcNet
 				if (consoleOutWriter == null) composite.Add(process.SubscribeLines(consoleOut.Add, e => seenException = e));
 				else
 				{
-					var observable = process.Publish();
-					composite.Add(observable.Select(LineOut.From).Subscribe(consoleOut.Add, e => seenException = e));
-					composite.Add(observable
-						.Subscribe(consoleOutWriter.Write, consoleOutWriter.Write, delegate { })
+					 composite.Add(process.SubscribeLinesAndCharacters(
+						 consoleOut.Add,
+						 e => seenException = e,
+						 consoleOutWriter.Write,
+						 consoleOutWriter.Write
+					 )
 					);
-					composite.Add(observable.Connect());
 				}
 
 				var completed = process.WaitForCompletion(timeout);

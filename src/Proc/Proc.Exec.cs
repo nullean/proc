@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace ProcNet
 {
@@ -7,7 +9,7 @@ namespace ProcNet
 	{
 
 		/// <summary>
-		/// This simply executes <see cref="binary"/> and returns the exit code or throws if the binary failed to start
+		/// This simply executes <paramref cref="binary"/> and returns the exit code or throws if the binary failed to start
 		/// <para>This method shares the same console and does not capture the output</para>
 		/// <para>Use <see cref="Start(string,string[])"/> or overloads if you want to capture output and write to console in realtime</para>
 		/// </summary>
@@ -16,7 +18,7 @@ namespace ProcNet
 		public static int Exec(string binary, params string[] arguments) => Exec(binary, DefaultTimeout, arguments);
 
 		/// <summary>
-		/// This simply executes <see cref="binary"/> and returns the exit code or throws if the binary failed to start
+		/// This simply executes <paramref cref="binary"/> and returns the exit code or throws if the binary failed to start
 		/// <para>This method shares the same console and does not capture the output</para>
 		/// <para>Use <see cref="Start(string,string[])"/> or overloads if you want to capture output and write to console in realtime</para>
 		/// </summary>
@@ -63,11 +65,19 @@ namespace ProcNet
                 if (!process.Start())
 	                throw new Exception($"Failed to start \"{arguments.Binary} {args}\" {(pwd == null ? string.Empty : $"pwd: {pwd}")}");
 
-                process.WaitForExit((int)timeout.TotalMilliseconds);
-                process.WaitForExit();
+                var completedBeforeTimeout = process.WaitForExit((int)timeout.TotalMilliseconds);
+                if (!completedBeforeTimeout)
+	                completedBeforeTimeout = HardWaitForExit(process, TimeSpan.FromSeconds(1));
+                if (!completedBeforeTimeout)
+	                throw new Exception($"Timeout {timeout} occured while running \"{arguments.Binary} {args}\" {(pwd == null ? string.Empty : $"pwd: {pwd}")}");
 				return process.ExitCode;
 			}
 
+		}
+		private static bool HardWaitForExit(Process process, TimeSpan timeSpan)
+		{
+			var task = Task.Run(() => process.WaitForExit());
+			return (Task.WaitAny(task, Task.Delay(timeSpan)) == 0);
 		}
 	}
 }

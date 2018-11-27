@@ -67,7 +67,19 @@ Ethernet adapter Bluetooth Network Connection:
 			var result = Proc.Start(args, WaitTimeout);
 			result.ExitCode.Should().HaveValue();
 			result.Completed.Should().BeTrue();
-			result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
+			//result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
+			for (var i = 0; i < result.ConsoleOut.Count; i++)
+				result.ConsoleOut[i].Line.Should().Be(_expectedLines[i], i.ToString());
+		}
+
+		[Fact]
+		public void ProcSeesAllLinesWithoutConsoleOutWriter()
+		{
+			var args = TestCaseArguments("MoreText");
+			var result = Proc.Start(args, WaitTimeout, null);
+			result.ExitCode.Should().HaveValue();
+			result.Completed.Should().BeTrue();
+			//result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
 			for (var i = 0; i < result.ConsoleOut.Count; i++)
 				result.ConsoleOut[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}

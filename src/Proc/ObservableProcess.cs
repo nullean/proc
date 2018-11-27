@@ -81,9 +81,13 @@ namespace ProcNet
 			return false;
 		}
 
-		public IDisposable Subscribe(IObserver<LineOut> observer)
+		public IDisposable Subscribe(IObserver<LineOut> observerLines) => this.Subscribe(observerLines, null);
+		public IDisposable Subscribe(IObserver<LineOut> observerLines, IObserver<CharactersOut> observerCharacters)
 		{
 			var published = this.OutStream.Publish();
+
+			if (observerCharacters != null) published.Subscribe(observerCharacters);
+
 			var boundaries = published
 				.Where(o => o.EndsWithNewLine || o.StartsWithCarriage || this.BufferBoundary(_bufferStdOutRemainder, _bufferStdErrRemainder));
 			var buffered = published.Buffer(boundaries);
@@ -97,15 +101,15 @@ namespace ProcNet
 				.TakeWhile(KeepBufferingLines)
 				.Where(l=>l!= null)
 				.Subscribe(
-					observer.OnNext,
+					observerLines.OnNext,
 					e =>
 					{
-						observer.OnError(e);
+						observerLines.OnError(e);
 						SetCompletedHandle();
 					},
 					() =>
 					{
-						observer.OnCompleted();
+						observerLines.OnCompleted();
 						SetCompletedHandle();
 					});
 			var connected = published.Connect();
@@ -117,6 +121,16 @@ namespace ProcNet
 
 		public virtual IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError) =>
 			this.Subscribe(Observer.Create(onNext, onError, delegate { }));
+
+		public virtual IDisposable SubscribeLinesAndCharacters(
+			Action<LineOut> onNext, Action<Exception> onError,
+			Action<CharactersOut> onNextCharacters,
+			Action<Exception> onExceptionCharacters
+			) =>
+			this.Subscribe(
+				Observer.Create(onNext, onError, delegate { }),
+				Observer.Create(onNextCharacters, onExceptionCharacters, delegate { })
+			);
 
 		public virtual IDisposable SubscribeLines(Action<LineOut> onNext) =>
 			this.Subscribe(Observer.Create(onNext, delegate { }, delegate { }));
