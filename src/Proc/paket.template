@@ -11,10 +11,10 @@ description
 	Proc - IObservable System.Diagnostic.Process and super handy static Proc class
 authors Proc contributors
 owners Proc contributors
-licenseUrl https://github.com/proc-net/proc/blob/master/license.txt
-projectUrl https://github.com/proc-net/proc
-iconUrl https://raw.githubusercontent.com/proc-net/proc/master/build/nuget-icon.png
-releaseNotes See https://github.com/elastic/proc-net/proc/releases/tag/$version$
+licenseUrl https://github.com/nullean/proc/blob/master/license.txt
+projectUrl https://github.com/nullean/proc
+iconUrl https://raw.githubusercontent.com/nullean/proc/master/build/nuget-icon.png
+releaseNotes See https://github.com/elastic/nullean/proc/releases
 requireLicenseAcceptance false
 copyright 2017 Proc contributors
 tags observable,process

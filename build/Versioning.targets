@@ -12,6 +12,6 @@
     <NoWarn>1591,1572,1571,1573,1587,1570</NoWarn>
     <Prefer32Bit>false</Prefer32Bit>
     <DebugType>portable</DebugType>
-    <RepoUri>https://raw.githubusercontent.com/elastic/elasticsearch-net-abstractions</RepoUri>
+    <RepoUri>https://github.com/nullean/proc</RepoUri>
   </PropertyGroup>
 </Project>
