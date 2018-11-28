@@ -1,27 +1,22 @@
+using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProcNet
 {
-	public class ExecArguments
+	public class ExecArguments : ProcessArgumentsBase
 	{
+		private Func<int, bool> _validExitCodeClassifier;
+		public ExecArguments(string binary, IEnumerable<string> args) : base(binary, args) { }
 
-		public string Binary { get; }
-		public IEnumerable<string> Args { get; }
+		public ExecArguments(string binary, params string[] args) : base(binary, args) { }
 
-		public ExecArguments(string binary, IEnumerable<string> args) : this(binary, args?.ToArray()) { }
+		/// <summary> Force arguments and the current working director NOT to be part of the exception message </summary>
+		public bool OnlyPrintBinaryInExceptionMessage { get; set; }
 
-		public ExecArguments(string binary, params string[] args)
+		public Func<int, bool> ValidExitCodeClassifier
 		{
-			this.Binary = binary;
-			this.Args = args;
+			get => _validExitCodeClassifier ?? (c => c == 0);
+			set => _validExitCodeClassifier = value;
 		}
-
-		/// <summary>Provide environment variable scoped to the process being executed</summary>
-		public IDictionary<string, string> Environment { get; set; }
-
-		/// <summary> Set the current working directory</summary>
-		public string WorkingDirectory { get; set; }
-
 	}
 }

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace ProcNet
 {
 	/// <summary> Encompasses all the options you can specify to start Proc processes </summary>
-	public class StartArguments : ExecArguments
+	public class StartArguments : ProcessArgumentsBase
 	{
 		public StartArguments(string binary, IEnumerable<string> args) : base(binary, args) { }
 

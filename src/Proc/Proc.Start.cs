@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using System.Runtime.ExceptionServices;
 using ProcNet.Std;
 
@@ -9,7 +8,11 @@ namespace ProcNet
 {
 	public static partial class Proc
 	{
-		private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(1);
+		/// <summary>
+		/// Default timeout for all the process started through Proc.Start() or Proc.Exec().
+		/// Defaults to 4 minutes.
+		/// </summary>
+		public static TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromMinutes(4);
 
 		/// <summary> Starts a programs and captures the output while writing to the console at the same time </summary>
 		/// <returns>An object holding a list of console out lines, the exit code and whether the process completed</returns>
