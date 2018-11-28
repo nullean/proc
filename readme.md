@@ -1,15 +1,29 @@
 # Proc
 
-1. Wraps `System.Diagnostics.Process` as an `IObservable` 
+A dependency free `System.Diagnostics.Process` supercharger. 
+
+1. `Proc.Exec()` for the quick one-liners
+2. `Proc.Start()` for the quick one-liners if you want to read the console output as well as print it back out.
+   * Proc.Start() also allows you to script StandardIn and react to messages
+3. Wraps `System.Diagnostics.Process` as an `IObservable` 
     * `ProcessObservable` stream based wrapper
     * `EventBasedObservableProcess` event based wrapper
-2. Exposes a super handy static `Proc.Start` for the quick oneliners
-3. Built in support to send `SIGINT` to any process rather than `SIGKILL` (`Process.Kill()`)
+4. Built in support to send `SIGINT` to any process rather than `SIGKILL` (`Process.Kill()`)
     * NOTE: This only works on Windows for the time being and is not the default
+
+## Proc.Exec
+
+Execute a process and blocks using a default timeout of 4 minutes. This method uses the same console session
+as and as such will print the binaries console output. Throws a `ProcExecException` if the command fails to execute.
+See also `ExecArguments` for more options
+
+```csharp
+Proc.Exec("ipconfig", "/all");
+```
 
 ## Proc.Start
 
-start a process and block using the default timeout of 1 minute
+start a process and block using the default timeout of 4 minutes
 ```csharp
 var result = Proc.Start("ipconfig", "/all");
 ```
@@ -31,13 +45,13 @@ var args = new StartArguments("ipconfig", "/all")
 Proc.Start(args, TimeSpan.FromSeconds(10));
 ```
 
-The static  `Proc.Start` has a timeout of `1 minute` if not specified.
+The static  `Proc.Start` has a timeout of `4 minutes` if not specified.
 
-`result` has the following propeties
+`result` has the following properties
 
 * `Completed` true if the program completed before the timeout
 * `ConsoleOut` a list the console out message as `LineOut` 
-   instances where `Error` on each indicating wheter it was written on `stderr` or not
+   instances where `Error` on each indicating whether it was written on `stderr` or not
 * `ExitCode` 
 
 **NOTE** `ConsoleOut` will always be set regardless of whether an `IConsoleOutWriter` is provided

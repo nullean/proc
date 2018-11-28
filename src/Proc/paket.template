@@ -4,11 +4,11 @@ id Proc
 
 licenseUrl http://opensource.org/licenses/MIT
 title
-	Proc - IObservable System.Diagnostic.Process and super handy static Proc class
+	Proc - The easiest and full featured way to execute Processes in .NET
 summary
-	Proc - IObservable System.Diagnostic.Process and super handy static Proc class
+	Dependency free reactive abstraction around Process, exposes handy static methods for the quick one-liner
 description
-	Proc - IObservable System.Diagnostic.Process and super handy static Proc class
+	Dependency free reactive abstraction around Process, exposes handy static methods for the quick one-liner
 authors Proc contributors
 owners Proc contributors
 licenseUrl https://github.com/nullean/proc/blob/master/license.txt
@@ -22,11 +22,15 @@ files
   ..\..\build\output\proc\netstandard1.3\proc.dll => lib\netstandard1.3
   ..\..\build\output\proc\netstandard1.3\proc.pdb => lib\netstandard1.3
   ..\..\build\output\proc\netstandard1.3\proc.xml => lib\netstandard1.3
+  ..\..\build\output\proc\netstandard2.0\proc.dll => lib\netstandard2.0
+  ..\..\build\output\proc\netstandard2.0\proc.pdb => lib\netstandard2.0
+  ..\..\build\output\proc\netstandard2.0\proc.xml => lib\netstandard2.0
   ..\..\build\output\proc\net46\proc.dll => lib\net46
   ..\..\build\output\proc\net46\proc.pdb => lib\net46
   ..\..\build\output\proc\net46\proc.xml => lib\net46
 dependencies
   framework: net46
+  framework: netstandard20
   framework: netstandard13
     System.Diagnostics.Process 4.3.0 
     System.Threading.Thread 4.3.0 
