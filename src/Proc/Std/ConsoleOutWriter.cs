@@ -6,7 +6,7 @@ namespace ProcNet.Std
 	{
 		public virtual void Write(Exception e)
 		{
-			if (!(e is CleanExitException ee)) throw e;
+			if (!(e is CleanExitExceptionBase ee)) throw e;
 			Console.WriteLine(e.Message);
 			if (!string.IsNullOrEmpty(ee.HelpText))
 			{

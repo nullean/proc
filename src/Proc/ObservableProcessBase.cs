@@ -165,7 +165,7 @@ namespace ProcNet
 		/// Block until the process completes.
 		/// </summary>
 		/// <param name="timeout">The maximum time span we are willing to wait</param>
-		/// <exception cref="CleanExitException">an exception that indicates a problem early in the pipeline</exception>
+		/// <exception cref="CleanExitExceptionBase">an exception that indicates a problem early in the pipeline</exception>
 		public bool WaitForCompletion(TimeSpan timeout)
 		{
 			if (this._completedHandle.WaitOne(timeout)) return true;

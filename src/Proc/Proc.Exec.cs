@@ -65,18 +65,21 @@ namespace ProcNet
 			using (var process = new Process())
 			{
                 process.StartInfo = info;
-                if (!process.Start()) throw new Exception($"Failed to start {printBinary}");
+                if (!process.Start()) throw new ProcExecException($"Failed to start {printBinary}");
 
                 var completedBeforeTimeout = process.WaitForExit((int)timeout.TotalMilliseconds);
                 if (!completedBeforeTimeout)
                 {
 	                HardWaitForExit(process, TimeSpan.FromSeconds(1));
-	                throw new Exception($"Timeout {timeout} occured while running {printBinary}");
+	                throw new ProcExecException($"Timeout {timeout} occured while running {printBinary}");
                 }
 
                 var exitCode = process.ExitCode;
                 if (!arguments.ValidExitCodeClassifier(exitCode))
-	                throw new Exception($"Process exited with '{exitCode}' {printBinary}");
+	                throw new ProcExecException($"Process exited with '{exitCode}' {printBinary}")
+	                {
+		                ExitCode = exitCode
+	                };
 			}
 
 		}

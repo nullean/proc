@@ -28,7 +28,7 @@ namespace ProcNet.Std
 
 		public override void Write(Exception e)
 		{
-			if (!(e is CleanExitException ee)) throw e;
+			if (!(e is CleanExitExceptionBase ee)) throw e;
 			lock (_lock)
 			{
 				Console.ForegroundColor = ConsoleColor.Red;
