@@ -29,7 +29,7 @@ namespace ProcNet
 		/// <param name="started">A callback when the process is ready to receive standard in writes</param>
 		/// <returns>An object holding a list of console out lines, the exit code and whether the process completed</returns>
 		public static ProcessResult Start(string bin, TimeSpan timeout, StartedHandler started, params string[] arguments) =>
-			Start(bin, timeout, ConsoleOutColorWriter.Default, started, arguments);
+			Start(bin, timeout, null, started, arguments);
 
 		/// <summary> Starts a programs and captures the output while writing to the console at the same time </summary>
 		/// <param name="timeout">The maximum runtime of the started program</param>
@@ -60,7 +60,7 @@ namespace ProcNet
 		/// <param name="timeout">The maximum runtime of the started program</param>
 		/// <returns>An object holding a list of console out lines, the exit code and whether the process completed</returns>
 		public static ProcessResult Start(StartArguments arguments, TimeSpan timeout) =>
-			Start(arguments, timeout, ConsoleOutColorWriter.Default);
+			Start(arguments, timeout, null);
 
 		/// <summary> Starts a programs and captures the output while writing to the console at the same time </summary>
 		/// <param name="timeout">The maximum runtime of the started program</param>
