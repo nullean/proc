@@ -82,7 +82,7 @@ The default for doing a shutdown is through `Process.Kill` this is a hard `SIGKI
 The cool thing about `Proc` is that it supports `SIGINT` interoptions as well to allow for processes to be cleanly shutdown. 
 
 ```csharp
-var args = new StartArguments("ipconfig", "/all")
+var args = new StartArguments("elasticsearch.bat")
 {
 	SendControlCFirst = true
 };
@@ -126,7 +126,7 @@ prompts without a new line:
 
 > Continue [Y/N]: <no newline here>
 
-A more concrete example of this is when you call a bat file on windows and send a `SIGINT` signal it will *always* prompt:
+A more concrete example of this is when you call a `bat` file on windows and send a `SIGINT` signal it will *always* prompt:
 
 > Terminate batch job (Y/N)?
 
