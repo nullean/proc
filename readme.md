@@ -3,7 +3,8 @@
 A dependency free `System.Diagnostics.Process` supercharger. 
 
 1. `Proc.Exec()` for the quick one-liners
-2. `Proc.Start()` for the quick one-liners if you want to read the console output as well as print it back out.
+2. `Proc.Start()` for the quick one-liners 
+   * Use if you want to capture the console output as well as print these message in real time.
    * Proc.Start() also allows you to script StandardIn and react to messages
 3. Wraps `System.Diagnostics.Process` as an `IObservable` 
     * `ProcessObservable` stream based wrapper
