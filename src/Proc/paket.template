@@ -28,7 +28,11 @@ files
   ..\..\build\output\proc\net46\proc.dll => lib\net46
   ..\..\build\output\proc\net46\proc.pdb => lib\net46
   ..\..\build\output\proc\net46\proc.xml => lib\net46
+  ..\..\build\output\proc\net45\proc.dll => lib\net45
+  ..\..\build\output\proc\net45\proc.pdb => lib\net45
+  ..\..\build\output\proc\net45\proc.xml => lib\net45
 dependencies
+  framework: net45
   framework: net46
   framework: netstandard20
   framework: netstandard13
