@@ -148,8 +148,16 @@ namespace ProcNet
 				RedirectStandardInput = true
 			};
 			if (s.Environment != null)
+			{
 				foreach (var kv in s.Environment)
+				{
+		#if NET45
+					processStartInfo.EnvironmentVariables[kv.Key] = kv.Value;
+		#else
 					processStartInfo.Environment[kv.Key] = kv.Value;
+		#endif
+				}
+			}
 
 			if (!string.IsNullOrWhiteSpace(s.WorkingDirectory)) processStartInfo.WorkingDirectory = s.WorkingDirectory;
 

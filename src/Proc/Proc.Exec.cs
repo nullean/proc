@@ -46,7 +46,7 @@ namespace ProcNet
 		/// <returns>The exit code of the binary being run</returns>
 		public static void Exec(ExecArguments arguments, TimeSpan timeout)
 		{
-			var args = string.Join(" ", arguments.Args ?? Array.Empty<string>());
+			var args = string.Join(" ", arguments.Args ?? new string[]{});
 			var info = new ProcessStartInfo(arguments.Binary, args)
 			{
 				UseShellExecute = false
@@ -55,8 +55,16 @@ namespace ProcNet
 			var pwd = arguments.WorkingDirectory;
 			if (!string.IsNullOrWhiteSpace(pwd)) info.WorkingDirectory = pwd;
 			if (arguments.Environment != null)
+			{
 				foreach (var kv in arguments.Environment)
+				{
+		#if NET45
+					info.EnvironmentVariables[kv.Key] = kv.Value;
+		#else
 					info.Environment[kv.Key] = kv.Value;
+		#endif
+				}
+			}
 
 			var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
 				? $"\"{arguments.Binary}\""
