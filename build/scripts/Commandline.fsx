@@ -25,8 +25,6 @@ module Commandline =
     let skipTests = args |> List.exists (fun x -> x = "skiptests")
     let private arguments = args |> List.filter (fun x -> x <> "skiptests")
     
-   
-
     let private (|IsAProject|_|) candidate =
         let names = projectsStartingWith candidate 
         match names with 
