@@ -14,7 +14,7 @@ namespace ProcNet
 		/// </summary>
 		/// <exception cref="Exception">If the application fails to start</exception>
 		/// <returns>The exit code of the binary being run</returns>
-		public static void Exec(string binary, params string[] arguments) => Exec(binary, DefaultTimeout, arguments);
+		public static int? Exec(string binary, params string[] arguments) => Exec(binary, DefaultTimeout, arguments);
 
 		/// <summary>
 		/// This simply executes <paramref name="binary"/> and returns the exit code or throws if the binary failed to start
@@ -24,7 +24,7 @@ namespace ProcNet
 		/// <param name="timeout">The maximum runtime of the started program</param>
 		/// <exception cref="Exception">If the application fails to start</exception>
 		/// <returns>The exit code of the binary being run</returns>
-		public static void Exec(string binary, TimeSpan timeout, params string[] arguments) =>
+		public static int? Exec(string binary, TimeSpan timeout, params string[] arguments) =>
 			Exec(new ExecArguments(binary, arguments), timeout);
 
 		/// <summary>
@@ -34,7 +34,7 @@ namespace ProcNet
 		/// </summary>
 		/// <exception cref="Exception">If the application fails to start</exception>
 		/// <returns>The exit code of the binary being run</returns>
-		public static void Exec(ExecArguments arguments) => Exec(arguments, DefaultTimeout);
+		public static int? Exec(ExecArguments arguments) => Exec(arguments, DefaultTimeout);
 
 		/// <summary>
 		/// This simply executes a binary and returns the exit code or throws if the binary failed to start
@@ -44,7 +44,7 @@ namespace ProcNet
 		/// <param name="timeout">The maximum runtime of the started program</param>
 		/// <exception cref="Exception">If the application fails to start</exception>
 		/// <returns>The exit code of the binary being run</returns>
-		public static void Exec(ExecArguments arguments, TimeSpan timeout)
+		public static int? Exec(ExecArguments arguments, TimeSpan timeout)
 		{
 			var args = string.Join(" ", arguments.Args ?? new string[]{});
 			var info = new ProcessStartInfo(arguments.Binary, args)
@@ -88,6 +88,8 @@ namespace ProcNet
 	                {
 		                ExitCode = exitCode
 	                };
+
+                return exitCode;
 			}
 
 		}
