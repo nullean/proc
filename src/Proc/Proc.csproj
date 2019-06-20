@@ -11,6 +11,7 @@
     <FileVersion>$(ProcCurrentAssemblyFileVersion)</FileVersion>
     <CopyLocalLockFileAssemblies Condition="'$(FakeBuild)'=='1'">true</CopyLocalLockFileAssemblies>
     <DefineConstants Condition="'$(TargetFramework)'=='net45'">NET45</DefineConstants>
+    <LangVersion>Latest</LangVersion>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)'!='net45' AND '$(TargetFramework)'!='net46'">
     <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
