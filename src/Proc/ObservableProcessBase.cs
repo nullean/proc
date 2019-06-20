@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Reactive.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Std;
@@ -190,20 +191,43 @@ namespace ProcNet
 		{
 			if (_sentControlC) return;
 			if (!this.ProcessId.HasValue) return;
-			var path = Path.Combine(Path.GetTempPath(), "proc-c.exe");
-			this.UnpackTempOutOfProcessSignalSender(path);
-			lock (_sendLock)
+			var platform = (int)Environment.OSVersion.Platform;
+			var isWindows = platform != 4 && platform != 6 && platform != 128;
+			if (isWindows)
 			{
-				if (_sentControlC) return;
-				if (!this.ProcessId.HasValue) return;
-				var args = new StartArguments(path, this.ProcessId.Value.ToString(CultureInfo.InvariantCulture))
+				var path = Path.Combine(Path.GetTempPath(), "proc-c.exe");
+				this.UnpackTempOutOfProcessSignalSender(path);
+				lock (_sendLock)
 				{
-					WaitForExit = null,
-				};
-				var result = Proc.Start(args, TimeSpan.FromSeconds(2));
-				_sentControlC = true;
-				this.SendYesForBatPrompt();
+					if (_sentControlC) return;
+					if (!this.ProcessId.HasValue) return;
+					var args = new StartArguments(path, this.ProcessId.Value.ToString(CultureInfo.InvariantCulture))
+					{
+						WaitForExit = null,
+					};
+					var result = Proc.Start(args, TimeSpan.FromSeconds(2));
+					_sentControlC = true;
+					this.SendYesForBatPrompt();
+				}
 			}
+			else
+			{
+				lock (_sendLock)
+				{
+					if (_sentControlC) return;
+					if (!this.ProcessId.HasValue) return;
+					// I wish .NET Core had signals baked in but looking at the corefx repos tickets this is not happening any time soon.
+					var args = new StartArguments("kill", "-SIGINT", this.ProcessId.Value.ToString(CultureInfo.InvariantCulture))
+					{
+						WaitForExit = null,
+					};
+					var result = Proc.Start(args, TimeSpan.FromSeconds(2));
+					_sentControlC = true;
+				}
+				
+			}
+			
+			
 		}
 
 		protected void SendYesForBatPrompt()
