@@ -1,7 +1,7 @@
 # Proc
 
 <img src="https://github.com/nullean/proc/raw/master/build/nuget-icon.png" align="right"
-     title="Size Limit logo by Anton Lovchikov" width="220" height="220">
+     title="Logo " width="220" height="220">
 
 A dependency free `System.Diagnostics.Process` supercharger. 
 
