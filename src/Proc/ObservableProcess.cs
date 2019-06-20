@@ -85,6 +85,7 @@ namespace ProcNet
 		public IDisposable Subscribe(IObserver<LineOut> observerLines, IObserver<CharactersOut> observerCharacters)
 		{
 			var published = this.OutStream.Publish();
+			var observeLinesFilter = StartArguments.LineOutFilter ?? (l => true);
 
 			if (observerCharacters != null) published.Subscribe(observerCharacters);
 
@@ -99,7 +100,8 @@ namespace ProcNet
 					return new LineOut(c.First().Error, line.TrimEnd(NewlineChars));
 				})
 				.TakeWhile(KeepBufferingLines)
-				.Where(l=>l!= null)
+				.Where(l => l != null)
+				.Where(observeLinesFilter)
 				.Subscribe(
 					observerLines.OnNext,
 					e =>

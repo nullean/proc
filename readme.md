@@ -1,17 +1,20 @@
 # Proc
 
+<img src="https://github.com/nullean/proc/raw/master/build/nuget-icon.png" align="right"
+     title="Size Limit logo by Anton Lovchikov" width="220" height="220">
+
 A dependency free `System.Diagnostics.Process` supercharger. 
 
 1. `Proc.Exec()` for the quick one-liners
 2. `Proc.Start()` for the quick one-liners 
-   * Use if you want to capture the console output as well as print these message in real time.
-   * Proc.Start() also allows you to script StandardIn and react to messages
+   - Use if you want to capture the console output as well as print these message in real time.
+   - Proc.Start() also allows you to script StandardIn and react to messages
 3. Wraps `System.Diagnostics.Process` as an `IObservable` 
     * `ProcessObservable` stream based wrapper
     * `EventBasedObservableProcess` event based wrapper
-4. Built in support to send `SIGINT` to any process rather than `SIGKILL` (`Process.Kill()`)
-    * NOTE: This only works on Windows for the time being and is not the default
-
+4. Built in support to send `SIGINT` to any process before doing a hard `SIGKILL` (`Process.Kill()`)
+    * Has to be set using `SendControlCFirst = true` on `StartArguments`
+    
 ## Proc.Exec
 
 Execute a process and blocks using a default timeout of 4 minutes. This method uses the same console session

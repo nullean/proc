@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ProcNet.Std;
 
 namespace ProcNet
 {
@@ -23,6 +24,12 @@ namespace ProcNet
 
 		/// <summary> Attempts to send control+c (SIGINT) to the process first </summary>
 		public bool SendControlCFirst { get; set; }
+
+		/// <summary>
+		/// Filter the lines we are interesting in and want to return on <see cref="ProcessResult.ConsoleOut"/>
+		/// Defaults to true meaning all all lines.
+		/// </summary>
+		public Func<LineOut, bool> LineOutFilter { get; set; }
 
 		private static readonly TimeSpan DefaultWaitForExit = TimeSpan.FromSeconds(10);
 

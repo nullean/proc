@@ -188,7 +188,6 @@ module Build =
         match isMono with
         | true -> ignore()
         | false -> 
-            ilRepackInternal "netstandard1.3"
             ilRepackInternal "netstandard2.0"
             ilRepackInternal "net45"
             ilRepackInternal "net46"
