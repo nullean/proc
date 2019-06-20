@@ -26,7 +26,7 @@ namespace ProcNet
 		public bool SendControlCFirst { get; set; }
 
 		/// <summary>
-		/// Filter the lines we are interesting in and want to return on <see cref="ProcessResult.ConsoleOut"/>
+		/// Filter the lines we are interesting in and want to return on <see cref="ProcessCaptureResult.ConsoleOut"/>
 		/// Defaults to true meaning all all lines.
 		/// </summary>
 		public Func<LineOut, bool> LineOutFilter { get; set; }
@@ -42,8 +42,9 @@ namespace ProcNet
 		/// <summary>
 		/// How long we should wait for the output stream readers to finish when the process exits before we call
 		/// <see cref="ObservableProcessBase{TConsoleOut}.OnCompleted"/> is called. By default waits for 5 seconds.
+		/// <para>Set to null to skip waiting,defaults to 10 seconds</para>
 		/// </summary>
-		public TimeSpan WaitForStreamReadersTimeout { get; set; } = DefaultWaitForExit;
+		public TimeSpan? WaitForStreamReadersTimeout { get; set; } = DefaultWaitForExit;
 
 		// ReSharper enable UnusedAutoPropertyAccessor.Global
 

@@ -33,7 +33,7 @@ namespace ProcNet
 		/// How long we should wait for the output stream readers to finish when the process exits before we call
 		/// <see cref="ObservableProcessBase{TConsoleOut}.OnCompleted"/> is called. By default waits for 10 seconds.
 		/// </summary>
-		private TimeSpan WaitForStreamReadersTimeout => this.StartArguments.WaitForStreamReadersTimeout;
+		private TimeSpan? WaitForStreamReadersTimeout => this.StartArguments.WaitForStreamReadersTimeout;
 
 		/// <summary>
 		/// Expert level setting: the maximum number of characters to read per itteration. Defaults to 256
@@ -110,9 +110,9 @@ namespace ProcNet
 				if (!this._reading) return;
 				try
 				{
-					this._ctx.Cancel();
 					this.Process.StandardOutput.BaseStream.Flush();
 					this.Process.StandardError.BaseStream.Flush();
+					this._ctx.Cancel();
 				}
 				finally
 				{
@@ -151,11 +151,15 @@ namespace ProcNet
 		{
 			if (!this._reading) return;
 			this.SendYesForBatPrompt();
-			if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout))
+			if (!WaitForStreamReadersTimeout.HasValue)
 			{
 				this.CancelAsyncReads();
-				this.OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout);
-				OnError(observer, new WaitForEndOfStreamsTimeoutException(WaitForStreamReadersTimeout));
+			}
+			else if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout.Value))
+			{
+				this.CancelAsyncReads();
+				this.OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout.Value);
+				OnError(observer, new WaitForEndOfStreamsTimeoutException(WaitForStreamReadersTimeout.Value));
 			}
 		}
 	}

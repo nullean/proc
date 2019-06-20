@@ -9,7 +9,7 @@ namespace ProcNet
 	public static partial class Proc
 	{
 		/// <summary>
-		/// Start a program and get notified of lines in realtime through <see cref="lineHandler"/> unlike <see cref="Start(string,string[])"/>
+		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
 		/// <param name="lineHandler">
@@ -24,7 +24,7 @@ namespace ProcNet
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
 		/// <param name="timeout">The maximum runtime of the started program</param>
-		/// <param name="lineHandler">
+		/// <param name="lineH"andler">
 		/// An implementation of <see cref="IConsoleLineHandler"/> that receives every line as <see cref="LineOut"/> or the <see cref="Exception"/> that occurs while running
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
@@ -32,7 +32,7 @@ namespace ProcNet
 			StartRedirected(lineHandler, bin, timeout, started: null, arguments: arguments);
 
 		/// <summary>
-		/// Start a program and get notified of lines in realtime through <see cref="lineHandler"/> unlike <see cref="Start(string,string[])"/>
+		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
 		/// <param name="timeout">The maximum runtime of the started program</param>
@@ -45,7 +45,7 @@ namespace ProcNet
 			StartRedirected(new StartArguments(bin, arguments), timeout, started, lineHandler);
 
 		/// <summary>
-		/// Start a program and get notified of lines in realtime through <see cref="lineHandler"/> unlike <see cref="Start(string,string[])"/>
+		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
 		/// <param name="lineHandler">
@@ -56,7 +56,7 @@ namespace ProcNet
 			StartRedirected(arguments, DefaultTimeout, started: null, lineHandler: lineHandler);
 
 		/// <summary>
-		/// Start a program and get notified of lines in realtime through <see cref="lineHandler"/> unlike <see cref="Start(string,string[])"/>
+		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
 		/// <param name="timeout">The maximum runtime of the started program</param>
@@ -68,7 +68,7 @@ namespace ProcNet
 			StartRedirected(arguments, timeout, started: null, lineHandler: lineHandler);
 
 		/// <summary>
-		/// Start a program and get notified of lines in realtime through <see cref="lineHandler"/> unlike <see cref="Start(string,string[])"/>
+		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
 		/// <param name="timeout">The maximum runtime of the started program</param>

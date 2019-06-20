@@ -9,7 +9,7 @@ namespace ProcNet
 	/// This is handy for when calling small utility binaries but if you are calling a binary with very verbose output you might not
 	/// want to capture and store this information.
 	/// <para><see cref="Proc.Start(string,string[])"/> and overloads will return a capturing result like this</para>
-	/// <para><see cref="Proc.StartRedirected"/> and overloads will not return the console out</para>
+	/// <para><see cref="Proc.StartRedirected(ProcNet.Std.IConsoleLineHandler,string,string[])"/> and overloads will not return the console out</para>
 	/// </summary>
 	public class ProcessCaptureResult : ProcessResult
 	{
