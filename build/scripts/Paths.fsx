@@ -15,7 +15,7 @@ open Projects
 
 module Paths =
 
-    let Repository = "https://github.com/proc-net/proc"
+    let Repository = "https://github.com/nullean/proc"
 
     let BuildFolder = "build"
     let BuildOutput = sprintf "%s/output" BuildFolder

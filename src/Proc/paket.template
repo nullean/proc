@@ -14,7 +14,7 @@ owners Proc contributors
 licenseUrl https://github.com/nullean/proc/blob/master/license.txt
 projectUrl https://github.com/nullean/proc
 iconUrl https://raw.githubusercontent.com/nullean/proc/master/build/nuget-icon.png
-releaseNotes See https://github.com/elastic/nullean/proc/releases
+releaseNotes See https://github.com/nullean/proc/releases
 requireLicenseAcceptance false
 copyright 2017 Proc contributors
 tags observable,process
