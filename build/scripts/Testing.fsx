@@ -18,7 +18,7 @@ module Tests =
 
     let private dotnetTest() =
         CreateDir Paths.BuildOutput
-        let command = ["xunit"; "-parallel"; "none"; "-xml"; "../.." @@ Paths.Output("Proc.Tests.xml")] 
+        let command = ["xunit"; "-parallel"; "none"; "-xml"; "../.." @@ Paths.Output("Proc.Tests.xml"); "-c"; "Release"] 
 
         let dotnet = Tooling.BuildTooling("dotnet")
         dotnet.ExecIn "src/Proc.Tests" command |> ignore
