@@ -26,6 +26,15 @@
     <DefineConstants Condition="'$(TargetFramework)'=='net45'">NET45</DefineConstants>
     <LangVersion>Latest</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\nuget-icon.png" CopyToOutputDirectory="PreserveNewest">
+      <Link>nuget-icon.png</Link>
+      <Pack>True</Pack>
+      <PackagePath>nuget-icon.png</PackagePath>
+    </Content>
+  </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework)'!='net45' AND '$(TargetFramework)'!='net46'">
     <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
