@@ -14,9 +14,9 @@ namespace ProcNet.Tests
 
 			public List<ConsoleOut> Out { get; } = new List<ConsoleOut>();
 
-			public void Write(Exception e) => this.SeenException = e;
+			public void Write(Exception e) => SeenException = e;
 
-			public void Write(ConsoleOut consoleOut) => this.Out.Add(consoleOut);
+			public void Write(ConsoleOut consoleOut) => Out.Add(consoleOut);
 		}
 
 		[Fact]

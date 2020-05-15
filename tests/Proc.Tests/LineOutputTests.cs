@@ -118,10 +118,7 @@ Ethernet adapter Bluetooth Network Connection:
 
 			public void Write(Exception e) => throw e;
 
-			public void Write(ConsoleOut consoleOut)
-			{
-				consoleOut.CharsOrString(c=>_sb.Append(new string(c)), s=>_sb.AppendLine(s));
-			}
+			public void Write(ConsoleOut consoleOut) => consoleOut.CharsOrString(c=>_sb.Append(new string(c)), s=>_sb.AppendLine(s));
 		}
 	}
 }

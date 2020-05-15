@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
 using ProcNet;
-using ProcNet.Std;
 
 namespace ScratchPad
 {
@@ -33,9 +30,6 @@ namespace ScratchPad
 
 		public MyProcObservable(StartArguments startArguments) : base(startArguments) { }
 
-		protected override bool BufferBoundary(char[] stdOut, char[] stdErr)
-		{
-			return base.BufferBoundary(stdOut, stdErr);
-		}
+		protected override bool BufferBoundary(char[] stdOut, char[] stdErr) => base.BufferBoundary(stdOut, stdErr);
 	}
 }

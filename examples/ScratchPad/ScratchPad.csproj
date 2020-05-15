@@ -4,6 +4,6 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Proc\Proc.csproj" />
+    <ProjectReference Include="..\..\src\Proc\Proc.csproj" />
   </ItemGroup>
 </Project>

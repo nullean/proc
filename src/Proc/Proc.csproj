@@ -1,15 +1,28 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\build\Versioning.targets" />
   <PropertyGroup>
     <AssemblyName>Proc</AssemblyName>
     <TargetFrameworks>netstandard2.0;net46;net45</TargetFrameworks>
     <RootNamespace>ProcNet</RootNamespace>
+
+
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\build\keys\keypair.snk</AssemblyOriginatorKeyFile>
+
+    <PackageIcon>nuget-icon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/nullean/proc</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/nullean/proc</PackageProjectUrl>
+    <PackageReleaseNotes>https://github.com/nullean/proc/releases</PackageReleaseNotes>
+
+    <Title>Proc - The easiest and full featured way to execute Processes in .NET</Title>
+    <Description>Dependency free reactive abstraction around Process, exposes handy static methods for the quick one-liners</Description>
+
     <Version>$(ProcCurrentVersion)</Version>
     <InformationalVersion>$(ProcCurrentVersion)</InformationalVersion>
     <AssemblyVersion>$(ProcCurrentAssemblyVersion)</AssemblyVersion>
     <FileVersion>$(ProcCurrentAssemblyFileVersion)</FileVersion>
-    <CopyLocalLockFileAssemblies Condition="'$(FakeBuild)'=='1'">true</CopyLocalLockFileAssemblies>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <DefineConstants Condition="'$(TargetFramework)'=='net45'">NET45</DefineConstants>
     <LangVersion>Latest</LangVersion>
   </PropertyGroup>
@@ -18,10 +31,11 @@
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net45" Version="1.0.0" PrivateAssets="true" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net46" Version="1.0.0" PrivateAssets="true" />
     <PackageReference Include="System.Reactive.Linq" Version="4.0.0-preview00001" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Embedded\Proc.ControlC.exe" />
   </ItemGroup>
-  <Import Project="..\outputpath.props" />
 </Project>

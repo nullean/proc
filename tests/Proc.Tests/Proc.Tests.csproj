@@ -3,9 +3,10 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <AssemblyName>Proc.Tests</AssemblyName>
     <RootNamespace>ProcNet.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Proc\Proc.csproj" />
+    <ProjectReference Include="..\..\src\Proc\Proc.csproj" />
   </ItemGroup>
   <ItemGroup>
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />

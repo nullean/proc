@@ -3,13 +3,13 @@ using System.ComponentModel;
 
 namespace Proc.ControlC
 {
-	class Program
+	public static class Program
 	{
-		static int Main(string[] args)
+		public static int Main(string[] args)
 		{
 			Console.WriteLine("Calling" + string.Join(" ", args));
 			if (args.Length == 0) return 1;
-			if (!int.TryParse(args[0], out int processId)) return 2;
+			if (!int.TryParse(args[0], out var processId)) return 2;
 
 			try
 			{

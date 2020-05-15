@@ -22,19 +22,19 @@ namespace ProcNet
 
 		protected ObservableProcessBase(StartArguments startArguments)
 		{
-			this.StartArguments = startArguments ?? throw new ArgumentNullException(nameof(startArguments));
-			this.Process = CreateProcess();
-			this.CreateObservable();
+			StartArguments = startArguments ?? throw new ArgumentNullException(nameof(startArguments));
+			Process = CreateProcess();
+			CreateObservable();
 		}
 
-		public virtual IDisposable Subscribe(IObserver<TConsoleOut> observer) => this.OutStream.Subscribe(observer);
+		public virtual IDisposable Subscribe(IObserver<TConsoleOut> observer) => OutStream.Subscribe(observer);
 
-		public IDisposable Subscribe(IConsoleOutWriter writer) => this.OutStream.Subscribe(writer.Write, writer.Write, delegate { });
+		public IDisposable Subscribe(IConsoleOutWriter writer) => OutStream.Subscribe(writer.Write, writer.Write, delegate { });
 
 		private readonly ManualResetEvent _completedHandle = new ManualResetEvent(false);
 
-		public StreamWriter StandardInput => this.Process.StandardInput;
-		public string Binary => this.StartArguments.Binary;
+		public StreamWriter StandardInput => Process.StandardInput;
+		public string Binary => StartArguments.Binary;
 		public int? ExitCode { get; private set; }
 
 		protected StartArguments StartArguments { get; }
@@ -42,7 +42,7 @@ namespace ProcNet
 		protected bool Started { get; set; }
 		protected string ProcessName { get; private set; }
 
-		protected bool NoWrapInThread => this.StartArguments.NoWrapInThread;
+		protected bool NoWrapInThread => StartArguments.NoWrapInThread;
 		private int? _processId;
 		public virtual int? ProcessId => _processId;
 
@@ -50,9 +50,9 @@ namespace ProcNet
 
 		private void CreateObservable()
 		{
-			if (this.Started) return;
-			this._completedHandle.Reset();
-			this.OutStream = CreateConsoleOutObservable();
+			if (Started) return;
+			_completedHandle.Reset();
+			OutStream = CreateConsoleOutObservable();
 		}
 
 		protected abstract IObservable<TConsoleOut> CreateConsoleOutObservable();
@@ -64,33 +64,33 @@ namespace ProcNet
 			var started = false;
 			try
 			{
-				started = this.Process.Start();
+				started = Process.Start();
 				if (started)
 				{
 					try
 					{
-						this._processId = this.Process.Id;
-						this.ProcessName = this.Process.ProcessName;
+						_processId = Process.Id;
+						ProcessName = Process.ProcessName;
 					}
 					catch (InvalidOperationException)
 					{
 						// best effort, Process could have finished before even attempting to read .Id and .ProcessName
 						// which can throw if the process exits in between
 					}
-					this.ProcessStarted(this.Process.StandardInput);
+					ProcessStarted(Process.StandardInput);
 					return true;
 				}
 
-				OnError(observer, new ObservableProcessException($"Failed to start observable process: {this.Binary}"));
+				OnError(observer, new ObservableProcessException($"Failed to start observable process: {Binary}"));
 				return false;
 			}
 			catch (Exception e)
 			{
-				OnError(observer, new ObservableProcessException($"Exception while starting observable process: {this.Binary}", e.Message, e));
+				OnError(observer, new ObservableProcessException($"Exception while starting observable process: {Binary}", e.Message, e));
 			}
 			finally
 			{
-				if (!started) this.SetCompletedHandle();
+				if (!started) SetCompletedHandle();
 			}
 
 			return false;
@@ -98,7 +98,7 @@ namespace ProcNet
 
 		protected virtual void OnError(IObserver<TConsoleOut> observer, Exception e)
 		{
-			this.HardKill();
+			HardKill();
 			observer.OnError(e);
 		}
 
@@ -108,11 +108,11 @@ namespace ProcNet
 
 		protected void OnExit(IObserver<TConsoleOut> observer)
 		{
-			if (!this.Started) return;
+			if (!Started) return;
 			int? exitCode = null;
 			try
 			{
-				exitCode = this.Process.ExitCode;
+				exitCode = Process.ExitCode;
 			}
 			//ExitCode and HasExited are all trigger happy. We are aware the process may or may not have an exit code.
 			catch (InvalidOperationException) { }
@@ -124,19 +124,19 @@ namespace ProcNet
 
 		private void ExitStop(IObserver<TConsoleOut> observer, int? exitCode)
 		{
-			if (!this.Started) return;
+			if (!Started) return;
 			if (_isDisposing) return;
 			lock (_exitLock)
 			{
-				if (!this.Started) return;
+				if (!Started) return;
 
-				this.Stop(exitCode, observer);
+				Stop(exitCode, observer);
 			}
 		}
 
 		private Process CreateProcess()
 		{
-			var s = this.StartArguments;
+			var s = StartArguments;
 			var args = s.Args;
 			var processStartInfo = new ProcessStartInfo
 			{
@@ -177,9 +177,9 @@ namespace ProcNet
 		/// <exception cref="CleanExitExceptionBase">an exception that indicates a problem early in the pipeline</exception>
 		public bool WaitForCompletion(TimeSpan timeout)
 		{
-			if (this._completedHandle.WaitOne(timeout)) return true;
+			if (_completedHandle.WaitOne(timeout)) return true;
 
-			this.Stop();
+			Stop();
 			return false;
 		}
 
@@ -190,24 +190,24 @@ namespace ProcNet
 		public void SendControlC()
 		{
 			if (_sentControlC) return;
-			if (!this.ProcessId.HasValue) return;
+			if (!ProcessId.HasValue) return;
 			var platform = (int)Environment.OSVersion.Platform;
 			var isWindows = platform != 4 && platform != 6 && platform != 128;
 			if (isWindows)
 			{
 				var path = Path.Combine(Path.GetTempPath(), "proc-c.exe");
-				this.UnpackTempOutOfProcessSignalSender(path);
+				UnpackTempOutOfProcessSignalSender(path);
 				lock (_sendLock)
 				{
 					if (_sentControlC) return;
-					if (!this.ProcessId.HasValue) return;
-					var args = new StartArguments(path, this.ProcessId.Value.ToString(CultureInfo.InvariantCulture))
+					if (!ProcessId.HasValue) return;
+					var args = new StartArguments(path, ProcessId.Value.ToString(CultureInfo.InvariantCulture))
 					{
 						WaitForExit = null,
 					};
 					var result = Proc.Start(args, TimeSpan.FromSeconds(2));
 					_sentControlC = true;
-					this.SendYesForBatPrompt();
+					SendYesForBatPrompt();
 				}
 			}
 			else
@@ -215,9 +215,9 @@ namespace ProcNet
 				lock (_sendLock)
 				{
 					if (_sentControlC) return;
-					if (!this.ProcessId.HasValue) return;
+					if (!ProcessId.HasValue) return;
 					// I wish .NET Core had signals baked in but looking at the corefx repos tickets this is not happening any time soon.
-					var args = new StartArguments("kill", "-SIGINT", this.ProcessId.Value.ToString(CultureInfo.InvariantCulture))
+					var args = new StartArguments("kill", "-SIGINT", ProcessId.Value.ToString(CultureInfo.InvariantCulture))
 					{
 						WaitForExit = null,
 					};
@@ -232,12 +232,12 @@ namespace ProcNet
 
 		protected void SendYesForBatPrompt()
 		{
-			if (!this.StopRequested) return;
-			if (this.ProcessName == "cmd")
+			if (!StopRequested) return;
+			if (ProcessName == "cmd")
 			{
 				try
 				{
-					this.StandardInput.WriteLine("Y");
+					StandardInput.WriteLine("Y");
 				}
 				//best effort
 				catch (InvalidOperationException) { }
@@ -271,34 +271,34 @@ namespace ProcNet
 		{
 			try
 			{
-				this._stopRequested = true;
-				if (this.Process == null) return;
+				_stopRequested = true;
+				if (Process == null) return;
 
-				var wait = this.StartArguments.WaitForExit;
+				var wait = StartArguments.WaitForExit;
 				try
 				{
-					if (this.Started && wait.HasValue)
+					if (Started && wait.HasValue)
 					{
 						bool exitted;
-						if (this.StartArguments.SendControlCFirst)
+						if (StartArguments.SendControlCFirst)
 						{
-							this.SendControlC();
-							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
+							SendControlC();
+							exitted = Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
 							//still attempt to kill to process if control c failed
-							if (!exitted) this.Process?.Kill();
+							if (!exitted) Process?.Kill();
 						}
 						else
 						{
-							this.Process?.Kill();
-							exitted = this.Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
+							Process?.Kill();
+							exitted = Process?.WaitForExit((int) wait.Value.TotalMilliseconds) ?? false;
 						}
 
 						//if we haven't exited do a hard wait for exit by using the overload that does not timeout.
-						if (this.Process != null && !exitted) this.HardWaitForExit(TimeSpan.FromSeconds(10));
+						if (Process != null && !exitted) HardWaitForExit(TimeSpan.FromSeconds(10));
 					}
-					else if (this.Started)
+					else if (Started)
 					{
-						this.Process?.Kill();
+						Process?.Kill();
 					}
 				}
 				//Access denied usually means the program is already terminating.
@@ -307,19 +307,19 @@ namespace ProcNet
 				catch (InvalidOperationException) { }
 				try
 				{
-					this.Process?.Dispose();
+					Process?.Dispose();
 				}
 				//the underlying call to .Close() can throw an NRE if you dispose too fast after starting
 				catch (NullReferenceException) { }
 			}
 			finally
 			{
-				if (this.Started && exitCode.HasValue)
-					this.ExitCode = exitCode.Value;
+				if (Started && exitCode.HasValue)
+					ExitCode = exitCode.Value;
 
-				this.Started = false;
+				Started = false;
 				if (observer != null) OnCompleted(observer);
-				this.SetCompletedHandle();
+				SetCompletedHandle();
 			}
 		}
 
@@ -327,7 +327,7 @@ namespace ProcNet
 		{
 			try
 			{
-				this.Process?.Kill();
+				Process?.Kill();
 			}
 			catch (Exception)
 			{
@@ -337,7 +337,7 @@ namespace ProcNet
 			{
 				try
 				{
-					this.Process?.Dispose();
+					Process?.Dispose();
 				}
 				catch (Exception)
 				{
@@ -349,14 +349,14 @@ namespace ProcNet
 		protected void SetCompletedHandle()
 		{
 			OnBeforeSetCompletedHandle();
-			this._completedHandle.Set();
+			_completedHandle.Set();
 		}
 
 		protected virtual void OnBeforeSetCompletedHandle() { }
 
 		private bool HardWaitForExit(TimeSpan timeSpan)
 		{
-			var task = Task.Run(() => this.Process.WaitForExit());
+			var task = Task.Run(() => Process.WaitForExit());
 			return (Task.WaitAny(task, Task.Delay(timeSpan)) == 0);
 		}
 
@@ -364,9 +364,9 @@ namespace ProcNet
 
 		public void Dispose()
 		{
-			this._isDisposing = true;
-			this.Stop();
-			this._isDisposing = false;
+			_isDisposing = true;
+			Stop();
+			_isDisposing = false;
 		}
 	}
 }

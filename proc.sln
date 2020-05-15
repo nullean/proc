@@ -3,31 +3,25 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.0.0
 MinimumVisualStudioVersion = 10.0.0.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "files", "build", "{73A4EA23-1EB6-428F-8713-A37C09627DB3}"
-ProjectSection(SolutionItems) = preProject
-	..\paket.dependencies = ..\paket.dependencies
-	..\global.json = ..\global.json
-	..\build\Versioning.targets = ..\build\Versioning.targets
-	..\.editorconfig = ..\.editorconfig
-	..\.gitignore = ..\.gitignore
-	..\build.bat = ..\build.bat
-	..\build.sh = ..\build.sh
-	..\readme.md = ..\readme.md
-	..\versions.json = ..\versions.json
-	outputpath.props = outputpath.props
-EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.Tests.Binary", "tests\Proc.Tests.Binary\Proc.Tests.Binary.csproj", "{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.Tests.Binary", "Proc.Tests.Binary\Proc.Tests.Binary.csproj", "{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.Tests", "tests\Proc.Tests\Proc.Tests.csproj", "{BE04AF1C-20CB-497B-9725-518C0C8109ED}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.Tests", "Proc.Tests\Proc.Tests.csproj", "{BE04AF1C-20CB-497B-9725-518C0C8109ED}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc", "src\Proc\Proc.csproj", "{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc", "Proc\Proc.csproj", "{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScratchPad", "examples\ScratchPad\ScratchPad.csproj", "{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScratchPad", "ScratchPad\ScratchPad.csproj", "{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "scripts", "build\scripts\scripts.fsproj", "{D6997ADC-E933-418E-831C-DE1A78897493}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "scripts", "..\build\scripts\scripts.fsproj", "{D6997ADC-E933-418E-831C-DE1A78897493}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.ControlC", "src\Proc.ControlC\Proc.ControlC.csproj", "{733EB608-B8B4-47FE-AB63-A4C7856C4209}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Proc.ControlC", "Proc.ControlC\Proc.ControlC.csproj", "{733EB608-B8B4-47FE-AB63-A4C7856C4209}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9C336E9A-3FC8-4F77-A5B4-1D07E4E54924}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0F267D58-B5AA-4D04-B346-12B283E37B68}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{E89606EC-111B-4151-997C-8006627F1926}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{E4B3DD3A-E36C-46D6-B35E-D824EB9B3C06}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,10 +51,18 @@ Global
 		{733EB608-B8B4-47FE-AB63-A4C7856C4209}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D6997ADC-E933-418E-831C-DE1A78897493}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D6997ADC-E933-418E-831C-DE1A78897493}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6997ADC-E933-418E-831C-DE1A78897493}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6997ADC-E933-418E-831C-DE1A78897493}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{4BE05F38-DAA3-45E3-A2F5-B7E6408941AD} = {9C336E9A-3FC8-4F77-A5B4-1D07E4E54924}
+		{733EB608-B8B4-47FE-AB63-A4C7856C4209} = {9C336E9A-3FC8-4F77-A5B4-1D07E4E54924}
+		{BE04AF1C-20CB-497B-9725-518C0C8109ED} = {0F267D58-B5AA-4D04-B346-12B283E37B68}
+		{D3AFFBE0-8F40-42C7-8A6A-BCCD2EDF4A3E} = {0F267D58-B5AA-4D04-B346-12B283E37B68}
+		{E7AD2461-309A-4BA7-A6EB-5C1F4F882BC2} = {E4B3DD3A-E36C-46D6-B35E-D824EB9B3C06}
+		{D6997ADC-E933-418E-831C-DE1A78897493} = {E89606EC-111B-4151-997C-8006627F1926}
 	EndGlobalSection
 EndGlobal

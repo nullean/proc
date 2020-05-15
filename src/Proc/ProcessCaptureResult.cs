@@ -15,10 +15,8 @@ namespace ProcNet
 	{
 		public IList<LineOut> ConsoleOut { get; }
 
-		public ProcessCaptureResult(bool completed, IList<LineOut> consoleOut, int? exitCode) : base(completed, exitCode)
-		{
-			this.ConsoleOut = consoleOut ?? new List<LineOut>();
-		}
+		public ProcessCaptureResult(bool completed, IList<LineOut> consoleOut, int? exitCode) : base(completed, exitCode) =>
+			ConsoleOut = consoleOut ?? new List<LineOut>();
 
 		public override string ToString()
 		{

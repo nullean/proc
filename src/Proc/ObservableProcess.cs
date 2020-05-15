@@ -11,8 +11,8 @@ using ProcNet.Std;
 
 namespace ProcNet
 {
+#pragma warning disable1574
 	/// <summary>
-#pragma warning disable 1574
 	/// Wraps around <see cref="Process"/> and turns <see cref="Process.StandardOutput"/> and <see cref="Process.StandardError"/>
 	/// into an observable sequence using <see cref="StreamReader.ReadAsync"/>
 	///
@@ -29,8 +29,8 @@ namespace ProcNet
 	///
 	/// This catches all cases where <see cref="EventBasedObservableProcess"/> would fall short to capture all the process output.
 	///
-#pragma warning restore 1574
 	/// </summary>
+#pragma warning restore 1574
 	public class ObservableProcess : BufferedObservableProcess, ISubscribeLines
 	{
 		private char[] _bufferStdOut = { };
@@ -43,17 +43,15 @@ namespace ProcNet
 
 		public ObservableProcess(StartArguments startArguments) : base(startArguments) { }
 
-		protected override IObservable<CharactersOut> CreateConsoleOutObservable()
-		{
-			return Observable.Create<CharactersOut>(observer =>
+		protected override IObservable<CharactersOut> CreateConsoleOutObservable() =>
+			Observable.Create<CharactersOut>(observer =>
 			{
 				base.CreateConsoleOutObservable()
 					.Subscribe(c => OnNextConsoleOut(c, observer), observer.OnError, observer.OnCompleted);
 				return Disposable.Empty;
 			});
-		}
 
-		public override IDisposable Subscribe(IObserver<CharactersOut> observer) => this.OutStream.Subscribe(observer);
+		public override IDisposable Subscribe(IObserver<CharactersOut> observer) => OutStream.Subscribe(observer);
 
 		private static readonly char[] NewlineChars = Environment.NewLine.ToCharArray();
 
@@ -70,10 +68,10 @@ namespace ProcNet
 		/// </summary>
 		protected virtual bool BufferBoundary(char[] stdOut, char[] stdErr)
 		{
-			if (!this.StopRequested) return false;
+			if (!StopRequested) return false;
 			var s = new string(stdOut);
 			//bat files prompt to confirm which blocks the output, we auto confirm here
-			if (this.ProcessName == "cmd" && s.EndsWith(" (Y/N)? "))
+			if (ProcessName == "cmd" && s.EndsWith(" (Y/N)? "))
 			{
 				SendYesForBatPrompt();
 				return true;
@@ -81,16 +79,16 @@ namespace ProcNet
 			return false;
 		}
 
-		public IDisposable Subscribe(IObserver<LineOut> observerLines) => this.Subscribe(observerLines, null);
+		public IDisposable Subscribe(IObserver<LineOut> observerLines) => Subscribe(observerLines, null);
 		public IDisposable Subscribe(IObserver<LineOut> observerLines, IObserver<CharactersOut> observerCharacters)
 		{
-			var published = this.OutStream.Publish();
+			var published = OutStream.Publish();
 			var observeLinesFilter = StartArguments.LineOutFilter ?? (l => true);
 
 			if (observerCharacters != null) published.Subscribe(observerCharacters);
 
 			var boundaries = published
-				.Where(o => o.EndsWithNewLine || o.StartsWithCarriage || this.BufferBoundary(_bufferStdOutRemainder, _bufferStdErrRemainder));
+				.Where(o => o.EndsWithNewLine || o.StartsWithCarriage || BufferBoundary(_bufferStdOutRemainder, _bufferStdErrRemainder));
 			var buffered = published.Buffer(boundaries);
 			var newlines = buffered
 				.Select(c =>
@@ -119,23 +117,23 @@ namespace ProcNet
 		}
 
 		public virtual IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError, Action onCompleted) =>
-			this.Subscribe(Observer.Create(onNext, onError, onCompleted));
+			Subscribe(Observer.Create(onNext, onError, onCompleted));
 
 		public virtual IDisposable SubscribeLines(Action<LineOut> onNext, Action<Exception> onError) =>
-			this.Subscribe(Observer.Create(onNext, onError, delegate { }));
+			Subscribe(Observer.Create(onNext, onError, delegate { }));
 
 		public virtual IDisposable SubscribeLinesAndCharacters(
 			Action<LineOut> onNext, Action<Exception> onError,
 			Action<CharactersOut> onNextCharacters,
 			Action<Exception> onExceptionCharacters
 			) =>
-			this.Subscribe(
+			Subscribe(
 				Observer.Create(onNext, onError, delegate { }),
 				Observer.Create(onNextCharacters, onExceptionCharacters, delegate { })
 			);
 
 		public virtual IDisposable SubscribeLines(Action<LineOut> onNext) =>
-			this.Subscribe(Observer.Create(onNext, delegate { }, delegate { }));
+			Subscribe(Observer.Create(onNext, delegate { }, delegate { }));
 
 		private void OnNextConsoleOut(CharactersOut c, IObserver<CharactersOut> observer)
 		{

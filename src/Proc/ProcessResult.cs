@@ -7,8 +7,8 @@ namespace ProcNet
 
 		public ProcessResult(bool completed, int? exitCode)
 		{
-			this.Completed = completed;
-			this.ExitCode = exitCode;
+			Completed = completed;
+			ExitCode = exitCode;
 		}
 
 		public override string ToString() => $"Process completed: {Completed}, ExitCode: {ExitCode}";

@@ -22,7 +22,7 @@ namespace ProcNet
 
 		protected override IObservable<LineOut> CreateConsoleOutObservable()
 		{
-			if (this.NoWrapInThread)
+			if (NoWrapInThread)
 				return Observable.Create<LineOut>(observer => KickOff(observer));
 
 			return Observable.Create<LineOut>(async observer =>
@@ -34,22 +34,22 @@ namespace ProcNet
 
 		private CompositeDisposable KickOff(IObserver<LineOut> observer)
 		{
-			var stdOut = this.Process.ObserveStandardOutLineByLine();
-			var stdErr = this.Process.ObserveErrorOutLineByLine();
+			var stdOut = Process.ObserveStandardOutLineByLine();
+			var stdErr = Process.ObserveErrorOutLineByLine();
 
 			var stdOutSubscription = stdOut.Subscribe(observer);
 			var stdErrSubscription = stdErr.Subscribe(observer);
 
-			var processExited = Observable.FromEventPattern(h => this.Process.Exited += h, h => this.Process.Exited -= h);
+			var processExited = Observable.FromEventPattern(h => Process.Exited += h, h => Process.Exited -= h);
 			var processError = CreateProcessExitSubscription(processExited, observer);
 
-			if (!this.StartProcess(observer))
+			if (!StartProcess(observer))
 				return new CompositeDisposable(processError);
 
-			this.Process.BeginOutputReadLine();
-			this.Process.BeginErrorReadLine();
+			Process.BeginOutputReadLine();
+			Process.BeginErrorReadLine();
 
-			this.Started = true;
+			Started = true;
 			return new CompositeDisposable(stdOutSubscription, stdErrSubscription, processError);
 		}
 
