@@ -11,7 +11,7 @@ using ProcNet.Std;
 
 namespace ProcNet
 {
-#pragma warning disable1574
+#pragma warning disable 1574
 	/// <summary>
 	/// Wraps around <see cref="Process"/> and turns <see cref="Process.StandardOutput"/> and <see cref="Process.StandardError"/>
 	/// into an observable sequence using <see cref="StreamReader.ReadAsync"/>
