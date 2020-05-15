@@ -5,6 +5,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.0" PrivateAssets="ture"/>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.0" PrivateAssets="all"/>
   </ItemGroup>
 </Project>

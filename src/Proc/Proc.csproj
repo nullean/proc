@@ -41,8 +41,8 @@
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net45" Version="1.0.0" PrivateAssets="true" />
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net46" Version="1.0.0" PrivateAssets="true" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net45" Version="1.0.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net46" Version="1.0.0" PrivateAssets="all" />
     <PackageReference Include="System.Reactive.Linq" Version="4.0.0-preview00001" />
   </ItemGroup>
   <ItemGroup>
