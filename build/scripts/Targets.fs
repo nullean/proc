@@ -41,7 +41,7 @@ let private validatePackages (arguments:ParseResults<Arguments>) =
     let nugetPackage =
         let p = Paths.Output.GetFiles("*.nupkg") |> Seq.sortByDescending(fun f -> f.CreationTimeUtc) |> Seq.head
         Paths.RootRelative p.FullName
-    exec "dotnet" ["nupkg-validator"; nugetPackage; "-v"; currentVersion.Value; "-a"; Paths.ToolName; "-k"; "96c599bbe3e70f5d"] |> ignore
+    exec "dotnet" ["nupkg-validator"; nugetPackage; "-v"; currentVersion.Value; "-a"; Paths.AssemblyName; "-k"; "96c599bbe3e70f5d"] |> ignore
 
 let private generateApiChanges (arguments:ParseResults<Arguments>) =
     let output = Paths.RootRelative <| Paths.Output.FullName
@@ -49,9 +49,9 @@ let private generateApiChanges (arguments:ParseResults<Arguments>) =
     let args =
         [
             "assembly-differ"
-            (sprintf "previous-nuget|%s|%s|netstandard2.0" Paths.ToolName currentVersion);
-            (sprintf "directory|src/%s/bin/Release/netstandard2.0" Paths.ToolName);
-            "--target"; Paths.ToolName; "-f"; "github-comment"; "--output"; output
+            (sprintf "previous-nuget|%s|%s|netstandard2.0" Paths.PackageId currentVersion);
+            (sprintf "directory|src/%s/bin/Release/netstandard2.0" Paths.PackageId);
+            "--target"; Paths.AssemblyName; "-f"; "github-comment"; "--output"; output
         ]
         
     exec "dotnet" args |> ignore
