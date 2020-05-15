@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Proc</AssemblyName>
+    <AssemblyName>proc</AssemblyName>
     <TargetFrameworks>netstandard2.0;net46;net45</TargetFrameworks>
     <RootNamespace>ProcNet</RootNamespace>
 
@@ -15,6 +15,7 @@
     <PackageProjectUrl>https://github.com/nullean/proc</PackageProjectUrl>
     <PackageReleaseNotes>https://github.com/nullean/proc/releases</PackageReleaseNotes>
 
+    <PackageId>Proc</PackageId>
     <Title>Proc - The easiest and full featured way to execute Processes in .NET</Title>
     <Description>Dependency free reactive abstraction around Process, exposes handy static methods for the quick one-liners</Description>
 
