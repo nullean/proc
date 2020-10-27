@@ -1,5 +1,7 @@
 # Proc
 
+<a href="https://www.nuget.org/packages/Proc/"><img src="https://img.shields.io/nuget/v/Proc?color=blue&style=plastic" /></a>
+
 <img src="https://github.com/nullean/proc/raw/master/build/nuget-icon.png" align="right"
      title="Logo " width="220" height="220">
 
