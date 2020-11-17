@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Reactive.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Std;
@@ -152,11 +151,7 @@ namespace ProcNet
 			{
 				foreach (var kv in s.Environment)
 				{
-		#if NET45
-					processStartInfo.EnvironmentVariables[kv.Key] = kv.Value;
-		#else
 					processStartInfo.Environment[kv.Key] = kv.Value;
-		#endif
 				}
 			}
 
@@ -224,10 +219,10 @@ namespace ProcNet
 					var result = Proc.Start(args, TimeSpan.FromSeconds(2));
 					_sentControlC = true;
 				}
-				
+
 			}
-			
-			
+
+
 		}
 
 		protected void SendYesForBatPrompt()

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Reactive.Disposables;
 using System.Runtime.ExceptionServices;
 using ProcNet.Std;
@@ -16,7 +15,7 @@ namespace ProcNet
 		/// An implementation of <see cref="IConsoleLineHandler"/> that receives every line as <see cref="LineOut"/> or the <see cref="Exception"/> that occurs while running
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
-		public static ProcessResult StartRedirected(IConsoleLineHandler lineHandler, string bin, params string[] arguments) => 
+		public static ProcessResult StartRedirected(IConsoleLineHandler lineHandler, string bin, params string[] arguments) =>
 			StartRedirected(lineHandler, bin, DefaultTimeout, arguments);
 
 		/// <summary>
@@ -52,7 +51,7 @@ namespace ProcNet
 		/// An implementation of <see cref="IConsoleLineHandler"/> that receives every line as <see cref="LineOut"/> or the <see cref="Exception"/> that occurs while running
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
-		public static ProcessResult StartRedirected(StartArguments arguments, IConsoleLineHandler lineHandler = null) => 
+		public static ProcessResult StartRedirected(StartArguments arguments, IConsoleLineHandler lineHandler = null) =>
 			StartRedirected(arguments, DefaultTimeout, started: null, lineHandler: lineHandler);
 
 		/// <summary>

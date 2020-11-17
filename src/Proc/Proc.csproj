@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>proc</AssemblyName>
-    <TargetFrameworks>netstandard2.0;net46;net45</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
     <RootNamespace>ProcNet</RootNamespace>
 
 
@@ -24,7 +24,6 @@
     <AssemblyVersion>$(ProcCurrentAssemblyVersion)</AssemblyVersion>
     <FileVersion>$(ProcCurrentAssemblyFileVersion)</FileVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <DefineConstants Condition="'$(TargetFramework)'=='net45'">NET45</DefineConstants>
     <LangVersion>Latest</LangVersion>
   </PropertyGroup>
 
@@ -36,14 +35,9 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)'!='net45' AND '$(TargetFramework)'!='net46'">
-    <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
-    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-  </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net45" Version="1.0.0" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net46" Version="1.0.0" PrivateAssets="all" />
-    <PackageReference Include="System.Reactive.Linq" Version="4.0.0-preview00001" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.0" PrivateAssets="all" />
+    <PackageReference Include="System.Reactive" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Embedded\Proc.ControlC.exe" />
