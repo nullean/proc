@@ -20,6 +20,16 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0F267D58-B5AA-4D04-B346-12B283E37B68}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{E89606EC-111B-4151-997C-8006627F1926}"
+ProjectSection(SolutionItems) = preProject
+	dotnet-tools.json = dotnet-tools.json
+	readme.md = readme.md
+	build.sh = build.sh
+	build.bat = build.bat
+	Directory.Build.props = Directory.Build.props
+	global.json = global.json
+	.editorconfig = .editorconfig
+	.gitignore = .gitignore
+EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{E4B3DD3A-E36C-46D6-B35E-D824EB9B3C06}"
 EndProject
