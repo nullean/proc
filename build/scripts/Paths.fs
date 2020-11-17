@@ -4,13 +4,13 @@ open System
 open System.IO
 
 let ToolName = "proc"
-let Repository = sprintf "elastic/%s" ToolName
+let Repository = sprintf "nullean/%s" ToolName
 let MainTFM = "netstandard2.0"
 let SignKey = "96c599bbe3e70f5d"
 
-let ValidateAssemblyName = false
-let IncludeGitHashInInformational = true
-let GenerateApiChanges = false
+let ValidateAssemblyName = true
+let IncludeGitHashInInformational = false
+let GenerateApiChanges = true
 
 let Root =
     let mutable dir = DirectoryInfo(".")
