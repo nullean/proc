@@ -17,9 +17,15 @@ let private restoreTools = lazy(exec "dotnet" ["tool"; "restore"])
 let private currentVersion =
     lazy(
         restoreTools.Value |> ignore
-        let r = Proc.Start("dotnet", "minver", "-d", "canary")
+        let r = Proc.Start("dotnet", "minver", "-d", "canary", "-m", "0.1")
         let o = r.ConsoleOut |> Seq.find (fun l -> not(l.Line.StartsWith("MinVer:")))
         o.Line
+    )
+let private currentVersionInformational =
+    lazy(
+        match Paths.IncludeGitHashInInformational with
+        | false -> currentVersion.Value
+        | true -> sprintf "%s+%s" currentVersion.Value (Information.getCurrentSHA1( "."))
     )
 
 let private clean (arguments:ParseResults<Arguments>) =
@@ -29,32 +35,56 @@ let private clean (arguments:ParseResults<Arguments>) =
 let private build (arguments:ParseResults<Arguments>) = exec "dotnet" ["build"; "-c"; "Release"] |> ignore
 
 let private pristineCheck (arguments:ParseResults<Arguments>) =
-    match Information.isCleanWorkingCopy "." with
-    | true  -> printfn "The checkout folder does not have pending changes, proceeding"
+    let doCheck = arguments.TryGetResult CleanCheckout |> Option.defaultValue true
+    match doCheck, Information.isCleanWorkingCopy "." with
+    | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
+    | false, _ -> printf "Checkout is dirty but -c was specified to ignore this"
     | _ -> failwithf "The checkout folder has pending changes, aborting"
+
+let private test (arguments:ParseResults<Arguments>) =
+    let junitOutput = Path.Combine(Paths.Output.FullName, "junit-{assembly}-{framework}-test-results.xml")
+    let loggerPathArgs = sprintf "LogFilePath=%s" junitOutput
+    let loggerArg = sprintf "--logger:\"junit;%s\"" loggerPathArgs
+    exec "dotnet" ["test"; "-c"; "RELEASE"; loggerArg; "--logger:pretty"] |> ignore
 
 let private generatePackages (arguments:ParseResults<Arguments>) =
     let output = Paths.RootRelative Paths.Output.FullName
     exec "dotnet" ["pack"; "-c"; "Release"; "-o"; output] |> ignore
     
 let private validatePackages (arguments:ParseResults<Arguments>) =
-    let nugetPackage =
-        let p = Paths.Output.GetFiles("*.nupkg") |> Seq.sortByDescending(fun f -> f.CreationTimeUtc) |> Seq.head
-        Paths.RootRelative p.FullName
-    exec "dotnet" ["nupkg-validator"; nugetPackage; "-v"; currentVersion.Value; "-a"; Paths.AssemblyName; "-k"; "96c599bbe3e70f5d"] |> ignore
+    let output = Paths.RootRelative <| Paths.Output.FullName
+    let nugetPackages =
+        Paths.Output.GetFiles("*.nupkg") |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
+        |> Seq.map (fun p -> Paths.RootRelative p.FullName)
+        
+    let jenkinsOnWindowsArgs =
+        if Fake.Core.Environment.hasEnvironVar "JENKINS_URL" && Fake.Core.Environment.isWindows then ["-r"; "true"] else []
+    
+    let args = ["-v"; currentVersionInformational.Value; "-k"; Paths.SignKey; "-t"; output] @ jenkinsOnWindowsArgs
+    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["nupkg-validator"; p] @ args) |> ignore)
+    
 
 let private generateApiChanges (arguments:ParseResults<Arguments>) =
     let output = Paths.RootRelative <| Paths.Output.FullName
     let currentVersion = currentVersion.Value
-    let args =
-        [
-            "assembly-differ"
-            (sprintf "previous-nuget|%s|%s|netstandard2.0" Paths.PackageId currentVersion);
-            (sprintf "directory|src/%s/bin/Release/netstandard2.0" Paths.PackageId);
-            "--target"; Paths.AssemblyName; "-f"; "github-comment"; "--output"; output
-        ]
+    let nugetPackages =
+        Paths.Output.GetFiles("*.nupkg") |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
+        |> Seq.map (fun p -> Path.GetFileNameWithoutExtension(Paths.RootRelative p.FullName).Replace("." + currentVersion, ""))
+    nugetPackages
+    |> Seq.iter(fun p ->
+        let outputFile =
+            let f = sprintf "breaking-changes-%s.md" p
+            Path.Combine(output, f)
+        let args =
+            [
+                "assembly-differ"
+                (sprintf "previous-nuget|%s|%s|%s" p currentVersion Paths.MainTFM);
+                (sprintf "directory|src/%s/bin/Release/%s" p Paths.MainTFM);
+                "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
+            ]
         
-    exec "dotnet" args |> ignore
+        exec "dotnet" args |> ignore
+    )
     
 let private generateReleaseNotes (arguments:ParseResults<Arguments>) =
     let currentVersion = currentVersion.Value
@@ -82,14 +112,18 @@ let private createReleaseOnGithub (arguments:ParseResults<Arguments>) =
         | None -> []
         | Some token -> ["--token"; token;]
     let releaseNotes = Paths.RootRelative <| Path.Combine(Paths.Output.FullName, sprintf "release-notes-%s.md" currentVersion)
-    let breakingChanges = Paths.RootRelative <| Path.Combine(Paths.Output.FullName, "github-breaking-changes-comments.md")
+    let breakingChanges =
+        let breakingChangesDocs = Paths.Output.GetFiles("breaking-changes-*.md")
+        breakingChangesDocs 
+        |> Seq.map(fun f -> ["--body"; Paths.RootRelative f.FullName])
+        |> Seq.collect id
+        |> Seq.toList
     let releaseArgs =
         (Paths.Repository.Split("/") |> Seq.toList)
         @ ["create-release"
            "--version"; currentVersion
            "--body"; releaseNotes; 
-           "--body"; breakingChanges; 
-        ] @ tokenArgs
+        ] @ breakingChanges @ tokenArgs
         
     exec "dotnet" (["release-notes"] @ releaseArgs) |> ignore
     
@@ -113,13 +147,15 @@ let Setup (parsed:ParseResults<Arguments>) (subCommand:Arguments) =
     step Clean.Name clean
     cmd Build.Name None (Some [Clean.Name]) <| fun _ -> build parsed
     
+    cmd Test.Name (Some [Build.Name;]) None <| fun _ -> test parsed
+    
     step PristineCheck.Name pristineCheck
     step GeneratePackages.Name generatePackages 
     step ValidatePackages.Name validatePackages 
     step GenerateReleaseNotes.Name generateReleaseNotes
     step GenerateApiChanges.Name generateApiChanges
     cmd Release.Name
-        (Some [PristineCheck.Name; Build.Name;])
+        (Some [PristineCheck.Name; Test.Name;])
         (Some [GeneratePackages.Name; ValidatePackages.Name; GenerateReleaseNotes.Name; GenerateApiChanges.Name])
         <| fun _ -> release parsed
         

@@ -7,7 +7,7 @@ namespace ProcNet.Tests
 {
 	public class ControlCTestCases : TestsBase
 	{
-		[Fact] public void ControlC()
+		[SkipOnNonWindowsFact] public void ControlC()
 		{
 			var args = TestCaseArguments(nameof(ControlC));
 			args.SendControlCFirst = true;
@@ -24,7 +24,7 @@ namespace ProcNet.Tests
 			seen[0].Should().Be("Written before control+c");
 			seen[1].Should().Be("Written after control+c");
 		}
-		[Fact] public void ControlCSend()
+		[SkipOnNonWindowsFact] public void ControlCSend()
 		{
 			var args = TestCaseArguments(nameof(ControlC));
 			args.SendControlCFirst = true;
@@ -42,8 +42,8 @@ namespace ProcNet.Tests
 			seen[0].Should().Be("Written before control+c");
 			seen[1].Should().Be("Written after control+c");
 		}
-		[Fact]
-		public void ControlCNoWait()
+
+		[SkipOnNonWindowsFact] public void ControlCNoWait()
 		{
 			var args = TestCaseArguments(nameof(ControlCNoWait));
 			args.SendControlCFirst = true;

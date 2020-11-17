@@ -38,7 +38,7 @@ namespace ProcNet.Tests
 			var writer = new TestConsoleOutWriter();
 			Action call = () => Proc.Start("this-does-not-exist.exe");
 			var shouldThrow = call.ShouldThrow<ObservableProcessException>();
-			shouldThrow.And.InnerException.Message.Should().Contain("The system cannot");
+			shouldThrow.And.InnerException.Message.Should().NotBeEmpty();
 			shouldThrow.And.Message.Should().Contain("this-does-not-exist.exe");
 		}
 	}
