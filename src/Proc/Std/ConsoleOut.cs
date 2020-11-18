@@ -11,7 +11,7 @@ namespace ProcNet.Std
 			switch (this)
 			{
 				case CharactersOut c:
-                    if (this.Error) errorCharacters(c.Characters);
+                    if (Error) errorCharacters(c.Characters);
                     else outChararchters(c.Characters);
 					break;
 				default:

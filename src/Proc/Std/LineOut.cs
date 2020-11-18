@@ -18,8 +18,8 @@ namespace ProcNet.Std
 
 		internal LineOut(bool error, string line)
 		{
-			this.Error = error;
-			this.Line = line;
+			Error = error;
+			Line = line;
 		}
 
 		/// <summary>

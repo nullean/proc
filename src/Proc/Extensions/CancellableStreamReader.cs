@@ -14,21 +14,21 @@ namespace ProcNet.Extensions
 		public CancellableStreamReader(Stream stream, Encoding encoding, bool detectEncodingFromByteOrderMarks, int bufferSize, bool leaveOpen, CancellationToken token)
 			: base(stream, encoding, detectEncodingFromByteOrderMarks, bufferSize, leaveOpen)
 		{
-			this._stream = stream;
-			this._encoding = encoding;
-			this._decoder = encoding.GetDecoder();
+			_stream = stream;
+			_encoding = encoding;
+			_decoder = encoding.GetDecoder();
 			if (bufferSize < MinBufferSize) bufferSize = MinBufferSize;
-			this._byteBuffer = new byte[bufferSize];
-			this._maxCharsPerBuffer = encoding.GetMaxCharCount(bufferSize);
-			this._charBuffer = new char[_maxCharsPerBuffer];
-			this._byteLen = 0;
-			this._bytePos = 0;
-			this._detectEncoding = detectEncodingFromByteOrderMarks;
-			this._token = token;
-			this._preamble = encoding.GetPreamble();
-			this._checkPreamble = (_preamble.Length > 0);
-			this._isBlocked = false;
-			this._closable = !leaveOpen;
+			_byteBuffer = new byte[bufferSize];
+			_maxCharsPerBuffer = encoding.GetMaxCharCount(bufferSize);
+			_charBuffer = new char[_maxCharsPerBuffer];
+			_byteLen = 0;
+			_bytePos = 0;
+			_detectEncoding = detectEncodingFromByteOrderMarks;
+			_token = token;
+			_preamble = encoding.GetPreamble();
+			_checkPreamble = (_preamble.Length > 0);
+			_isBlocked = false;
+			_closable = !leaveOpen;
 		}
 		private const int MinBufferSize = 128;
 

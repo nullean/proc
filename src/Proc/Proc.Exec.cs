@@ -58,11 +58,7 @@ namespace ProcNet
 			{
 				foreach (var kv in arguments.Environment)
 				{
-		#if NET45
-					info.EnvironmentVariables[kv.Key] = kv.Value;
-		#else
 					info.Environment[kv.Key] = kv.Value;
-		#endif
 				}
 			}
 

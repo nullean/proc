@@ -33,7 +33,7 @@ namespace ProcNet
 		/// How long we should wait for the output stream readers to finish when the process exits before we call
 		/// <see cref="ObservableProcessBase{TConsoleOut}.OnCompleted"/> is called. By default waits for 10 seconds.
 		/// </summary>
-		private TimeSpan? WaitForStreamReadersTimeout => this.StartArguments.WaitForStreamReadersTimeout;
+		private TimeSpan? WaitForStreamReadersTimeout => StartArguments.WaitForStreamReadersTimeout;
 
 		/// <summary>
 		/// Expert level setting: the maximum number of characters to read per itteration. Defaults to 256
@@ -47,7 +47,7 @@ namespace ProcNet
 
 		protected override IObservable<CharactersOut> CreateConsoleOutObservable()
 		{
-			if (this.NoWrapInThread)
+			if (NoWrapInThread)
 				return Observable.Create<CharactersOut>(observer =>
 				{
 					var disposable = KickOff(observer);
@@ -69,20 +69,20 @@ namespace ProcNet
 
 		private IDisposable KickOff(IObserver<CharactersOut> observer)
 		{
-			if (!this.StartProcess(observer)) return Disposable.Empty;
+			if (!StartProcess(observer)) return Disposable.Empty;
 
-			this.Started = true;
+			Started = true;
 
-			if (this.Process.HasExited)
+			if (Process.HasExited)
 			{
 				OnExit(observer);
 				return Disposable.Empty;
 			}
 
-			this._observer = observer;
-			this.StartAsyncReads();
+			_observer = observer;
+			StartAsyncReads();
 
-			this.Process.Exited += (o, s) =>
+			Process.Exited += (o, s) =>
 			{
 				WaitForEndOfStreams(observer, _stdOutSubscription, _stdErrSubscription);
 				OnExit(observer);
@@ -104,25 +104,25 @@ namespace ProcNet
 		/// </summary>
 		public void CancelAsyncReads()
 		{
-			if (!this._reading) return;
+			if (!_reading) return;
 			lock (_lock)
 			{
-				if (!this._reading) return;
+				if (!_reading) return;
 				try
 				{
-					this.Process.StandardOutput.BaseStream.Flush();
-					this.Process.StandardError.BaseStream.Flush();
-					this._ctx.Cancel();
+					Process.StandardOutput.BaseStream.Flush();
+					Process.StandardError.BaseStream.Flush();
+					_ctx.Cancel();
 				}
 				finally
 				{
-					this._ctx = new CancellationTokenSource();
-					this._reading = false;
+					_ctx = new CancellationTokenSource();
+					_reading = false;
 				}
 			}
 		}
 
-		public bool IsActivelyReading => IsNotCompletedTask(this._stdOutSubscription) && IsNotCompletedTask(this._stdErrSubscription);
+		public bool IsActivelyReading => IsNotCompletedTask(_stdOutSubscription) && IsNotCompletedTask(_stdErrSubscription);
 
 		private static bool IsNotCompletedTask(Task t) => t.Status != TaskStatus.Canceled && t.Status != TaskStatus.RanToCompletion && t.Status != TaskStatus.Faulted;
 
@@ -131,17 +131,17 @@ namespace ProcNet
 		/// </summary>
 		public void StartAsyncReads()
 		{
-			if (this._reading) return;
+			if (_reading) return;
 			lock (_lock)
 			{
-				if (this._reading) return;
+				if (_reading) return;
 
-				this.Process.StandardOutput.BaseStream.Flush();
-				this.Process.StandardError.BaseStream.Flush();
+				Process.StandardOutput.BaseStream.Flush();
+				Process.StandardError.BaseStream.Flush();
 
-				this._stdOutSubscription = this.Process.ObserveStandardOutBuffered(_observer, BufferSize, () => this.ContinueReadingFromProcessReaders(), _ctx.Token);
-				this._stdErrSubscription = this.Process.ObserveErrorOutBuffered(_observer, BufferSize, () => this.ContinueReadingFromProcessReaders(), _ctx.Token);
-				this._reading = true;
+				_stdOutSubscription = Process.ObserveStandardOutBuffered(_observer, BufferSize, () => ContinueReadingFromProcessReaders(), _ctx.Token);
+				_stdErrSubscription = Process.ObserveErrorOutBuffered(_observer, BufferSize, () => ContinueReadingFromProcessReaders(), _ctx.Token);
+				_reading = true;
 			}
 		}
 
@@ -149,16 +149,16 @@ namespace ProcNet
 
 		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)
 		{
-			if (!this._reading) return;
-			this.SendYesForBatPrompt();
+			if (!_reading) return;
+			SendYesForBatPrompt();
 			if (!WaitForStreamReadersTimeout.HasValue)
 			{
-				this.CancelAsyncReads();
+				CancelAsyncReads();
 			}
 			else if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout.Value))
 			{
-				this.CancelAsyncReads();
-				this.OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout.Value);
+				CancelAsyncReads();
+				OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout.Value);
 				OnError(observer, new WaitForEndOfStreamsTimeoutException(WaitForStreamReadersTimeout.Value));
 			}
 		}

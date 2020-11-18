@@ -28,9 +28,8 @@ test-results
 test-results/*
 *.lib
 *.sbr
-*.DotSettings
+*.DotSettings.user
 obj/
-[Rr]elease*/
 _ReSharper*/
 _NCrunch*/
 [Tt]est[Rr]esult*
@@ -38,12 +37,10 @@ _NCrunch*/
 .fake/*
 .fake
 packages/*
-!paket.bootstrapper.exe
 paket.exe
 paket-files/*.cached
 
-!src/Proc/Embedded/Proc.ControlC.exe
-
+BenchmarkDotNet.Artifacts
 build/*
 !build/tools
 !build/keys
@@ -84,3 +81,6 @@ project.lock.json
 .idea/
 *.sln.iml
 /src/.vs/restore.dg
+# temporary location for doc generation
+docs-temp
+*.binlog

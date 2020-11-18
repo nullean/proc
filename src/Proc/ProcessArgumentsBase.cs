@@ -9,8 +9,8 @@ namespace ProcNet
 
 		public ProcessArgumentsBase(string binary, params string[] args)
 		{
-			this.Binary = binary;
-			this.Args = args;
+			Binary = binary;
+			Args = args;
 		}
 
 		public string Binary { get; }

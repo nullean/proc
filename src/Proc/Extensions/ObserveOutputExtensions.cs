@@ -3,12 +3,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Std;
-using static System.Threading.Tasks.TaskCreationOptions;
 
 namespace ProcNet.Extensions
 {
