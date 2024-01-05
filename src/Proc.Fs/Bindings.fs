@@ -162,19 +162,19 @@ type ExecBuilder() =
         |> List.ofSeq
         
     [<CustomOperation("invoke_args")>]
-    member inline this.Invoke(opts, [<ParamArray>] args: string array) =
+    member inline this.InvokeArgs(opts, [<ParamArray>] args: string array) =
         let opts = { opts with Arguments = Some (args |> List.ofArray) }
         let execArgs = execArgs opts
         Proc.Exec(execArgs)
         
     [<CustomOperation("invoke_args")>]
-    member inline this.Invoke(opts, args: string list) =
+    member inline this.InvokeArgs(opts, args: string list) =
         let opts = { opts with Arguments = Some args}
         let execArgs = execArgs opts
         Proc.Exec(execArgs)
         
     [<CustomOperation("invoke")>]
-    member inline this.Invoke(opts) =
+    member this.Invoke(opts) =
         let execArgs = execArgs opts
         Proc.Exec(execArgs)
 
