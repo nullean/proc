@@ -113,35 +113,35 @@ type ExecBuilder() =
         { opts with Arguments = Some args}
         
     [<CustomOperation("workingDirectory")>]
-    member this.WorkingDirectory(opts, workingDirectory: string) =
+    member inline this.WorkingDirectory(opts, workingDirectory: string) =
         { opts with WorkingDirectory = Some workingDirectory }
         
     [<CustomOperation("env")>]
-    member this.EnvironmentVariables(opts, env: Map<string, string>) =
+    member inline this.EnvironmentVariables(opts, env: Map<string, string>) =
         { opts with Environment = Some env }
         
     [<CustomOperation("timeout")>]
-    member this.Timeout(opts, timeout) =
+    member inline this.Timeout(opts, timeout) =
         { opts with Timeout = Some timeout }
         
     [<CustomOperation("stream_reader_wait_timeout")>]
-    member this.WaitForStreamReadersTimeout(opts, timeout) =
+    member inline this.WaitForStreamReadersTimeout(opts, timeout) =
         { opts with WaitForStreamReadersTimeout = Some timeout }
         
     [<CustomOperation("send_control_c")>]
-    member this.SendControlCFirst(opts, sendControlCFirst) =
+    member inline this.SendControlCFirst(opts, sendControlCFirst) =
         { opts with SendControlCFirst = Some sendControlCFirst }
         
     [<CustomOperation("thread_wrap")>]
-    member this.NoWrapInThread(opts, threadWrap) =
+    member inline this.NoWrapInThread(opts, threadWrap) =
         { opts with NoWrapInThread = Some (not threadWrap) }
         
     [<CustomOperation("filterOutput")>]
-    member this.FilterOutput(opts, find: LineOut -> bool) =
+    member inline this.FilterOutput(opts, find: LineOut -> bool) =
         { opts with LineOutFilter = Some find }
         
     [<CustomOperation("validExitCode")>]
-    member this.ValidExitCode(opts, exitCodeClassifier: int -> bool) =
+    member inline this.ValidExitCode(opts, exitCodeClassifier: int -> bool) =
         { opts with ValidExitCodeClassifier = Some exitCodeClassifier }
     
     [<CustomOperation("find")>]
@@ -162,13 +162,13 @@ type ExecBuilder() =
         |> List.ofSeq
         
     [<CustomOperation("invoke_args")>]
-    member inline this.InvokeArgs(opts, [<ParamArray>] args: string array) =
+    member this.InvokeArgs(opts, [<ParamArray>] args: string array) =
         let opts = { opts with Arguments = Some (args |> List.ofArray) }
         let execArgs = execArgs opts
         Proc.Exec(execArgs)
         
     [<CustomOperation("invoke_args")>]
-    member inline this.InvokeArgs(opts, args: string list) =
+    member this.InvokeArgs(opts, args: string list) =
         let opts = { opts with Arguments = Some args}
         let execArgs = execArgs opts
         Proc.Exec(execArgs)
