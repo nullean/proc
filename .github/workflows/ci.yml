@@ -27,13 +27,20 @@ jobs:
         git tag --list
     - uses: actions/setup-dotnet@v1
       with:
+<<<<<<< Updated upstream
           dotnet-version: '3.1.201'
     - uses: actions/setup-dotnet@v1
       with:
         dotnet-version: '8.0.100'
         source-url: https://nuget.pkg.github.com/nullean/index.json
+=======
+          dotnet-version: |
+              8.0.x
+              6.0.x
+          source-url: https://nuget.pkg.github.com/nullean/index.json
+>>>>>>> Stashed changes
       env:
-        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
         
     - run: ./build.sh build -s true
       name: Build
