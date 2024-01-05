@@ -8,8 +8,8 @@ namespace ProcNet.Tests
 	{
 		private static string _procTestBinary = "Proc.Tests.Binary";
 
-		protected static TimeSpan WaitTimeout { get; } = TimeSpan.FromSeconds(20);
-		protected static TimeSpan WaitTimeoutDebug { get; } = TimeSpan.FromMinutes(20);
+		protected static TimeSpan WaitTimeout { get; } = TimeSpan.FromSeconds(5);
+		protected static TimeSpan WaitTimeoutDebug { get; } = TimeSpan.FromMinutes(5);
 
 		private static string GetWorkingDir()
 		{
