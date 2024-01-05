@@ -1,10 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <AssemblyName>proc</AssemblyName>
-    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
-    <RootNamespace>ProcNet</RootNamespace>
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
 
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\build\keys\keypair.snk</AssemblyOriginatorKeyFile>
@@ -15,17 +13,22 @@
     <PackageProjectUrl>https://github.com/nullean/proc</PackageProjectUrl>
     <PackageReleaseNotes>https://github.com/nullean/proc/releases</PackageReleaseNotes>
 
-    <PackageId>Proc</PackageId>
-    <Title>Proc - The easiest and full featured way to execute Processes in .NET</Title>
+    <PackageId>Proc.Fs</PackageId>
+    <Title>Proc.Fs - F# bindings for the easiest and full featured way to execute Processes in .NET</Title>
     <Description>Dependency free reactive abstraction around Process, exposes handy static methods for the quick one-liners</Description>
 
     <Version>$(ProcCurrentVersion)</Version>
     <InformationalVersion>$(ProcCurrentVersion)</InformationalVersion>
     <AssemblyVersion>$(ProcCurrentAssemblyVersion)</AssemblyVersion>
     <FileVersion>$(ProcCurrentAssemblyFileVersion)</FileVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <LangVersion>Latest</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Bindings.fs" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="..\..\nuget-icon.png" CopyToOutputDirectory="PreserveNewest">
@@ -36,10 +39,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="System.Reactive" Version="5.0.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Embedded\Proc.ControlC.exe" />
+    <ProjectReference Include="..\Proc\Proc.csproj" />
   </ItemGroup>
 </Project>

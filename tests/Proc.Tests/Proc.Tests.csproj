@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>Proc.Tests</AssemblyName>
     <RootNamespace>ProcNet.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
