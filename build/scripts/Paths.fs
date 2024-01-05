@@ -9,7 +9,7 @@ let MainTFM = "netstandard2.0"
 let SignKey = "96c599bbe3e70f5d"
 
 let ValidateAssemblyName = true
-let IncludeGitHashInInformational = false
+let IncludeGitHashInInformational = true
 let GenerateApiChanges = true
 
 let Root =
