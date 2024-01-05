@@ -66,32 +66,28 @@ namespace ProcNet
 				? $"\"{arguments.Binary}\""
 				: $"\"{arguments.Binary} {args}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
 
-			using (var process = new Process())
+			using var process = new Process { StartInfo = info };
+			if (!process.Start()) throw new ProcExecException($"Failed to start {printBinary}");
+
+			var completedBeforeTimeout = process.WaitForExit((int)timeout.TotalMilliseconds);
+			if (!completedBeforeTimeout)
 			{
-                process.StartInfo = info;
-                if (!process.Start()) throw new ProcExecException($"Failed to start {printBinary}");
-
-                var completedBeforeTimeout = process.WaitForExit((int)timeout.TotalMilliseconds);
-                if (!completedBeforeTimeout)
-                {
-	                HardWaitForExit(process, TimeSpan.FromSeconds(1));
-	                throw new ProcExecException($"Timeout {timeout} occured while running {printBinary}");
-                }
-
-                var exitCode = process.ExitCode;
-                if (!arguments.ValidExitCodeClassifier(exitCode))
-	                throw new ProcExecException($"Process exited with '{exitCode}' {printBinary}")
-	                {
-		                ExitCode = exitCode
-	                };
-
-                return exitCode;
+				HardWaitForExit(process, TimeSpan.FromSeconds(1));
+				throw new ProcExecException($"Timeout {timeout} occured while running {printBinary}");
 			}
 
+			var exitCode = process.ExitCode;
+			if (!arguments.ValidExitCodeClassifier(exitCode))
+				throw new ProcExecException($"Process exited with '{exitCode}' {printBinary}")
+				{
+					ExitCode = exitCode
+				};
+
+			return exitCode;
 		}
 		private static void HardWaitForExit(Process process, TimeSpan timeSpan)
 		{
-			var task = Task.Run(() => process.WaitForExit());
+			using var task = Task.Run(() => process.WaitForExit());
 			Task.WaitAny(task, Task.Delay(timeSpan));
 		}
 	}

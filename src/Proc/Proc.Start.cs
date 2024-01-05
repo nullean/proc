@@ -10,9 +10,9 @@ namespace ProcNet
 	{
 		/// <summary>
 		/// Default timeout for all the process started through Proc.Start() or Proc.Exec().
-		/// Defaults to 4 minutes.
+		/// Defaults to 10 minutes.
 		/// </summary>
-		public static TimeSpan DefaultTimeout { get; } = TimeSpan.FromMinutes(4);
+		public static TimeSpan DefaultTimeout { get; } = TimeSpan.FromMinutes(10);
 
 		/// <summary> Starts a program and captures the output while writing to the console in realtime during execution </summary>
 		/// <returns>An object holding a list of console out lines, the exit code and whether the process completed</returns>
@@ -83,27 +83,25 @@ namespace ProcNet
 		/// <returns>An object holding a list of console out lines, the exit code and whether the process completed</returns>
 		public static ProcessCaptureResult Start(StartArguments arguments, TimeSpan timeout, IConsoleOutWriter consoleOutWriter, StartedHandler started)
 		{
-			using (var composite = new CompositeDisposable())
-			{
-				var process = new ObservableProcess(arguments);
-				if (started != null) process.ProcessStarted += started;
-				consoleOutWriter = consoleOutWriter ?? new ConsoleOutColorWriter();
+			using var composite = new CompositeDisposable();
+			var process = new ObservableProcess(arguments);
+			if (started != null) process.ProcessStarted += started;
+			consoleOutWriter = consoleOutWriter ?? new ConsoleOutColorWriter();
 
-				Exception seenException = null;
-				var consoleOut = new List<LineOut>();
-				composite.Add(process);
-				composite.Add(process.SubscribeLinesAndCharacters(
-						consoleOut.Add,
-						e => seenException = e,
-						consoleOutWriter.Write,
-						consoleOutWriter.Write
-					)
-				);
+			Exception seenException = null;
+			var consoleOut = new List<LineOut>();
+			composite.Add(process);
+			composite.Add(process.SubscribeLinesAndCharacters(
+					consoleOut.Add,
+					e => seenException = e,
+					consoleOutWriter.Write,
+					consoleOutWriter.Write
+				)
+			);
 
-				var completed = process.WaitForCompletion(timeout);
-				if (seenException != null) ExceptionDispatchInfo.Capture(seenException).Throw();
-				return new ProcessCaptureResult(completed, consoleOut, process.ExitCode);
-			}
+			var completed = process.WaitForCompletion(timeout);
+			if (seenException != null) ExceptionDispatchInfo.Capture(seenException).Throw();
+			return new ProcessCaptureResult(completed, consoleOut, process.ExitCode);
 		}
 	}
 }
