@@ -25,9 +25,11 @@
     <FileVersion>$(ProcCurrentAssemblyFileVersion)</FileVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <LangVersion>Latest</LangVersion>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="README.md" Pack="true" PackagePath="README.md" CopyToOutputDirectory="PreserveNewest"/>
     <Content Include="..\..\nuget-icon.png" CopyToOutputDirectory="PreserveNewest">
       <Link>nuget-icon.png</Link>
       <Pack>True</Pack>
