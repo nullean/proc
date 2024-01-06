@@ -24,6 +24,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <LangVersion>Latest</LangVersion>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,6 +37,7 @@
       <Pack>True</Pack>
       <PackagePath>nuget-icon.png</PackagePath>
     </Content>
+    <Content Include="README.md" />
   </ItemGroup>
 
   <ItemGroup>

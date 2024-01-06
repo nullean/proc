@@ -175,7 +175,7 @@ type ExecBuilder() =
         Proc.Exec(execArgs) |> ignore
         
     [<CustomOperation("run")>]
-    member this.Invoke(opts) =
+    member this.Execute(opts) =
         let execArgs = execArgs opts
         Proc.Exec(execArgs) |> ignore
         

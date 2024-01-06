@@ -1,4 +1,5 @@
-﻿open Proc.Fs
+﻿open System
+open Proc.Fs
 
 let _ = shell {
     exec "dotnet" "--version"
@@ -8,7 +9,20 @@ let _ = shell {
 let dotnetVersion = exec {
     binary "dotnet"
     args "--help"
+    filter_output (fun l -> l.Line.Contains "clean")
     filter (fun l -> l.Line.Contains "clean")
+}
+
+exec {
+    binary "dotnet"
+    args "--help"
+    env Map[("key", "value")]
+    workingDirectory "."
+    send_control_c false
+    timeout (TimeSpan.FromSeconds(10))
+    thread_wrap false
+    validExitCode (fun i -> i <> 0)
+    run
 }
 
 let helpStatus = exec {
