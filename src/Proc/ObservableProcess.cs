@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -89,11 +90,25 @@ namespace ProcNet
 				.Where(o => o.EndsWithNewLine || o.StartsWithCarriage || BufferBoundary(_bufferStdOutRemainder, _bufferStdErrRemainder));
 			var buffered = published.Buffer(boundaries);
 			var newlines = buffered
-				.Select(c =>
+				.SelectMany(c =>
 				{
-					if (c.Count == 0) return null;
-					var line = new string(c.SelectMany(o => o.Characters).ToArray());
-					return new LineOut(c.First().Error, line.TrimEnd(NewlineChars));
+					if (c == null || c.Count == 0)
+						return Array.Empty<LineOut>();
+					if (c.Count == 1)
+					{
+						var cOut = c.First();
+						var chars = new string(cOut.Characters).TrimEnd(NewlineChars);
+						return new[] { new LineOut(cOut.Error, chars) };
+					}
+
+					return c
+						.GroupBy(l => l.Error)
+						.Select(g => (g.Key, new string(g.SelectMany(o => o.Characters).ToArray())))
+						.SelectMany(kv =>
+							kv.Item2.TrimEnd(NewlineChars).Split(NewlineChars)
+								.Select(line => new LineOut(kv.Key, line.TrimEnd(NewlineChars)))
+						)
+						.ToArray();
 				})
 				.TakeWhile(KeepBufferingLines)
 				.Where(l => l != null)
