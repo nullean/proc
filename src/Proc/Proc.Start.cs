@@ -92,7 +92,10 @@ namespace ProcNet
 			var consoleOut = new List<LineOut>();
 			composite.Add(process);
 			composite.Add(process.SubscribeLinesAndCharacters(
-					consoleOut.Add,
+					l =>
+					{
+						consoleOut.Add(l);
+					},
 					e => seenException = e,
 					consoleOutWriter.Write,
 					consoleOutWriter.Write

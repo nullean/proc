@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
@@ -16,9 +17,7 @@ namespace ProcNet
 	///
 	/// This catches all cases where <see cref="EventBasedObservableProcess"/> would fall short to capture all the process output.
 	///
-#pragma warning disable 1574
-	/// <see cref="CharactersOut"/> contains the current char[] buffer which could be fed to <see cref="Console.Write"/> directly.
-#pragma warning restore 1574
+	/// <see cref="CharactersOut"/> contains the current char[] buffer which could be fed to <see cref="Console.Write(string,object)"/> directly.
 	///
 	/// Note that there is a subclass <use cref="ObservableProcess"/> that allows you to subscribe console output per line
 	/// instead whilst still reading the actual process output using asynchronous stream readers.
@@ -36,11 +35,11 @@ namespace ProcNet
 		private TimeSpan? WaitForStreamReadersTimeout => StartArguments.WaitForStreamReadersTimeout;
 
 		/// <summary>
-		/// Expert level setting: the maximum number of characters to read per itteration. Defaults to 256
+		/// Expert level setting: the maximum number of characters to read per iteration. Defaults to 1024
 		/// </summary>
-		public int BufferSize { get; set; } = 256;
+		public int BufferSize { get; set; } = 1024;
 
-		private CancellationTokenSource _ctx = new CancellationTokenSource();
+		private CancellationTokenSource _ctx = new();
 		private Task _stdOutSubscription;
 		private Task _stdErrSubscription;
 		private IObserver<CharactersOut> _observer;
