@@ -4,57 +4,6 @@ open System
 open ProcNet
 open ProcNet.Std
 
-let execWithTimeout binary args timeout =
-    let opts =
-        ExecArguments(binary, args |> List.map (sprintf "\"%s\"") |> List.toArray)
-    let options = args |> String.concat " "
-    printfn ":: Running command: %s %s" binary options
-    let r = Proc.Exec(opts, timeout)
-
-    match r.HasValue with
-    | true -> r.Value
-    | false -> failwithf "invocation of `%s` timed out" binary
-
-///executes
-let exec2 (binary: string) (args: string list): int =
-    execWithTimeout binary args (TimeSpan.FromMinutes 10)
-
-let private redirected (binary: string) (args: string list) : ProcessCaptureResult = 
-    Proc.Start(binary, args |> Array.ofList)
-    
-type RunningStatus = {
-    LastExitCode: int
-    GrepOutput: Std.LineOut list option
-}
-type ShellBuilder() =
-
-    member t.Yield _ = None
-        
-    [<CustomOperation("exec")>]
-    member inline this.ExecuteWithArguments(status, binary, [<ParamArray>] args: string array) =
-        let exitCode = exec2 binary (args |> List.ofArray)
-        match status with
-        | None ->
-            Some { LastExitCode =  exitCode; GrepOutput = None }
-        | Some s ->
-            Some { s with LastExitCode = exitCode }
-            
-    [<CustomOperation("grep")>]
-    member this.Grep(status, searchForRe, binary, [<ParamArray>] args: string array) =
-        let r = Proc.Start(binary, args)
-        let o =
-            r.ConsoleOut
-            |> Seq.filter (_.Line.Contains(searchForRe))
-            |> List.ofSeq
-        
-        match status with
-        | None ->
-            Some { LastExitCode =  0; GrepOutput = Some o }
-        | Some s ->
-            Some { LastExitCode =  0; GrepOutput = Some o }
-        
-let shell = ShellBuilder()
-
 type ExecOptions = {
     Binary: string
     Arguments: string list option
@@ -71,27 +20,8 @@ type ExecOptions = {
     SendControlCFirst: bool option
     WaitForStreamReadersTimeout: TimeSpan option
 }
-
-type ExecBuilder() =
-
-    let startArgs (opts: ExecOptions) =
-        let startArguments = StartArguments(opts.Binary, opts.Arguments |> Option.defaultValue [])
-        opts.LineOutFilter |> Option.iter(fun f -> startArguments.LineOutFilter <- f)
-        opts.Environment |> Option.iter(fun e -> startArguments.Environment <- e)
-        opts.WorkingDirectory |> Option.iter(fun d -> startArguments.WorkingDirectory <- d)
-        opts.NoWrapInThread |> Option.iter(fun b -> startArguments.NoWrapInThread <- b)
-        opts.SendControlCFirst |> Option.iter(fun b -> startArguments.SendControlCFirst <- b)
-        opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> startArguments.WaitForStreamReadersTimeout <- t)
-        startArguments
-     
-    let execArgs (opts: ExecOptions) =
-        let execArguments = ExecArguments(opts.Binary, opts.Arguments |> Option.defaultValue [])
-        opts.Environment |> Option.iter(fun e -> execArguments.Environment <- e)
-        opts.WorkingDirectory |> Option.iter(fun d -> execArguments.WorkingDirectory <- d)
-        opts.ValidExitCodeClassifier |> Option.iter(fun f -> execArguments.ValidExitCodeClassifier <- f)
-        execArguments
-    
-    member t.Yield _ =
+with
+    static member Empty = 
         {
             Binary = ""; Arguments = None; Find = None; 
             LineOutFilter = None; WorkingDirectory = None; Environment = None
@@ -99,11 +29,77 @@ type ExecBuilder() =
             ValidExitCodeClassifier = None; 
             NoWrapInThread = None; SendControlCFirst = None; WaitForStreamReadersTimeout = None; 
         }
+
+let private startArgs (opts: ExecOptions) =
+    let startArguments = StartArguments(opts.Binary, opts.Arguments |> Option.defaultValue [])
+    opts.LineOutFilter |> Option.iter(fun f -> startArguments.LineOutFilter <- f)
+    opts.Environment |> Option.iter(fun e -> startArguments.Environment <- e)
+    opts.WorkingDirectory |> Option.iter(fun d -> startArguments.WorkingDirectory <- d)
+    opts.NoWrapInThread |> Option.iter(fun b -> startArguments.NoWrapInThread <- b)
+    opts.SendControlCFirst |> Option.iter(fun b -> startArguments.SendControlCFirst <- b)
+    opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> startArguments.WaitForStreamReadersTimeout <- t)
+    startArguments
+ 
+let private execArgs (opts: ExecOptions) =
+    let execArguments = ExecArguments(opts.Binary, opts.Arguments |> Option.defaultValue [])
+    opts.Environment |> Option.iter(fun e -> execArguments.Environment <- e)
+    opts.WorkingDirectory |> Option.iter(fun d -> execArguments.WorkingDirectory <- d)
+    opts.ValidExitCodeClassifier |> Option.iter(fun f -> execArguments.ValidExitCodeClassifier <- f)
+    execArguments
+    
+
+type ShellBuilder() =
+
+    member t.Yield _ = ExecOptions.Empty
+        
+    [<CustomOperation("workingDirectory")>]
+    member inline this.WorkingDirectory(opts, workingDirectory: string) =
+        { opts with WorkingDirectory = Some workingDirectory }
+        
+    [<CustomOperation("env")>]
+    member inline this.EnvironmentVariables(opts, env: Map<string, string>) =
+        { opts with Environment = Some env }
+        
+    [<CustomOperation("timeout")>]
+    member inline this.Timeout(opts, timeout) =
+        { opts with Timeout = Some timeout }
+        
+    [<CustomOperation("stream_reader_wait_timeout")>]
+    member inline this.WaitForStreamReadersTimeout(opts, timeout) =
+        { opts with WaitForStreamReadersTimeout = Some timeout }
+        
+    [<CustomOperation("send_control_c")>]
+    member inline this.SendControlCFirst(opts, sendControlCFirst) =
+        { opts with SendControlCFirst = Some sendControlCFirst }
+        
+    [<CustomOperation("thread_wrap")>]
+    member inline this.NoWrapInThread(opts, threadWrap) =
+        { opts with NoWrapInThread = Some (not threadWrap) }
+        
+    [<CustomOperation("exec")>]
+    member this.ExecuteWithArguments(opts, binary, [<ParamArray>] args: string array) =
+        let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)  }
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        opts
+        
+    [<CustomOperation("exec")>]
+    member this.ExecuteWithArguments(opts, binary, args: string list) =
+        let opts = { opts with Binary = binary; Arguments = Some args }
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        opts
+        
+let shell = ShellBuilder()
+
+type ExecBuilder() =
+
+    member t.Yield _ = ExecOptions.Empty
         
     [<CustomOperation("binary")>]
-    member inline this.Binary(opts, binary) =
+    member this.Binary(opts, binary) =
         { opts with Binary = binary }
-            
+        
     [<CustomOperation("args")>]
     member inline this.Arguments(opts, [<ParamArray>] args: string array) =
         { opts with Arguments = Some (args |> List.ofArray) }
@@ -136,7 +132,7 @@ type ExecBuilder() =
     member inline this.NoWrapInThread(opts, threadWrap) =
         { opts with NoWrapInThread = Some (not threadWrap) }
         
-    [<CustomOperation("filterOutput")>]
+    [<CustomOperation("filter_output")>]
     member inline this.FilterOutput(opts, find: LineOut -> bool) =
         { opts with LineOutFilter = Some find }
         
@@ -161,22 +157,68 @@ type ExecBuilder() =
         |> Seq.filter find
         |> List.ofSeq
         
-    [<CustomOperation("invoke_args")>]
+    [<CustomOperation("output")>]
+    member this.Output(opts) =
+        let startArguments = startArgs opts
+        Proc.Start(startArguments)
+        
+    [<CustomOperation("run_args")>]
     member this.InvokeArgs(opts, [<ParamArray>] args: string array) =
         let opts = { opts with Arguments = Some (args |> List.ofArray) }
         let execArgs = execArgs opts
-        Proc.Exec(execArgs)
+        Proc.Exec(execArgs) |> ignore
         
-    [<CustomOperation("invoke_args")>]
+    [<CustomOperation("run_args")>]
     member this.InvokeArgs(opts, args: string list) =
         let opts = { opts with Arguments = Some args}
         let execArgs = execArgs opts
-        Proc.Exec(execArgs)
+        Proc.Exec(execArgs) |> ignore
         
-    [<CustomOperation("invoke")>]
+    [<CustomOperation("run")>]
     member this.Invoke(opts) =
         let execArgs = execArgs opts
-        Proc.Exec(execArgs)
+        Proc.Exec(execArgs) |> ignore
+        
+    [<CustomOperation("run")>]
+    member this.Execute(opts, binary, args: string list) =
+        let opts = { opts with Binary = binary; Arguments = Some args}
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        
+    [<CustomOperation("run")>]
+    member this.Execute(opts, binary, [<ParamArray>] args: string array) =
+        let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)}
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        
+    [<CustomOperation("exit_code_of")>]
+    member this.ReturnStatus(opts, binary, args: string list) =
+        let opts = { opts with Binary = binary; Arguments = Some args}
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs).GetValueOrDefault 1
+        
+    [<CustomOperation("exit_code_of")>]
+    member this.ReturnStatus(opts, binary, [<ParamArray>] args: string array) =
+        let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)}
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs).GetValueOrDefault 1
+        
+    [<CustomOperation("exit_code")>]
+    member this.ReturnStatus(opts) =
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs).GetValueOrDefault 1
+        
+    [<CustomOperation("output_of")>]
+    member this.ReturnOutput(opts, binary, [<ParamArray>] args: string array) =
+        let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)}
+        let execArgs = startArgs opts
+        Proc.Start(execArgs)
+        
+    [<CustomOperation("output_of")>]
+    member this.ReturnOutput(opts) =
+        let startArgs = startArgs opts
+        Proc.Start(startArgs)
+            
 
 let exec = ExecBuilder()
     
