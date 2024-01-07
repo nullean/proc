@@ -235,26 +235,26 @@ type ExecBuilder() =
         Proc.Start(startArguments)
         
     [<CustomOperation("run_args")>]
-    member this.InvokeArgs(opts, [<ParamArray>] args: string array) =
-        let opts = { opts with Arguments = Some (args |> List.ofArray) }
+    member this.InvokeArgs(opts, [<ParamArray>] arguments: string array) =
+        let opts = { opts with Arguments = Some (arguments |> List.ofArray) }
         let execArgs = execArgs opts
         Proc.Exec(execArgs) |> ignore
         
     [<CustomOperation("run_args")>]
-    member this.InvokeArgs(opts, args: string list) =
-        let opts = { opts with Arguments = Some args}
+    member this.InvokeArgs(opts, arguments: string list) =
+        let opts = { opts with Arguments = Some arguments}
         let execArgs = execArgs opts
         Proc.Exec(execArgs) |> ignore
         
     [<CustomOperation("exit_code_of")>]
-    member this.ReturnStatus(opts, binary, args: string list) =
-        let opts = { opts with Binary = binary; Arguments = Some args}
+    member this.ReturnStatus(opts, binary, arguments: string list) =
+        let opts = { opts with Binary = binary; Arguments = Some arguments}
         let execArgs = execArgs opts
         Proc.Exec(execArgs).GetValueOrDefault 1
         
     [<CustomOperation("exit_code_of")>]
-    member this.ReturnStatus(opts, binary, [<ParamArray>] args: string array) =
-        let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)}
+    member this.ReturnStatus(opts, binary, [<ParamArray>] arguments: string array) =
+        let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
         let execArgs = execArgs opts
         Proc.Exec(execArgs).GetValueOrDefault 1
         
@@ -264,8 +264,8 @@ type ExecBuilder() =
         Proc.Exec(execArgs).GetValueOrDefault 1
         
     [<CustomOperation("output_of")>]
-    member this.ReturnOutput(opts, binary, [<ParamArray>] args: string array) =
-        let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)}
+    member this.ReturnOutput(opts, binary, [<ParamArray>] arguments: string array) =
+        let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
         let execArgs = startArgs opts
         Proc.Start(execArgs)
         
