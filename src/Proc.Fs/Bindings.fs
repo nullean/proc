@@ -52,7 +52,7 @@ type ShellBuilder() =
 
     member t.Yield _ = ExecOptions.Empty
         
-    [<CustomOperation("workingDirectory")>]
+    [<CustomOperation("working_dir")>]
     member inline this.WorkingDirectory(opts, workingDirectory: string) =
         { opts with WorkingDirectory = Some workingDirectory }
         
@@ -90,54 +90,126 @@ type ShellBuilder() =
         Proc.Exec(execArgs) |> ignore
         opts
         
+        
 let shell = ShellBuilder()
+
+type TempBuilder() =
+
+    member t.Yield _ = ExecOptions.Empty
+    
+    [<CustomOperation("run")>]
+    member this.Run2(opts, binary, [<ParamArray>] args: string array) =
+        let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)}
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        
+    [<CustomOperation("run")>]
+    member this.Run2(opts, binary, args: string list) =
+        let opts = { opts with Binary = binary; Arguments = Some args}
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        
+    [<CustomOperation("run")>]
+    member this.Run2(opts) =
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+
+let temp = TempBuilder()
+        
 
 type ExecBuilder() =
 
     member t.Yield _ = ExecOptions.Empty
         
+    ///<summary>Runs <paramref name="binary"/> using <paramref name="arguments"/> immediately</summary>
+    /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
+    /// <param name="binary">The binary to execute</param>
+    /// <param name="arguments">the arguments to pass on to the binary being executed</param>
+    [<CustomOperation("run")>]
+    member this.Execute(opts, binary, [<ParamArray>] arguments: string array) =
+        let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        
+    ///<summary>Runs <paramref name="binary"/> using <paramref name="arguments"/> immediately</summary>
+    /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
+    /// <param name="binary">The binary to execute</param>
+    /// <param name="arguments">the arguments to pass on to the binary being executed</param>
+    [<CustomOperation("run")>]
+    member this.Execute(opts, binary, arguments: string list) =
+        let opts = { opts with Binary = binary; Arguments = Some arguments}
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        
+    ///<summary>
+    /// Runs the <see cref="ExecOptions"/> the computation build thus far.
+    /// <para>Needs at least `binary` to be specified</para>
+    /// </summary>
+    [<CustomOperation("run")>]
+    member this.Execute(opts) =
+        if opts.Binary = "" then failwithf "No binary specified to exec computation expression"
+        let execArgs = execArgs opts
+        Proc.Exec(execArgs) |> ignore
+        
+    ///<summary>Supply external <see cref="ExecOptions"/> to bootstrap</summary>
+    [<CustomOperation("options")>]
+    member this.Options(_, reuseOptions: ExecOptions) =
+        reuseOptions
+        
+    ///<summary>The binary to execute</summary>
+    /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
+    /// <param name="binary">The binary to execute</param>
     [<CustomOperation("binary")>]
     member this.Binary(opts, binary) =
         { opts with Binary = binary }
         
-    [<CustomOperation("args")>]
-    member inline this.Arguments(opts, [<ParamArray>] args: string array) =
-        { opts with Arguments = Some (args |> List.ofArray) }
+    ///<summary>The arguments to call the binary with</summary>
+    /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
+    /// <param name="arguments">The arguments to call the binary with</param>
+    [<CustomOperation("arguments")>]
+    member this.Arguments(opts, [<ParamArray>] arguments: string array) =
+        { opts with Arguments = Some (arguments |> List.ofArray) }
         
-    [<CustomOperation("args")>]
-    member inline this.Arguments(opts, args: string list) =
-        { opts with Arguments = Some args}
+    ///<summary>The arguments to call the binary with</summary>
+    /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
+    /// <param name="arguments">The arguments to call the binary with</param>
+    [<CustomOperation("arguments")>]
+    member this.Arguments(opts, arguments: string list) =
+        { opts with Arguments = Some arguments}
         
-    [<CustomOperation("workingDirectory")>]
-    member inline this.WorkingDirectory(opts, workingDirectory: string) =
+    ///<summary>Specify a working directory to start the execution of the binary in</summary>
+    /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
+    /// <param name="workingDirectory">Specify a working directory to start the execution of the binary in</param>
+    [<CustomOperation("working_dir")>]
+    member this.WorkingDirectory(opts, workingDirectory: string) =
         { opts with WorkingDirectory = Some workingDirectory }
         
     [<CustomOperation("env")>]
-    member inline this.EnvironmentVariables(opts, env: Map<string, string>) =
+    member this.EnvironmentVariables(opts, env: Map<string, string>) =
         { opts with Environment = Some env }
         
     [<CustomOperation("timeout")>]
-    member inline this.Timeout(opts, timeout) =
+    member this.Timeout(opts, timeout) =
         { opts with Timeout = Some timeout }
         
     [<CustomOperation("stream_reader_wait_timeout")>]
-    member inline this.WaitForStreamReadersTimeout(opts, timeout) =
+    member this.WaitForStreamReadersTimeout(opts, timeout) =
         { opts with WaitForStreamReadersTimeout = Some timeout }
         
     [<CustomOperation("send_control_c")>]
-    member inline this.SendControlCFirst(opts, sendControlCFirst) =
+    member this.SendControlCFirst(opts, sendControlCFirst) =
         { opts with SendControlCFirst = Some sendControlCFirst }
         
     [<CustomOperation("thread_wrap")>]
-    member inline this.NoWrapInThread(opts, threadWrap) =
+    member this.NoWrapInThread(opts, threadWrap) =
         { opts with NoWrapInThread = Some (not threadWrap) }
         
     [<CustomOperation("filter_output")>]
-    member inline this.FilterOutput(opts, find: LineOut -> bool) =
+    member this.FilterOutput(opts, find: LineOut -> bool) =
         { opts with LineOutFilter = Some find }
         
     [<CustomOperation("validExitCode")>]
-    member inline this.ValidExitCode(opts, exitCodeClassifier: int -> bool) =
+    member this.ValidExitCode(opts, exitCodeClassifier: int -> bool) =
         { opts with ValidExitCodeClassifier = Some exitCodeClassifier }
     
     [<CustomOperation("find")>]
@@ -174,23 +246,6 @@ type ExecBuilder() =
         let execArgs = execArgs opts
         Proc.Exec(execArgs) |> ignore
         
-    [<CustomOperation("run")>]
-    member this.Execute(opts) =
-        let execArgs = execArgs opts
-        Proc.Exec(execArgs) |> ignore
-        
-    [<CustomOperation("run")>]
-    member this.Execute(opts, binary, args: string list) =
-        let opts = { opts with Binary = binary; Arguments = Some args}
-        let execArgs = execArgs opts
-        Proc.Exec(execArgs) |> ignore
-        
-    [<CustomOperation("run")>]
-    member this.Execute(opts, binary, [<ParamArray>] args: string array) =
-        let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)}
-        let execArgs = execArgs opts
-        Proc.Exec(execArgs) |> ignore
-        
     [<CustomOperation("exit_code_of")>]
     member this.ReturnStatus(opts, binary, args: string list) =
         let opts = { opts with Binary = binary; Arguments = Some args}
@@ -218,7 +273,7 @@ type ExecBuilder() =
     member this.ReturnOutput(opts) =
         let startArgs = startArgs opts
         Proc.Start(startArgs)
-            
+        
 
 let exec = ExecBuilder()
     

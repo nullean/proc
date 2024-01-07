@@ -6,18 +6,28 @@ let _ = shell {
     exec "uname"
 }
 
+let a: string list = [""]
+temp { run }
+temp { run "x" }
+temp { run "x" "x" }
+temp { run "x" [] }
+temp { run "x" a }
+
 let dotnetVersion = exec {
     binary "dotnet"
-    args "--help"
+    arguments "--help"
     filter_output (fun l -> l.Line.Contains "clean")
     filter (fun l -> l.Line.Contains "clean")
 }
 
+printfn "Found lines %i" dotnetVersion.Length
+
+
 exec {
     binary "dotnet"
-    args "--help"
+    arguments "--help"
     env Map[("key", "value")]
-    workingDirectory "."
+    working_dir "."
     send_control_c false
     timeout (TimeSpan.FromSeconds(10))
     thread_wrap false
@@ -27,22 +37,26 @@ exec {
 
 let helpStatus = exec {
     binary "dotnet"
-    args "--help"
+    arguments "--help"
     exit_code
 }
 
 let helpOutput = exec {
     binary "dotnet"
-    args "--help"
+    arguments "--help"
     output
 }
 
-printfn "Found lines %i" dotnetVersion.Length
+let dotnet = exec { binary "dotnet" }
 
-exec {
-    binary "dotnet"
+let x = exec {
+    options dotnet
     run_args ["restore"; "--help"]
 }
 
+let args: string list = [""]
 exec { run "dotnet" " "}
+exec { run "dotnet" args }
+
+let _ = shell { exec "dotnet" a }
 let statusCode = exec { exit_code_of "dotnet" " "}

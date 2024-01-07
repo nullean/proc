@@ -47,7 +47,7 @@ you can supply the following options.
 ```fsharp
 exec {
     binary "dotnet"
-    args "--help"
+    arguments "--help"
     env Map[("key", "value")]
     workingDirectory "."
     send_control_c false
@@ -74,7 +74,7 @@ Shortcut to supply arguments AND run
 ```fsharp
 let linesContainingClean = exec {
     binary "dotnet"
-    args "--help"
+    arguments "--help"
     filter (fun l -> l.Line.Contains "clean")
 }
 ```
@@ -86,7 +86,7 @@ run the process returning only the console out matching the `filter` if you want
 
 let dotnetHelpExitCode = exec {
     binary "dotnet"
-    args "--help"
+    arguments "--help"
     exit_code
 }
 ```
@@ -97,7 +97,7 @@ returns just the exit code
 
 let helpOutput = exec {
     binary "dotnet"
-    args "--help"
+    arguments "--help"
     output
 }
 ```
