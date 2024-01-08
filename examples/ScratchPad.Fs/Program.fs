@@ -6,23 +6,8 @@ let _ = shell {
     exec "uname"
 }
 
-let a: string list = [""]
-temp { run }
-temp { run "x" }
-temp { run "x" "x" }
-temp { run "x" [] }
-temp { run "x" a }
 
-let dotnetVersion = exec {
-    binary "dotnet"
-    arguments "--help"
-    filter_output (fun l -> l.Line.Contains "clean")
-    filter (fun l -> l.Line.Contains "clean")
-}
-
-printfn "Found lines %i" dotnetVersion.Length
-
-
+exec { run "dotnet" "--help"}
 exec {
     binary "dotnet"
     arguments "--help"
@@ -31,7 +16,7 @@ exec {
     send_control_c false
     timeout (TimeSpan.FromSeconds(10))
     thread_wrap false
-    validExitCode (fun i -> i <> 0)
+    validExitCode (fun i -> i = 0)
     run
 }
 
@@ -46,17 +31,28 @@ let helpOutput = exec {
     arguments "--help"
     output
 }
+let dotnetVersion = exec {
+    binary "dotnet"
+    arguments "--help"
+    filter_output (fun l -> l.Line.Contains "clean")
+    filter (fun l -> l.Line.Contains "clean")
+}
 
-let dotnet = exec { binary "dotnet" }
+printfn "Found lines %i" dotnetVersion.Length
 
-let x = exec {
-    options dotnet
+
+let dotnetOptions = exec { binary "dotnet" }
+exec {
+    options dotnetOptions
     run_args ["restore"; "--help"]
 }
 
-let args: string list = [""]
-exec { run "dotnet" " "}
+let args: string list = ["--help"]
+exec { run "dotnet" "--help"}
 exec { run "dotnet" args }
 
-let _ = shell { exec "dotnet" a }
-let statusCode = exec { exit_code_of "dotnet" " "}
+let _ = shell { exec "dotnet" args }
+let statusCode = exec { exit_code_of "dotnet" "--help"}
+
+
+printfn "That's all folks!"
