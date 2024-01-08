@@ -41,6 +41,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Proc.Fs", "src\Proc.Fs\Proc
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ScratchPad.Fs", "examples\ScratchPad.Fs\ScratchPad.Fs.fsproj", "{C33E3F7C-0C2A-4DD2-91E4-328866195997}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ScratchPad.Fs.ArgumentPrinter", "examples\ScratchPad.Fs.ArgumentPrinter\ScratchPad.Fs.ArgumentPrinter.fsproj", "{50A40BEB-1C22-41CF-908F-F24FB34B1699}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -79,6 +81,10 @@ Global
 		{C33E3F7C-0C2A-4DD2-91E4-328866195997}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C33E3F7C-0C2A-4DD2-91E4-328866195997}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C33E3F7C-0C2A-4DD2-91E4-328866195997}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50A40BEB-1C22-41CF-908F-F24FB34B1699}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50A40BEB-1C22-41CF-908F-F24FB34B1699}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50A40BEB-1C22-41CF-908F-F24FB34B1699}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50A40BEB-1C22-41CF-908F-F24FB34B1699}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -92,5 +98,6 @@ Global
 		{D6997ADC-E933-418E-831C-DE1A78897493} = {E89606EC-111B-4151-997C-8006627F1926}
 		{5EA4E26F-F623-473D-9CD7-E590A3E54239} = {9C336E9A-3FC8-4F77-A5B4-1D07E4E54924}
 		{C33E3F7C-0C2A-4DD2-91E4-328866195997} = {E4B3DD3A-E36C-46D6-B35E-D824EB9B3C06}
+		{50A40BEB-1C22-41CF-908F-F24FB34B1699} = {E4B3DD3A-E36C-46D6-B35E-D824EB9B3C06}
 	EndGlobalSection
 EndGlobal

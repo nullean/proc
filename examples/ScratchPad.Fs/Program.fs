@@ -54,5 +54,6 @@ exec { run "dotnet" args }
 let _ = shell { exec "dotnet" args }
 let statusCode = exec { exit_code_of "dotnet" "--help"}
 
+exec { run "dotnet" "run" "--project" "examples/ScratchPad.Fs.ArgumentPrinter" "--" "With Space" }
 
 printfn "That's all folks!"

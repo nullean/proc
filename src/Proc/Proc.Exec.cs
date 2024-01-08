@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using ProcNet.Extensions;
 
 namespace ProcNet
 {
@@ -46,11 +47,18 @@ namespace ProcNet
 		/// <returns>The exit code of the binary being run</returns>
 		public static int? Exec(ExecArguments arguments, TimeSpan timeout)
 		{
-			var args = string.Join(" ", arguments.Args ?? new string[]{});
-			var info = new ProcessStartInfo(arguments.Binary, args)
+			var args = arguments.Args.NaivelyQuoteArguments();
+			var info = new ProcessStartInfo(arguments.Binary)
 			{
 				UseShellExecute = false
+				#if !NETSTANDARD2_1
+				, Arguments = args
+				#endif
 			};
+			#if NETSTANDARD2_1
+			foreach (var arg in arguments.Args)
+				info.ArgumentList.Add(arg);
+			#endif
 
 			var pwd = arguments.WorkingDirectory;
 			if (!string.IsNullOrWhiteSpace(pwd)) info.WorkingDirectory = pwd;
