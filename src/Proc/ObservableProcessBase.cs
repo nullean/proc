@@ -7,6 +7,7 @@ using System.Reactive.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using ProcNet.Extensions;
 using ProcNet.Std;
 
 namespace ProcNet
@@ -140,13 +141,19 @@ namespace ProcNet
 			var processStartInfo = new ProcessStartInfo
 			{
 				FileName = s.Binary,
-				Arguments = args != null ? string.Join(" ", args) : string.Empty,
+				#if !NETSTANDARD2_1
+				Arguments = args.NaivelyQuoteArguments(),
+				#endif
 				CreateNoWindow = true,
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
 				RedirectStandardError = true,
 				RedirectStandardInput = true
 			};
+			#if NETSTANDARD2_1
+			foreach (var arg in s.Args)
+				processStartInfo.ArgumentList.Add(arg);
+			#endif
 			if (s.Environment != null)
 			{
 				foreach (var kv in s.Environment)
