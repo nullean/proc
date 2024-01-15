@@ -103,3 +103,24 @@ let helpOutput = exec {
 ```
 
 returns the exit code and the full console output.
+
+```fsharp
+
+let process = exec {
+    binary "dotnet"
+    arguments "--help"
+    wait_until (fun l -> l.Line.Contains "clean")
+}
+```
+
+returns an already running process but only after it confirms a line was printed
+```fsharp
+
+let process = exec {
+    binary "dotnet"
+    arguments "--help"
+    wait_until_and_disconnect (fun l -> l.Line.Contains "clean")
+}
+```
+
+returns an already running process but only after it confirms a line was printed. This version will stop the yielding standard/out lines which may utilize memory consumption which is no longer needed.

@@ -1,11 +1,11 @@
 ﻿open System
 open Proc.Fs
 
+(*
 let _ = shell {
     exec "dotnet" "--version"
     exec "uname"
 }
-
 
 exec { run "dotnet" "--help"}
 
@@ -56,5 +56,14 @@ let _ = shell { exec "dotnet" args }
 let statusCode = exec { exit_code_of "dotnet" "--help"}
 
 exec { run "dotnet" "run" "--project" "examples/ScratchPad.Fs.ArgumentPrinter" "--" "With Space" }
+*)
+
+let runningProcess = exec {
+    binary "dotnet"
+    arguments "run" "--project" "tests/Proc.Tests.Binary" "--" "TrulyLongRunning"
+    //wait_until (fun l -> l.Line = "Started!")
+    wait_until_and_disconnect (fun l -> l.Line = "Started!")
+}
+
 
 printfn "That's all folks!"
