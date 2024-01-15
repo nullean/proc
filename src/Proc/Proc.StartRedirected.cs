@@ -22,66 +22,71 @@ namespace ProcNet
 		/// Start a program and get notified of lines in realtime through <see cref="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
+		/// <param name="arguments">Encompasses all the options you can specify to start Proc processes</param>
 		/// <param name="timeout">The maximum runtime of the started program</param>
 		/// <param name="lineH"andler">
 		/// An implementation of <see cref="IConsoleLineHandler"/> that receives every line as <see cref="LineOut"/> or the <see cref="Exception"/> that occurs while running
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
 		public static ProcessResult StartRedirected(IConsoleLineHandler lineHandler, string bin, TimeSpan timeout, params string[] arguments) =>
-			StartRedirected(lineHandler, bin, timeout, started: null, arguments: arguments);
+			StartRedirected(lineHandler, bin, timeout, standardInput: null, arguments: arguments);
 
 		/// <summary>
 		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
+		/// <param name="arguments">Encompasses all the options you can specify to start Proc processes</param>
 		/// <param name="timeout">The maximum runtime of the started program</param>
-		/// <param name="started">A callback when the process is ready to receive standard in writes</param>
+		/// <param name="standardInput">A callback when the process is ready to receive standard in writes</param>
 		/// <param name="lineHandler">
 		/// An implementation of <see cref="IConsoleLineHandler"/> that receives every line as <see cref="LineOut"/> or the <see cref="Exception"/> that occurs while running
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
-		public static ProcessResult StartRedirected(IConsoleLineHandler lineHandler, string bin, TimeSpan timeout, StartedHandler started, params string[] arguments) =>
-			StartRedirected(new StartArguments(bin, arguments), timeout, started, lineHandler);
+		public static ProcessResult StartRedirected(IConsoleLineHandler lineHandler, string bin, TimeSpan timeout, StandardInputHandler standardInput, params string[] arguments) =>
+			StartRedirected(new StartArguments(bin, arguments), timeout, standardInput, lineHandler);
 
 		/// <summary>
 		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
+		/// <param name="arguments">Encompasses all the options you can specify to start Proc processes</param>
 		/// <param name="lineHandler">
 		/// An implementation of <see cref="IConsoleLineHandler"/> that receives every line as <see cref="LineOut"/> or the <see cref="Exception"/> that occurs while running
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
 		public static ProcessResult StartRedirected(StartArguments arguments, IConsoleLineHandler lineHandler = null) =>
-			StartRedirected(arguments, DefaultTimeout, started: null, lineHandler: lineHandler);
+			StartRedirected(arguments, DefaultTimeout, standardInput: null, lineHandler: lineHandler);
 
 		/// <summary>
 		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
+		/// <param name="arguments">Encompasses all the options you can specify to start Proc processes</param>
 		/// <param name="timeout">The maximum runtime of the started program</param>
 		/// <param name="lineHandler">
 		/// An implementation of <see cref="IConsoleLineHandler"/> that receives every line as <see cref="LineOut"/> or the <see cref="Exception"/> that occurs while running
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
 		public static ProcessResult StartRedirected(StartArguments arguments, TimeSpan timeout, IConsoleLineHandler lineHandler = null) =>
-			StartRedirected(arguments, timeout, started: null, lineHandler: lineHandler);
+			StartRedirected(arguments, timeout, standardInput: null, lineHandler: lineHandler);
 
 		/// <summary>
 		/// Start a program and get notified of lines in realtime through <paramref name="lineHandler"/> unlike <see cref="Start(string,string[])"/>
 		/// This won't capture all lines on the returned object and won't default to writing to the Console.
 		/// </summary>
+		/// <param name="arguments">Encompasses all the options you can specify to start Proc processes</param>
 		/// <param name="timeout">The maximum runtime of the started program</param>
-		/// <param name="started">A callback when the process is ready to receive standard in writes</param>
+		/// <param name="standardInput">A callback when the process is ready to receive standard in writes</param>
 		/// <param name="lineHandler">
 		/// An implementation of <see cref="IConsoleLineHandler"/> that receives every line as <see cref="LineOut"/> or the <see cref="Exception"/> that occurs while running
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
-		public static ProcessResult StartRedirected(StartArguments arguments, TimeSpan timeout, StartedHandler started, IConsoleLineHandler lineHandler = null)
+		public static ProcessResult StartRedirected(StartArguments arguments, TimeSpan timeout, StandardInputHandler standardInput, IConsoleLineHandler lineHandler = null)
 		{
 			using (var composite = new CompositeDisposable())
 			{
 				var process = new ObservableProcess(arguments);
-				if (started != null) process.ProcessStarted += started;
+				if (standardInput != null) process.StandardInputReady += standardInput;
 
 				Exception seenException = null;
 				composite.Add(process);

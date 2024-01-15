@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,7 +8,7 @@ namespace Proc.Tests.Binary
 {
 	public static class Program
 	{
-		public static int Main(string[] args)
+		public static async Task<int> Main(string[] args)
 		{
 			if (args.Length == 0)
 			{
@@ -35,6 +36,8 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(ControlCNoWait).ToLowerInvariant()) return ControlCNoWait();
 			if (testCase == nameof(OverwriteLines).ToLowerInvariant()) return OverwriteLines();
 			if (testCase == nameof(InterMixedOutAndError).ToLowerInvariant()) return InterMixedOutAndError();
+			if (testCase == nameof(LongRunning).ToLowerInvariant()) return await LongRunning();
+			if (testCase == nameof(TrulyLongRunning).ToLowerInvariant()) return await TrulyLongRunning();
 
 			return 1;
 		}
@@ -144,6 +147,42 @@ namespace Proc.Tests.Binary
 			Console.Write(output);
 
 			return 60;
+		}
+
+		private static async Task<int> LongRunning()
+		{
+			for (var i = 0; i < 10; i++)
+			{
+				Console.WriteLine($"Starting up: {i}");
+				await Task.Delay(20);
+			}
+			Console.WriteLine($"Started!");
+			await Task.Delay(20);
+			for (var i = 0; i < 10; i++)
+			{
+				Console.WriteLine($"Data after startup: {i}");
+				await Task.Delay(20);
+			}
+
+
+			return 0;
+		}
+
+		private static async Task<int> TrulyLongRunning()
+		{
+			for (var i = 0; i < 2; i++)
+			{
+				Console.WriteLine($"Starting up: {i}");
+				await Task.Delay(TimeSpan.FromSeconds(1));
+			}
+			Console.WriteLine($"Started!");
+			await Task.Delay(TimeSpan.FromSeconds(3));
+			for (var i = 0; i < 10; i++)
+			{
+				Console.WriteLine($"Data after startup: {i}");
+				await Task.Delay(TimeSpan.FromSeconds(10));
+			}
+			return 0;
 		}
 
 		private static int MoreText()

@@ -23,8 +23,9 @@ namespace ProcNet.Tests
 		public void ReadKeyFirst()
 		{
 			var args = TestCaseArguments(nameof(ReadKeyFirst));
+			args.StandardInputHandler = s => s.Write("y");
 			var writer = new TestConsoleOutWriter();
-			var result = Proc.Start(args, WaitTimeout, writer, s => s.Write("y"));
+			var result = Proc.Start(args, WaitTimeout, writer);
 			result.Completed.Should().BeTrue("completed");
 			result.ExitCode.Should().HaveValue();
 			result.ConsoleOut.Should().NotBeEmpty();

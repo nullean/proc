@@ -12,7 +12,7 @@ namespace ProcNet.Tests
 		{
 			var seen = new List<string>();
 			var process = new ObservableProcess(TestCaseArguments(nameof(ReadKeyFirst)));
-			process.ProcessStarted += (standardInput) =>
+			process.StandardInputReady += (standardInput) =>
 			{
 				//this particular program does not output anything and expect user input immediatly
 				//OnNext on the observable is only called on output so we need to write on the started event

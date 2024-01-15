@@ -15,6 +15,9 @@ type ExecOptions = {
     Timeout: TimeSpan 
     ValidExitCodeClassifier: (int -> bool) option
     
+    StartedConfirmationHandler: (LineOut -> bool) option
+    StopBufferingAfterStarted: bool option
+    
     NoWrapInThread: bool option
     SendControlCFirst: bool option
     WaitForStreamReadersTimeout: TimeSpan option
@@ -26,7 +29,8 @@ with
             LineOutFilter = None; WorkingDirectory = None; Environment = None
             Timeout = TimeSpan(0, 0, 0, 0, -1)
             ValidExitCodeClassifier = None; 
-            NoWrapInThread = None; SendControlCFirst = None; WaitForStreamReadersTimeout = None; 
+            NoWrapInThread = None; SendControlCFirst = None; WaitForStreamReadersTimeout = None
+            StartedConfirmationHandler = None; StopBufferingAfterStarted = None 
         }
 
 let private startArgs (opts: ExecOptions) =
@@ -47,6 +51,21 @@ let private execArgs (opts: ExecOptions) =
     opts.WorkingDirectory |> Option.iter(fun d -> execArguments.WorkingDirectory <- d)
     opts.ValidExitCodeClassifier |> Option.iter(fun f -> execArguments.ValidExitCodeClassifier <- f)
     execArguments
+    
+let private longRunningArguments (opts: ExecOptions) =
+    let args = opts.Arguments |> Option.defaultValue []
+    let longRunningArguments = LongRunningArguments(opts.Binary, args)
+    opts.LineOutFilter |> Option.iter(fun f -> longRunningArguments.LineOutFilter <- f)
+    opts.Environment |> Option.iter(fun e -> longRunningArguments.Environment <- e)
+    opts.WorkingDirectory |> Option.iter(fun d -> longRunningArguments.WorkingDirectory <- d)
+    opts.NoWrapInThread |> Option.iter(fun b -> longRunningArguments.NoWrapInThread <- b)
+    opts.SendControlCFirst |> Option.iter(fun b -> longRunningArguments.SendControlCFirst <- b)
+    opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> longRunningArguments.WaitForStreamReadersTimeout <- t)
+    
+    opts.StartedConfirmationHandler |> Option.iter(fun t -> longRunningArguments.StartedConfirmationHandler <- t)
+    opts.StopBufferingAfterStarted |> Option.iter(fun t -> longRunningArguments.StopBufferingAfterStarted <- t)
+    
+    longRunningArguments
     
 
 type ShellBuilder() =
@@ -250,6 +269,24 @@ type ExecBuilder() =
     member this.ReturnOutput(opts) =
         let startArgs = startArgs opts
         Proc.Start(startArgs, opts.Timeout)
+        
+    [<CustomOperation("wait_until")>]
+    member this.WaitUntil(opts, startedConfirmation: LineOut -> bool) =
+        let opts = { opts with StartedConfirmationHandler = Some startedConfirmation }
+        let longRunningArguments = longRunningArguments opts
+        Proc.StartLongRunning(longRunningArguments, opts.Timeout)
+        
+    [<CustomOperation("wait_until_and_disconnect")>]
+    member this.WaitUntilQuietAfter(opts, startedConfirmation: LineOut -> bool) =
+        let opts =
+            {
+                opts with
+                     StartedConfirmationHandler = Some startedConfirmation
+                     StopBufferingAfterStarted = Some true 
+            }
+        let longRunningArguments = longRunningArguments opts
+        Proc.StartLongRunning(longRunningArguments, opts.Timeout)
+        
         
 
 let exec = ExecBuilder()
