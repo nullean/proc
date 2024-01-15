@@ -12,7 +12,7 @@ using ProcNet.Std;
 
 namespace ProcNet
 {
-	public delegate void StartedHandler(StreamWriter standardInput);
+	public delegate void StandardInputHandler(StreamWriter standardInput);
 
 	public abstract class ObservableProcessBase<TConsoleOut> : IObservableProcess<TConsoleOut>
 		where TConsoleOut : ConsoleOut
@@ -24,6 +24,8 @@ namespace ProcNet
 		{
 			StartArguments = startArguments ?? throw new ArgumentNullException(nameof(startArguments));
 			Process = CreateProcess();
+			if (startArguments.StandardInputHandler != null)
+				StandardInputReady += startArguments.StandardInputHandler;
 			CreateObservable();
 		}
 
@@ -31,7 +33,7 @@ namespace ProcNet
 
 		public IDisposable Subscribe(IConsoleOutWriter writer) => OutStream.Subscribe(writer.Write, writer.Write, delegate { });
 
-		private readonly ManualResetEvent _completedHandle = new ManualResetEvent(false);
+		private readonly ManualResetEvent _completedHandle = new(false);
 
 		public StreamWriter StandardInput => Process.StandardInput;
 		public string Binary => StartArguments.Binary;
@@ -57,7 +59,7 @@ namespace ProcNet
 
 		protected abstract IObservable<TConsoleOut> CreateConsoleOutObservable();
 
-		public event StartedHandler ProcessStarted = (s) => { };
+		public event StandardInputHandler StandardInputReady = (s) => { };
 
 		protected bool StartProcess(IObserver<TConsoleOut> observer)
 		{
@@ -77,7 +79,7 @@ namespace ProcNet
 						// best effort, Process could have finished before even attempting to read .Id and .ProcessName
 						// which can throw if the process exits in between
 					}
-					ProcessStarted(Process.StandardInput);
+					StandardInputReady(Process.StandardInput);
 					return true;
 				}
 
@@ -185,14 +187,13 @@ namespace ProcNet
 			return false;
 		}
 
-		private readonly object _unpackLock = new object();
-		private readonly object _sendLock = new object();
-		private bool _sentControlC = false;
+		private readonly object _unpackLock = new();
+		private readonly object _sendLock = new();
+		private bool _sentControlC;
 
-		public void SendControlC()
+
+		public bool SendControlC(int processId)
 		{
-			if (_sentControlC) return;
-			if (!ProcessId.HasValue) return;
 			var platform = (int)Environment.OSVersion.Platform;
 			var isWindows = platform != 4 && platform != 6 && platform != 128;
 			if (isWindows)
@@ -201,35 +202,37 @@ namespace ProcNet
 				UnpackTempOutOfProcessSignalSender(path);
 				lock (_sendLock)
 				{
-					if (_sentControlC) return;
-					if (!ProcessId.HasValue) return;
-					var args = new StartArguments(path, ProcessId.Value.ToString(CultureInfo.InvariantCulture))
+					var args = new StartArguments(path, processId.ToString(CultureInfo.InvariantCulture))
 					{
 						WaitForExit = null,
 					};
-					var result = Proc.Start(args, TimeSpan.FromSeconds(2));
-					_sentControlC = true;
+					var result = Proc.Start(args, TimeSpan.FromSeconds(5));
 					SendYesForBatPrompt();
+					return result.ExitCode == 0;
 				}
 			}
 			else
 			{
 				lock (_sendLock)
 				{
-					if (_sentControlC) return;
-					if (!ProcessId.HasValue) return;
 					// I wish .NET Core had signals baked in but looking at the corefx repos tickets this is not happening any time soon.
-					var args = new StartArguments("kill", "-SIGINT", ProcessId.Value.ToString(CultureInfo.InvariantCulture))
+					var args = new StartArguments("kill", "-SIGINT", processId.ToString(CultureInfo.InvariantCulture))
 					{
 						WaitForExit = null,
 					};
-					var result = Proc.Start(args, TimeSpan.FromSeconds(2));
-					_sentControlC = true;
+					var result = Proc.Start(args, TimeSpan.FromSeconds(5));
+					return result.ExitCode == 0;
 				}
-
 			}
+		}
 
+		public void SendControlC()
+		{
+			if (_sentControlC) return;
+			if (!ProcessId.HasValue) return;
 
+			var success = SendControlC(ProcessId.Value);
+			_sentControlC = true;
 		}
 
 		protected void SendYesForBatPrompt()

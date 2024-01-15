@@ -21,5 +21,9 @@ namespace ProcNet
 
 		/// <summary> Set the current working directory</summary>
 		public string WorkingDirectory { get; set; }
+
+		/// <summary> Force arguments and the current working director NOT to be part of the exception message </summary>
+		public bool OnlyPrintBinaryInExceptionMessage { get; set; }
+
 	}
 }

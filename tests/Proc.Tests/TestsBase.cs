@@ -26,7 +26,13 @@ namespace ProcNet.Tests
 		}
 
 		protected static StartArguments TestCaseArguments(string testcase) =>
-			new StartArguments("dotnet", GetDll(), testcase)
+			new("dotnet", GetDll(), testcase)
+			{
+				WorkingDirectory = GetWorkingDir(),
+			};
+
+		protected static LongRunningArguments LongRunningTestCaseArguments(string testcase) =>
+			new("dotnet", GetDll(), testcase)
 			{
 				WorkingDirectory = GetWorkingDir(),
 			};

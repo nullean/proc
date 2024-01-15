@@ -22,6 +22,15 @@ namespace ProcNet
 		/// </summary>
 		public bool NoWrapInThread { get; set; }
 
+		/// <summary>
+		/// return true to stop buffering lines. Allows callers to optionally short circuit reading
+		/// from stdout/stderr without closing the process.
+		/// This is great for long running processes to only buffer console output until
+		/// all information is parsed.
+		/// </summary>
+		/// <returns>True to end the buffering of char[] to lines of text</returns>
+		public Func<LineOut, bool> KeepBufferingLines { get; set; }
+
 		/// <summary> Attempts to send control+c (SIGINT) to the process first </summary>
 		public bool SendControlCFirst { get; set; }
 
@@ -30,6 +39,11 @@ namespace ProcNet
 		/// Defaults to true meaning all all lines.
 		/// </summary>
 		public Func<LineOut, bool> LineOutFilter { get; set; }
+
+		/// <summary>
+		/// Callback with a reference to standard in once the process has started and stdin can be written too
+		/// </summary>
+		public StandardInputHandler StandardInputHandler { get; set; }
 
 		private static readonly TimeSpan DefaultWaitForExit = TimeSpan.FromSeconds(10);
 

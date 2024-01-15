@@ -110,7 +110,12 @@ namespace ProcNet
 						)
 						.ToArray();
 				})
-				.TakeWhile(KeepBufferingLines)
+				.TakeWhile(l =>
+				{
+					var keepBuffering = StartArguments.KeepBufferingLines ?? KeepBufferingLines;
+					var keep = keepBuffering?.Invoke(l);
+					return keep.GetValueOrDefault(true);
+				})
 				.Where(l => l != null)
 				.Where(observeLinesFilter)
 				.Subscribe(

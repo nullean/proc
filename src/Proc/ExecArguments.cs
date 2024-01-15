@@ -10,9 +10,6 @@ namespace ProcNet
 
 		public ExecArguments(string binary, params string[] args) : base(binary, args) { }
 
-		/// <summary> Force arguments and the current working director NOT to be part of the exception message </summary>
-		public bool OnlyPrintBinaryInExceptionMessage { get; set; }
-
 		public Func<int, bool> ValidExitCodeClassifier
 		{
 			get => _validExitCodeClassifier ?? (c => c == 0);

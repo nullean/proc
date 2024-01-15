@@ -8,6 +8,7 @@ let _ = shell {
 
 
 exec { run "dotnet" "--help"}
+
 exec {
     binary "dotnet"
     arguments "--help"
@@ -38,7 +39,7 @@ let dotnetVersion = exec {
     filter (fun l -> l.Line.Contains "clean")
 }
 
-printfn "Found lines %i" dotnetVersion.Length
+printfn $"Found lines %i{dotnetVersion.Length}"
 
 
 let dotnetOptions = exec { binary "dotnet" }
