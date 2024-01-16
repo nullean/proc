@@ -7,6 +7,28 @@ using ProcNet.Std;
 
 namespace ProcNet
 {
+	public class LongRunningApplicationSubscription : IDisposable
+	{
+		internal LongRunningApplicationSubscription(ObservableProcess process, CompositeDisposable subscription)
+		{
+			Process = process;
+			Subscription = subscription;
+		}
+
+		private IDisposable Subscription { get; }
+
+		public ObservableProcess Process { get; }
+
+		public bool SendControlC(int processId) => Process.SendControlC(processId);
+		public void SendControlC() => Process.SendControlC();
+
+		public void Dispose()
+		{
+			Subscription?.Dispose();
+			Process?.Dispose();
+		}
+	}
+
 	public static partial class Proc
 	{
 
@@ -28,7 +50,7 @@ namespace ProcNet
 		/// <para>defaults to <see cref="ConsoleOutColorWriter"/> which writes standard error messages in red</para>
 		/// </param>
 		/// <returns>The exit code and whether the process completed</returns>
-		public static IDisposable StartLongRunning(LongRunningArguments arguments, TimeSpan waitForStartedConfirmation, IConsoleOutWriter consoleOutWriter = null)
+		public static LongRunningApplicationSubscription StartLongRunning(LongRunningArguments arguments, TimeSpan waitForStartedConfirmation, IConsoleOutWriter consoleOutWriter = null)
 		{
 			var started = false;
 			var confirmWaitHandle = new ManualResetEvent(false);
@@ -71,7 +93,7 @@ namespace ProcNet
 			else
 			{
 				 var completed = confirmWaitHandle.WaitOne(waitForStartedConfirmation);
-				 if (completed) return composite;
+				 if (completed) return new(process, composite);
 				 var pwd = arguments.WorkingDirectory;
 				 var args = arguments.Args.NaivelyQuoteArguments();
 				 var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
@@ -80,7 +102,7 @@ namespace ProcNet
 				 throw new ProcExecException($"Could not yield started confirmation after {waitForStartedConfirmation} while running {printBinary}");
 			}
 
-			return composite;
+			return new(process, composite);
 		}
 	}
 }
