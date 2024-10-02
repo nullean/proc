@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace Proc.Tests.Binary
 
 			var testCase = args[0].ToLowerInvariant();
 
+			if (testCase == nameof(PrintArgs).ToLowerInvariant()) return PrintArgs(args.Skip(1).ToArray());
 			if (testCase == nameof(SingleLineNoEnter).ToLowerInvariant()) return SingleLineNoEnter();
 			if (testCase == nameof(TwoWrites).ToLowerInvariant()) return TwoWrites();
 
@@ -40,6 +42,12 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(TrulyLongRunning).ToLowerInvariant()) return await TrulyLongRunning();
 
 			return 1;
+		}
+		private static int PrintArgs(string[] args)
+		{
+			foreach (var arg in args)
+				Console.WriteLine(arg);
+			return 0;
 		}
 		private static int DelayedWriter()
 		{

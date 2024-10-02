@@ -144,7 +144,7 @@ namespace ProcNet
 			Action<LineOut> onNext, Action<Exception> onError,
 			Action<CharactersOut> onNextCharacters,
 			Action<Exception> onExceptionCharacters,
-			Action? onCompleted = null
+			Action onCompleted = null
 		) =>
 			Subscribe(
 				Observer.Create(onNext, onError, onCompleted ?? delegate { }),

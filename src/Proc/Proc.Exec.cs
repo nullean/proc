@@ -51,14 +51,13 @@ namespace ProcNet
 			var info = new ProcessStartInfo(arguments.Binary)
 			{
 				UseShellExecute = false
-				#if !NETSTANDARD2_1
-				, Arguments = args
-				#endif
 			};
-			#if NETSTANDARD2_1
+#if NETSTANDARD2_1
 			foreach (var arg in arguments.Args)
 				info.ArgumentList.Add(arg);
-			#endif
+#else
+			info.Arguments = args;
+#endif
 
 			var pwd = arguments.WorkingDirectory;
 			if (!string.IsNullOrWhiteSpace(pwd)) info.WorkingDirectory = pwd;
@@ -93,6 +92,7 @@ namespace ProcNet
 
 			return exitCode;
 		}
+
 		private static void HardWaitForExit(Process process, TimeSpan timeSpan)
 		{
 			using var task = Task.Run(() => process.WaitForExit());
