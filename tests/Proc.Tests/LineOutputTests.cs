@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FluentAssertions;
 using ProcNet.Std;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ProcNet.Tests
 {
@@ -19,7 +19,7 @@ namespace ProcNet.Tests
 	}
 
 
-	public class LineOutputTestCases : TestsBase
+	public class LineOutputTestCases(ITestOutputHelper output) : TestsBase
 	{
 		private static readonly string _expected = @"
 Windows IP Configuration
@@ -99,7 +99,7 @@ Ethernet adapter Bluetooth Network Connection:
 		[Fact]
 		public void ConsoleWriterSeesAllLines()
 		{
-			var writer = new TestConsoleOutWriter();
+			var writer = new TestConsoleOutWriter(output);
 			var args = TestCaseArguments("MoreText");
 			var result = Proc.Start(args, WaitTimeout, writer);
 			result.ExitCode.Should().HaveValue();
@@ -110,15 +110,5 @@ Ethernet adapter Bluetooth Network Connection:
 				lines[i].Should().Be(_expectedLines[i], i.ToString());
 		}
 
-		public class TestConsoleOutWriter : IConsoleOutWriter
-		{
-			private readonly StringBuilder _sb = new StringBuilder();
-			public string[] Lines => _sb.ToString().Replace("\r\n", "\n").Split(new [] {"\n"}, StringSplitOptions.None);
-			public string Text => _sb.ToString();
-
-			public void Write(Exception e) => throw e;
-
-			public void Write(ConsoleOut consoleOut) => consoleOut.CharsOrString(c=>_sb.Append(new string(c)), s=>_sb.AppendLine(s));
-		}
 	}
 }
