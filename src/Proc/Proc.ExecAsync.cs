@@ -1,22 +1,14 @@
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using ProcNet.Extensions;
 
+#if NET6_0_OR_GREATER
 namespace ProcNet
 {
 	public static partial class Proc
 	{
-
-		/// <summary>
-		/// This simply executes <paramref name="binary"/> and returns the exit code or throws if the binary failed to start
-		/// <para>This method shares the same console and does not capture the output</para>
-		/// <para>Use <see cref="Start(string,string[])"/> or overloads if you want to capture output and write to console in realtime</para>
-		/// </summary>
-		/// <exception cref="Exception">If the application fails to start</exception>
-		/// <returns>The exit code of the binary being run</returns>
-		public static int Exec(string binary, params string[] arguments) => Exec(new ExecArguments(binary, arguments));
-
 		/// <summary>
 		/// This simply executes a binary and returns the exit code or throws if the binary failed to start
 		/// <para>This method shares the same console and does not capture the output</para>
@@ -24,19 +16,15 @@ namespace ProcNet
 		/// </summary>
 		/// <exception cref="Exception">If the application fails to start</exception>
 		/// <returns>The exit code of the binary being run</returns>
-		public static int Exec(ExecArguments arguments)
+		public static async Task<int> ExecAsync(ExecArguments arguments, CancellationToken ctx = default)
 		{
 			var args = arguments.Args.NaivelyQuoteArguments();
 			var info = new ProcessStartInfo(arguments.Binary)
 			{
 				UseShellExecute = false
 			};
-#if NETSTANDARD2_1
 			foreach (var arg in arguments.Args)
 				info.ArgumentList.Add(arg);
-#else
-			info.Arguments = args;
-#endif
 
 			var pwd = arguments.WorkingDirectory;
 			if (!string.IsNullOrWhiteSpace(pwd)) info.WorkingDirectory = pwd;
@@ -57,12 +45,12 @@ namespace ProcNet
 				var completedBeforeTimeout =process.WaitForExit((int)t.TotalMilliseconds);
 				if (!completedBeforeTimeout)
 				{
-					HardWaitForExit(process, TimeSpan.FromSeconds(1));
+					await HardWaitForExitAsync(process, TimeSpan.FromSeconds(1));
 					throw new ProcExecException($"Timeout {t} occured while running {printBinary}");
 				}
 			}
 			else
-				process.WaitForExit();
+				await process.WaitForExitAsync(ctx);
 
 			var exitCode = process.ExitCode;
 			if (!arguments.ValidExitCodeClassifier(exitCode))
@@ -74,10 +62,11 @@ namespace ProcNet
 			return exitCode;
 		}
 
-		private static void HardWaitForExit(Process process, TimeSpan timeSpan)
+		private static async Task HardWaitForExitAsync(Process process, TimeSpan timeSpan)
 		{
-			using var task = Task.Run(() => process.WaitForExit());
-			Task.WaitAny(task, Task.Delay(timeSpan));
+			using var task = Task.Run(() => process.WaitForExitAsync());
+			await Task.WhenAny(task, Task.Delay(timeSpan));
 		}
 	}
 }
+#endif

@@ -33,6 +33,7 @@ namespace ProcNet.Tests
 			return new StartArguments("dotnet", arguments.Concat(args))
 			{
 				WorkingDirectory = GetWorkingDir(),
+				Timeout = WaitTimeout
 			};
 		}
 
@@ -40,6 +41,7 @@ namespace ProcNet.Tests
 			new("dotnet", GetDll(), testcase)
 			{
 				WorkingDirectory = GetWorkingDir(),
+				Timeout = WaitTimeout
 			};
 
 		private static string GetDll()

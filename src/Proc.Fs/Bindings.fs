@@ -30,7 +30,7 @@ with
             Timeout = TimeSpan(0, 0, 0, 0, -1)
             ValidExitCodeClassifier = None; 
             NoWrapInThread = None; SendControlCFirst = None; WaitForStreamReadersTimeout = None
-            StartedConfirmationHandler = None; StopBufferingAfterStarted = None 
+            StartedConfirmationHandler = None; StopBufferingAfterStarted = None
         }
 
 let private startArgs (opts: ExecOptions) =
@@ -42,6 +42,7 @@ let private startArgs (opts: ExecOptions) =
     opts.NoWrapInThread |> Option.iter(fun b -> startArguments.NoWrapInThread <- b)
     opts.SendControlCFirst |> Option.iter(fun b -> startArguments.SendControlCFirst <- b)
     opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> startArguments.WaitForStreamReadersTimeout <- t)
+    startArguments.Timeout <- opts.Timeout
     startArguments
  
 let private execArgs (opts: ExecOptions) =
@@ -50,6 +51,7 @@ let private execArgs (opts: ExecOptions) =
     opts.Environment |> Option.iter(fun e -> execArguments.Environment <- e)
     opts.WorkingDirectory |> Option.iter(fun d -> execArguments.WorkingDirectory <- d)
     opts.ValidExitCodeClassifier |> Option.iter(fun f -> execArguments.ValidExitCodeClassifier <- f)
+    execArguments.Timeout <- opts.Timeout
     execArguments
     
 let private longRunningArguments (opts: ExecOptions) =
@@ -100,14 +102,14 @@ type ShellBuilder() =
     member this.ExecuteWithArguments(opts, binary, [<ParamArray>] args: string array) =
         let opts = { opts with Binary = binary; Arguments = Some (args |> List.ofArray)  }
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout) |> ignore
+        Proc.Exec(execArgs) |> ignore
         opts
         
     [<CustomOperation("exec")>]
     member this.ExecuteWithArguments(opts, binary, args: string list) =
         let opts = { opts with Binary = binary; Arguments = Some args }
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout) |> ignore
+        Proc.Exec(execArgs) |> ignore
         opts
         
         
@@ -125,7 +127,7 @@ type ExecBuilder() =
     member this.Execute(opts, binary, [<ParamArray>] arguments: string array) =
         let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout) |> ignore
+        Proc.Exec(execArgs) |> ignore
         
     ///<summary>Runs <paramref name="binary"/> using <paramref name="arguments"/> immediately</summary>
     /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
@@ -135,7 +137,7 @@ type ExecBuilder() =
     member this.Execute(opts, binary, arguments: string list) =
         let opts = { opts with Binary = binary; Arguments = Some arguments}
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout) |> ignore
+        Proc.Exec(execArgs) |> ignore
         
     ///<summary>
     /// Runs the <see cref="ExecOptions"/> the computation build thus far.
@@ -145,7 +147,7 @@ type ExecBuilder() =
     member this.Execute(opts) =
         if opts.Binary = "" then failwithf "No binary specified to exec computation expression"
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout) |> ignore
+        Proc.Exec(execArgs) |> ignore
         
     ///<summary>Supply external <see cref="ExecOptions"/> to bootstrap</summary>
     [<CustomOperation("options")>]
@@ -212,7 +214,7 @@ type ExecBuilder() =
     member this.Find(opts, find: LineOut -> bool) =
         let opts = { opts with Find = Some find }
         let startArguments = startArgs opts
-        let result = Proc.Start(startArguments, opts.Timeout)
+        let result = Proc.Start(startArguments)
         result.ConsoleOut
         |> Seq.find find
         
@@ -220,7 +222,7 @@ type ExecBuilder() =
     member this.Filter(opts, find: LineOut -> bool) =
         let opts = { opts with Find = Some find }
         let startArguments = startArgs opts
-        let result = Proc.Start(startArguments, opts.Timeout)
+        let result = Proc.Start(startArguments)
         result.ConsoleOut
         |> Seq.filter find
         |> List.ofSeq
@@ -228,47 +230,47 @@ type ExecBuilder() =
     [<CustomOperation("output")>]
     member this.Output(opts) =
         let startArguments = startArgs opts
-        Proc.Start(startArguments, opts.Timeout)
+        Proc.Start(startArguments)
         
     [<CustomOperation("run_args")>]
     member this.InvokeArgs(opts, [<ParamArray>] arguments: string array) =
         let opts = { opts with Arguments = Some (arguments |> List.ofArray) }
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout) |> ignore
+        Proc.Exec(execArgs) |> ignore
         
     [<CustomOperation("run_args")>]
     member this.InvokeArgs(opts, arguments: string list) =
         let opts = { opts with Arguments = Some arguments}
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout) |> ignore
+        Proc.Exec(execArgs) |> ignore
         
     [<CustomOperation("exit_code_of")>]
     member this.ReturnStatus(opts, binary, arguments: string list) =
         let opts = { opts with Binary = binary; Arguments = Some arguments}
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout).GetValueOrDefault 1
+        Proc.Exec(execArgs)
         
     [<CustomOperation("exit_code_of")>]
     member this.ReturnStatus(opts, binary, [<ParamArray>] arguments: string array) =
         let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout).GetValueOrDefault 1
+        Proc.Exec(execArgs)
         
     [<CustomOperation("exit_code")>]
     member this.ReturnStatus(opts) =
         let execArgs = execArgs opts
-        Proc.Exec(execArgs, opts.Timeout).GetValueOrDefault 1
+        Proc.Exec(execArgs)
         
     [<CustomOperation("output_of")>]
     member this.ReturnOutput(opts, binary, [<ParamArray>] arguments: string array) =
         let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
         let execArgs = startArgs opts
-        Proc.Start(execArgs, opts.Timeout)
+        Proc.Start(execArgs)
         
     [<CustomOperation("output_of")>]
     member this.ReturnOutput(opts) =
         let startArgs = startArgs opts
-        Proc.Start(startArgs, opts.Timeout)
+        Proc.Start(startArgs)
         
     [<CustomOperation("wait_until")>]
     member this.WaitUntil(opts, startedConfirmation: LineOut -> bool) =

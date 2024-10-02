@@ -179,9 +179,9 @@ namespace ProcNet
 		/// </summary>
 		/// <param name="timeout">The maximum time span we are willing to wait</param>
 		/// <exception cref="CleanExitExceptionBase">an exception that indicates a problem early in the pipeline</exception>
-		public bool WaitForCompletion(TimeSpan timeout)
+		public bool WaitForCompletion(TimeSpan? timeout)
 		{
-			if (_completedHandle.WaitOne(timeout)) return true;
+			if (_completedHandle.WaitOne(timeout ?? default)) return true;
 
 			Stop();
 			return false;
@@ -205,8 +205,9 @@ namespace ProcNet
 					var args = new StartArguments(path, processId.ToString(CultureInfo.InvariantCulture))
 					{
 						WaitForExit = null,
+						Timeout = TimeSpan.FromSeconds(5)
 					};
-					var result = Proc.Start(args, TimeSpan.FromSeconds(5));
+					var result = Proc.Start(args);
 					SendYesForBatPrompt();
 					return result.ExitCode == 0;
 				}
@@ -219,8 +220,9 @@ namespace ProcNet
 					var args = new StartArguments("kill", "-SIGINT", processId.ToString(CultureInfo.InvariantCulture))
 					{
 						WaitForExit = null,
+						Timeout = TimeSpan.FromSeconds(5)
 					};
-					var result = Proc.Start(args, TimeSpan.FromSeconds(5));
+					var result = Proc.Start(args);
 					return result.ExitCode == 0;
 				}
 			}

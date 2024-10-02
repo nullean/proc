@@ -13,6 +13,9 @@ namespace ProcNet
 
 		// ReSharper disable UnusedAutoPropertyAccessor.Global
 
+		public TimeSpan? Timeout { get; set; }
+
+		public IConsoleOutWriter ConsoleOutWriter { get; set; }
 
 		/// <summary>
 		/// By default processes are started in a threadpool thread assuming you start multiple from the same thread.

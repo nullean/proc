@@ -21,7 +21,7 @@ namespace ProcNet.Tests
 		public void ProcSeesAllLines()
 		{
 			var args = TestCaseArguments("TrailingLines");
-			var result = Proc.Start(args, WaitTimeout);
+			var result = Proc.Start(args);
 			result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expected.Count(c=>c=='\n'));
 			for (var i = 0; i < result.ConsoleOut.Count; i++)
 				result.ConsoleOut[i].Line.Should().Be(_expectedLines[i], i.ToString());
@@ -44,7 +44,8 @@ namespace ProcNet.Tests
 		{
 			var writer = new TestConsoleOutWriter();
 			var args = TestCaseArguments("TrailingLines");
-			var result = Proc.Start(args, WaitTimeout, writer);
+			args.ConsoleOutWriter = writer;
+			var result = Proc.Start(args);
 			var lines = writer.Lines;
 			lines.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
 			for (var i = 0; i < lines.Length; i++)

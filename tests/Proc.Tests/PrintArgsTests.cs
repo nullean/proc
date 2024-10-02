@@ -37,7 +37,8 @@ public class PrintArgsTests(ITestOutputHelper output) : TestsBase
 	{
 		var args = TestCaseArguments("PrintArgs", testArgs);
 		var outputWriter = new TestConsoleOutWriter(output);
-		var result = Proc.Start(args, WaitTimeout, outputWriter);
+		args.ConsoleOutWriter = outputWriter;
+		var result = Proc.Start(args);
 		result.ExitCode.Should().Be(0);
 		result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(testArgs.Length);
 		for (var i = 0; i < result.ConsoleOut.Count; i++)
