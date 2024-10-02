@@ -17,9 +17,16 @@ namespace ProcNet
 
 		private IDisposable Subscription { get; }
 
-		public ObservableProcess Process { get; }
+		private ObservableProcess Process { get; }
 
+		public bool Running { get; internal set; }
+
+		internal ManualResetEvent WaitHandle { get; } = new(false);
+
+		/// <inheritdoc cref="ObservableProcessBase{TConsoleOut}.SendControlC(int)"/>>
 		public bool SendControlC(int processId) => Process.SendControlC(processId);
+
+		/// <inheritdoc cref="ObservableProcessBase{TConsoleOut}.SendControlC()"/>>
 		public void SendControlC() => Process.SendControlC();
 
 		public void Dispose()
@@ -52,48 +59,50 @@ namespace ProcNet
 		/// <returns>The exit code and whether the process completed</returns>
 		public static LongRunningApplicationSubscription StartLongRunning(LongRunningArguments arguments, TimeSpan waitForStartedConfirmation, IConsoleOutWriter consoleOutWriter = null)
 		{
-			var started = false;
-			var confirmWaitHandle = new ManualResetEvent(false);
 			var composite = new CompositeDisposable();
 			var process = new ObservableProcess(arguments);
+			var subscription = new LongRunningApplicationSubscription(process, composite);
 			consoleOutWriter ??= new ConsoleOutColorWriter();
 
 			var startedConfirmation = arguments.StartedConfirmationHandler ?? (_ => true);
 
 			if (arguments.StartedConfirmationHandler != null && arguments.StopBufferingAfterStarted)
-				arguments.KeepBufferingLines = _ => !started;
+				arguments.KeepBufferingLines = _ => !subscription.Running;
 
 			Exception seenException = null;
 			composite.Add(process);
 			composite.Add(process.SubscribeLinesAndCharacters(
 					l =>
 					{
-						if (startedConfirmation(l))
-						{
-							confirmWaitHandle.Set();
-							started = true;
-						}
+						if (!startedConfirmation(l)) return;
+						subscription.Running = true;
+						subscription.WaitHandle.Set();
 					},
 					e =>
 					{
 						seenException = e;
-						confirmWaitHandle.Set();
+						subscription.Running = false;
+						subscription.WaitHandle.Set();
 					},
 					l => consoleOutWriter.Write(l),
-					l => consoleOutWriter.Write(l)
-					)
+					l => consoleOutWriter.Write(l),
+					onCompleted: () =>
+					{
+						subscription.Running = false;
+						subscription.WaitHandle.Set();
+					})
 			);
 
 			if (seenException != null) ExceptionDispatchInfo.Capture(seenException).Throw();
 			if (arguments.StartedConfirmationHandler == null)
 			{
-				confirmWaitHandle.Set();
-				started = true;
+				subscription.Running = true;
+				subscription.WaitHandle.Set();
 			}
 			else
 			{
-				 var completed = confirmWaitHandle.WaitOne(waitForStartedConfirmation);
-				 if (completed) return new(process, composite);
+				 var completed = subscription.WaitHandle.WaitOne(waitForStartedConfirmation);
+				 if (completed) return subscription;
 				 var pwd = arguments.WorkingDirectory;
 				 var args = arguments.Args.NaivelyQuoteArguments();
 				 var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
@@ -102,7 +111,7 @@ namespace ProcNet
 				 throw new ProcExecException($"Could not yield started confirmation after {waitForStartedConfirmation} while running {printBinary}");
 			}
 
-			return new(process, composite);
+			return subscription;
 		}
 	}
 }
