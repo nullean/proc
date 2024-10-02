@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace ProcNet.Tests
@@ -25,11 +26,15 @@ namespace ProcNet.Tests
 			return binaryFolder;
 		}
 
-		protected static StartArguments TestCaseArguments(string testcase) =>
-			new("dotnet", GetDll(), testcase)
+		protected static StartArguments TestCaseArguments(string testcase, params string[] args)
+		{
+			string[] arguments = [GetDll(), testcase];
+
+			return new StartArguments("dotnet", arguments.Concat(args))
 			{
 				WorkingDirectory = GetWorkingDir(),
 			};
+		}
 
 		protected static LongRunningArguments LongRunningTestCaseArguments(string testcase) =>
 			new("dotnet", GetDll(), testcase)

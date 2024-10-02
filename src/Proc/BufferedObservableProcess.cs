@@ -74,11 +74,14 @@ namespace ProcNet
 
 			if (Process.HasExited)
 			{
+				Process.ReadStandardErrBlocking(_observer, BufferSize, () => ContinueReadingFromProcessReaders());
+				Process.ReadStandardOutBlocking(_observer, BufferSize, () => ContinueReadingFromProcessReaders());
 				OnExit(observer);
 				return Disposable.Empty;
 			}
 
 			_observer = observer;
+
 			StartAsyncReads();
 
 			Process.Exited += (o, s) =>

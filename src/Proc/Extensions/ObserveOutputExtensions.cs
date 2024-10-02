@@ -70,5 +70,26 @@ namespace ProcNet.Extensions
 			token.ThrowIfCancellationRequested();
 		}
 
+		public static void ReadStandardErrBlocking(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering) =>
+			BufferedReadBlocking(process, process.StandardError, observer, bufferSize, ConsoleOut.ErrorOut, keepBuffering);
+
+		public static void ReadStandardOutBlocking(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering) =>
+			BufferedReadBlocking(process, process.StandardOutput, observer, bufferSize, ConsoleOut.Out, keepBuffering);
+
+		private static void BufferedReadBlocking(this Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering)
+		{
+			using var sr = new StreamReader(r.BaseStream, Encoding.UTF8, true, b, true);
+			while (keepBuffering())
+			{
+				var buffer = new char[b];
+				var read = sr.Read(buffer, 0, buffer.Length);
+
+				if (read > 0)
+					o.OnNext(m(buffer));
+				else
+				if (sr.EndOfStream) break;
+			}
+		}
+
 	}
 }
