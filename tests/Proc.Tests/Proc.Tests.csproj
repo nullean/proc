@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net462; net8.0</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>Proc.Tests</AssemblyName>
     <RootNamespace>ProcNet.Tests</RootNamespace>
     <IsPackable>false</IsPackable>

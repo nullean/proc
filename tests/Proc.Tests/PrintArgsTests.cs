@@ -26,6 +26,12 @@ public class PrintArgsTests(ITestOutputHelper output) : TestsBase
 		string[] testArgs = ["this argument has spaces", "hello", "world"];
 		AssertOutput(testArgs);
 	}
+	[Fact]
+	public void EscapedQuotes()
+	{
+		string[] testArgs = ["\"this argument has spaces\"", "hello", "world"];
+		AssertOutput(testArgs);
+	}
 
 	private void AssertOutput(string[] testArgs)
 	{
