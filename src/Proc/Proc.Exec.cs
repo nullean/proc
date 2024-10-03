@@ -31,7 +31,7 @@ namespace ProcNet
 			{
 				UseShellExecute = false
 			};
-#if NETSTANDARD2_1
+#if NETSTANDARD2_1 || NET5_0_OR_GREATER
 			foreach (var arg in arguments.Args)
 				info.ArgumentList.Add(arg);
 #else
@@ -49,7 +49,8 @@ namespace ProcNet
 				: $"\"{arguments.Binary} {args}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
 
 			using var process = new Process { StartInfo = info };
-			if (!process.Start()) throw new ProcExecException($"Failed to start {printBinary}");
+			if (!process.Start())
+				throw new ProcExecException($"Failed to start {printBinary}");
 
 			if (arguments.Timeout.HasValue)
 			{
