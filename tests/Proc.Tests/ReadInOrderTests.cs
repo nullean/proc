@@ -9,7 +9,7 @@ namespace ProcNet.Tests
 		public void InterMixedOutAndError()
 		{
 			var args = TestCaseArguments(nameof(InterMixedOutAndError));
-			var result = Proc.Start(args, WaitTimeout);
+			var result = Proc.Start(args);
 			result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(200);
 
 			var interspersed = 0;

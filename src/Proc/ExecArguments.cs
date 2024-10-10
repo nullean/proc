@@ -15,5 +15,7 @@ namespace ProcNet
 			get => _validExitCodeClassifier ?? (c => c == 0);
 			set => _validExitCodeClassifier = value;
 		}
+
+		public TimeSpan? Timeout { get; set; }
 	}
 }

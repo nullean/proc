@@ -14,7 +14,7 @@ namespace ProcNet.Tests
 		public void OverwriteLines()
 		{
 			var args = TestCaseArguments(nameof(OverwriteLines));
-			var result = Proc.Start(args, WaitTimeout);
+			var result = Proc.Start(args);
 		}
 	}
 
@@ -64,7 +64,7 @@ Ethernet adapter Bluetooth Network Connection:
 		public void ProcSeesAllLines()
 		{
 			var args = TestCaseArguments("MoreText");
-			var result = Proc.Start(args, WaitTimeout);
+			var result = Proc.Start(args);
 			result.ExitCode.Should().HaveValue();
 			result.Completed.Should().BeTrue();
 			//result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
@@ -76,7 +76,8 @@ Ethernet adapter Bluetooth Network Connection:
 		public void ProcSeesAllLinesWithoutConsoleOutWriter()
 		{
 			var args = TestCaseArguments("MoreText");
-			var result = Proc.Start(args, WaitTimeout, null);
+			args.ConsoleOutWriter = null;
+			var result = Proc.Start(args);
 			result.ExitCode.Should().HaveValue();
 			result.Completed.Should().BeTrue();
 			//result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(_expectedLines.Length);
@@ -101,7 +102,8 @@ Ethernet adapter Bluetooth Network Connection:
 		{
 			var writer = new TestConsoleOutWriter(output);
 			var args = TestCaseArguments("MoreText");
-			var result = Proc.Start(args, WaitTimeout, writer);
+			args.ConsoleOutWriter = writer;
+			var result = Proc.Start(args);
 			result.ExitCode.Should().HaveValue();
 			result.Completed.Should().BeTrue();
 			var lines = writer.Lines;
