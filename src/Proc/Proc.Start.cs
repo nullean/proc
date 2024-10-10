@@ -38,7 +38,11 @@ namespace ProcNet
 					},
 					e => seenException = e,
 					l => consoleOutWriter.Write(l),
-					l => consoleOutWriter.Write(l)
+					e =>
+					{
+						seenException = e;
+						consoleOutWriter.Write(e);
+					}
 				)
 			);
 

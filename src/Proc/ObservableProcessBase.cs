@@ -181,7 +181,7 @@ namespace ProcNet
 		/// <exception cref="CleanExitExceptionBase">an exception that indicates a problem early in the pipeline</exception>
 		public bool WaitForCompletion(TimeSpan? timeout)
 		{
-			if (_completedHandle.WaitOne(timeout ?? default)) return true;
+			if (_completedHandle.WaitOne(timeout ?? TimeSpan.FromMilliseconds(-1))) return true;
 
 			Stop();
 			return false;

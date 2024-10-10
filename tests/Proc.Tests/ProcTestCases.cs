@@ -36,8 +36,6 @@ namespace ProcNet.Tests
 		[Fact]
 		public void BadBinary()
 		{
-			//Proc throws exceptions where as the observable does not.
-			var writer = new TestConsoleOutWriter();
 			Action call = () => Proc.Start("this-does-not-exist.exe");
 			var shouldThrow = call.ShouldThrow<ObservableProcessException>();
 			shouldThrow.And.InnerException.Message.Should().NotBeEmpty();
