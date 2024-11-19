@@ -248,6 +248,7 @@ namespace ProcNet
 				}
 				//best effort
 				catch (InvalidOperationException) { }
+				catch (IOException) { }
 			}
 		}
 

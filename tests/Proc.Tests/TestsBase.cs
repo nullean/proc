@@ -26,6 +26,15 @@ namespace ProcNet.Tests
 			return binaryFolder;
 		}
 
+		protected static StartArguments CmdTestCaseArguments(string testcase, params string[] args) {
+			string[] arguments = ["/C", "dotnet", GetDll(), testcase];
+
+			return new StartArguments("cmd", arguments.Concat(args)) {
+				WorkingDirectory = GetWorkingDir(),
+				Timeout = WaitTimeout
+			};
+		}
+
 		protected static StartArguments TestCaseArguments(string testcase, params string[] args)
 		{
 			string[] arguments = [GetDll(), testcase];
