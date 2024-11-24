@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using FluentAssertions;
-using Xunit;
 
 namespace ProcNet.Tests
 {
@@ -24,6 +24,7 @@ namespace ProcNet.Tests
 			seen[0].Should().Be("Written before control+c");
 			seen[1].Should().Be("Written after control+c");
 		}
+
 		[SkipOnNonWindowsFact] public void ControlCSend()
 		{
 			var args = TestCaseArguments(nameof(ControlC));
@@ -49,7 +50,6 @@ namespace ProcNet.Tests
 			args.SendControlCFirst = true;
 
 			var process = new ObservableProcess(args);
-
 			var seen = new List<string>();
 			process.SubscribeLines(c=>
 			{
@@ -62,5 +62,18 @@ namespace ProcNet.Tests
 			seen[0].Should().Be("Written before control+c");
 		}
 
+		[SkipOnNonWindowsFact]
+		public void ControlCIngoredByCmd() {
+			var args = CmdTestCaseArguments("TrulyLongRunning");
+			args.SendControlCFirst = true;
+			args.WaitForExit = TimeSpan.FromSeconds(2);
+			
+			var process = new ObservableProcess(args);
+			process.SubscribeLines(c => { });
+
+			Action call = () => process.WaitForCompletion(TimeSpan.FromSeconds(1));
+
+			call.ShouldNotThrow<IOException>();
+		}
 	}
 }
