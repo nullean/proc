@@ -10,10 +10,12 @@ internal static class ArgumentExtensions
 		if (arguments == null) return string.Empty;
 		var args = arguments.ToList();
 		if (args.Count == 0) return string.Empty;
+
 		var quotedArgs = args
 			.Select(a =>
 			{
 				if (!a.Contains(" ")) return a;
+				if (a.StartsWith("\"")) return a;
 				return $"\"{a}\"";
 			})
 			.ToList();

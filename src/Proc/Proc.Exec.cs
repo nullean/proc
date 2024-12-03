@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using ProcNet.Extensions;
 
@@ -26,16 +27,16 @@ namespace ProcNet
 		/// <returns>The exit code of the binary being run</returns>
 		public static int Exec(ExecArguments arguments)
 		{
-			var args = arguments.Args.NaivelyQuoteArguments();
+			var args = arguments.Args?.ToArray() ?? [];
 			var info = new ProcessStartInfo(arguments.Binary)
 			{
 				UseShellExecute = false
 			};
-#if NETSTANDARD2_1 || NET5_0_OR_GREATER
-			foreach (var arg in arguments.Args)
+#if !STRING_ARGS
+			foreach (var arg in args)
 				info.ArgumentList.Add(arg);
 #else
-			info.Arguments = args;
+			info.Arguments = args != null ? string.Join(" ", args) : string.Empty;
 #endif
 
 			var pwd = arguments.WorkingDirectory;
@@ -46,7 +47,7 @@ namespace ProcNet
 
 			var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
 				? $"\"{arguments.Binary}\""
-				: $"\"{arguments.Binary} {args}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
+				: $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
 
 			using var process = new Process { StartInfo = info };
 			if (!process.Start())

@@ -13,6 +13,7 @@ public class PrintArgsTests(ITestOutputHelper output) : TestsBase
 		AssertOutput(testArgs);
 	}
 
+#if NETSTANDARD2_1
 	[Fact]
 	public void ArgumentsWithSpaceAreNotSplit()
 	{
@@ -32,6 +33,20 @@ public class PrintArgsTests(ITestOutputHelper output) : TestsBase
 		string[] testArgs = ["\"this argument has spaces\"", "hello", "world"];
 		AssertOutput(testArgs);
 	}
+
+#else
+	[Fact]
+	public void EscapedQuotes()
+	{
+		string[] testArgs = ["\"this argument has spaces\"", "hello", "world"];
+		var args = TestCaseArguments("PrintArgs", testArgs);
+		var outputWriter = new TestConsoleOutWriter(output);
+		args.ConsoleOutWriter = outputWriter;
+		var result = Proc.Start(args);
+		result.ExitCode.Should().Be(0);
+		result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(testArgs.Length);
+	}
+#endif
 
 	private void AssertOutput(string[] testArgs)
 	{

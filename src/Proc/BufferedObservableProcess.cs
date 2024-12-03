@@ -71,16 +71,15 @@ namespace ProcNet
 			if (!StartProcess(observer)) return Disposable.Empty;
 
 			Started = true;
+			_observer = observer;
 
 			if (Process.HasExited)
 			{
-				Process.ReadStandardErrBlocking(_observer, BufferSize, () => ContinueReadingFromProcessReaders());
-				Process.ReadStandardOutBlocking(_observer, BufferSize, () => ContinueReadingFromProcessReaders());
+				Process.ReadStandardErrBlocking(observer, BufferSize, () => ContinueReadingFromProcessReaders());
+				Process.ReadStandardOutBlocking(observer, BufferSize, () => ContinueReadingFromProcessReaders());
 				OnExit(observer);
 				return Disposable.Empty;
 			}
-
-			_observer = observer;
 
 			StartAsyncReads();
 
