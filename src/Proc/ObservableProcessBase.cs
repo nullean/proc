@@ -143,8 +143,8 @@ namespace ProcNet
 			var processStartInfo = new ProcessStartInfo
 			{
 				FileName = s.Binary,
-				#if !NETSTANDARD2_1 && !NET5_0_OR_GREATER
-				Arguments = args.NaivelyQuoteArguments(),
+				#if STRING_ARGS
+				Arguments = args != null ? string.Join(" ", args) : string.Empty,
 				#endif
 				CreateNoWindow = true,
 				UseShellExecute = false,
@@ -152,7 +152,7 @@ namespace ProcNet
 				RedirectStandardError = true,
 				RedirectStandardInput = true
 			};
-			#if NETSTANDARD2_1 || NET5_0_OR_GREATER
+			#if !STRING_ARGS
 			foreach (var arg in s.Args)
 				processStartInfo.ArgumentList.Add(arg);
 			#endif

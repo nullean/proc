@@ -104,10 +104,10 @@ namespace ProcNet
 				 var completed = subscription.WaitHandle.WaitOne(waitForStartedConfirmation);
 				 if (completed) return subscription;
 				 var pwd = arguments.WorkingDirectory;
-				 var args = arguments.Args.NaivelyQuoteArguments();
+				 var args = arguments.Args;
 				 var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
 					 ? $"\"{arguments.Binary}\""
-					 : $"\"{arguments.Binary} {args}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
+					 : $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
 				 throw new ProcExecException($"Could not yield started confirmation after {waitForStartedConfirmation} while running {printBinary}");
 			}
 
