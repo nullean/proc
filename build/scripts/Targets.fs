@@ -41,7 +41,6 @@ let private pristineCheck (arguments:ParseResults<Arguments>) =
     | _ -> failwithf "The checkout folder has pending changes, aborting"
 
 let private test (arguments:ParseResults<Arguments>) =
-    let junitOutput = Path.Combine(Paths.Output.FullName, "junit-{assembly}-{framework}-test-results.xml")
     let loggerArg = "--logger:\"GithubActions;summary.includePassedTests=true;summary.includeSkippedTests=true\""
     exec "dotnet" ["test"; "-c"; "RELEASE"; loggerArg; "--logger:pretty"] |> ignore
 
