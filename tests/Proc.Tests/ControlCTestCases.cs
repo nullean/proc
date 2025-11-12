@@ -67,13 +67,13 @@ namespace ProcNet.Tests
 			var args = CmdTestCaseArguments("TrulyLongRunning");
 			args.SendControlCFirst = true;
 			args.WaitForExit = TimeSpan.FromSeconds(2);
-			
+
 			var process = new ObservableProcess(args);
 			process.SubscribeLines(c => { });
 
 			Action call = () => process.WaitForCompletion(TimeSpan.FromSeconds(1));
 
-			call.ShouldNotThrow<IOException>();
+			call.Should().NotThrow<IOException>();
 		}
 	}
 }

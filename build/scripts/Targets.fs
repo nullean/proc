@@ -10,8 +10,7 @@ open ProcNet
 
     
 let exec binary args =
-    let r = Proc.Exec (binary, args |> List.map (fun a -> sprintf "\"%s\"" a) |> List.toArray)
-    match r.HasValue with | true -> r.Value | false -> failwithf "invocation of `%s` timed out" binary
+    Proc.Exec (binary, args |> List.toArray)
     
 let private restoreTools = lazy(exec "dotnet" ["tool"; "restore"])
 let private currentVersion =
@@ -42,10 +41,7 @@ let private pristineCheck (arguments:ParseResults<Arguments>) =
     | _ -> failwithf "The checkout folder has pending changes, aborting"
 
 let private test (arguments:ParseResults<Arguments>) =
-    let junitOutput = Path.Combine(Paths.Output.FullName, "junit-{assembly}-{framework}-test-results.xml")
-    let loggerPathArgs = sprintf "LogFilePath=%s" junitOutput
-    let loggerArg = sprintf "--logger:\"junit;%s\"" loggerPathArgs
-    exec "dotnet" ["test"; "-c"; "RELEASE"; loggerArg; "--logger:pretty"] |> ignore
+    exec "dotnet" ["test"; "-c"; "RELEASE"; "--logger:GithubActions"; "--logger:pretty"] |> ignore
 
 let private generatePackages (arguments:ParseResults<Arguments>) =
     let output = Paths.RootRelative Paths.Output.FullName

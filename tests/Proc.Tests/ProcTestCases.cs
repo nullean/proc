@@ -37,8 +37,8 @@ namespace ProcNet.Tests
 		public void BadBinary()
 		{
 			Action call = () => Proc.Start("this-does-not-exist.exe");
-			var shouldThrow = call.ShouldThrow<ObservableProcessException>();
-			shouldThrow.And.InnerException.Message.Should().NotBeEmpty();
+			var shouldThrow = call.Should().Throw<ObservableProcessException>();
+			shouldThrow.And.InnerException?.Message.Should().NotBeEmpty();
 			shouldThrow.And.Message.Should().Contain("this-does-not-exist.exe");
 		}
 	}
