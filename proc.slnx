@@ -1,0 +1,29 @@
+<Solution>
+  <Folder Name="/build/">
+    <File Path=".editorconfig" />
+    <File Path=".github/workflows/ci.yml" />
+    <File Path=".gitignore" />
+    <File Path="build.bat" />
+    <File Path="build.sh" />
+    <File Path="Directory.Build.props" />
+    <File Path="dotnet-tools.json" />
+    <File Path="global.json" />
+    <File Path="readme.md" />
+    <Project Path="build/scripts/scripts.fsproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/ScratchPad.Fs.ArgumentPrinter/ScratchPad.Fs.ArgumentPrinter.fsproj" />
+    <Project Path="examples/ScratchPad.Fs/ScratchPad.Fs.fsproj" />
+    <Project Path="examples/ScratchPad/ScratchPad.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Proc.ControlC/Proc.ControlC.csproj" />
+    <Project Path="src/Proc.Fs/Proc.Fs.fsproj" />
+    <Project Path="src/Proc/Proc.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <File Path="tests/Directory.Build.props" />
+    <Project Path="tests/Proc.Tests.Binary/Proc.Tests.Binary.csproj" />
+    <Project Path="tests/Proc.Tests/Proc.Tests.csproj" />
+  </Folder>
+</Solution>

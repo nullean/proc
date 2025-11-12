@@ -10,8 +10,7 @@ open ProcNet
 
     
 let exec binary args =
-    let r = Proc.Exec (binary, args |> List.map (fun a -> sprintf "\"%s\"" a) |> List.toArray)
-    match r.HasValue with | true -> r.Value | false -> failwithf "invocation of `%s` timed out" binary
+    Proc.Exec (binary, args |> List.map (fun a -> sprintf "\"%s\"" a) |> List.toArray)
     
 let private restoreTools = lazy(exec "dotnet" ["tool"; "restore"])
 let private currentVersion =
