@@ -13,6 +13,10 @@
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="GitHubActionsTestLogger" Version="2.4.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="System.Reactive.Linq" Version="4.0.0-preview00001" />
     <PackageReference Include="FluentAssertions" Version="7.2.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -21,6 +25,5 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageReference Update="Nullean.VsTest.Pretty.TestLogger" Version="0.4.0" />
   </ItemGroup>
 </Project>
