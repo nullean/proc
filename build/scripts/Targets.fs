@@ -41,8 +41,7 @@ let private pristineCheck (arguments:ParseResults<Arguments>) =
     | _ -> failwithf "The checkout folder has pending changes, aborting"
 
 let private test (arguments:ParseResults<Arguments>) =
-    let loggerArg = "--logger:\"GithubActions;summary.includePassedTests=true;summary.includeSkippedTests=true\""
-    exec "dotnet" ["test"; "-c"; "RELEASE"; loggerArg; "--logger:pretty"] |> ignore
+    exec "dotnet" ["test"; "-c"; "RELEASE"; "--logger:GithubActions"; "--logger:pretty"] |> ignore
 
 let private generatePackages (arguments:ParseResults<Arguments>) =
     let output = Paths.RootRelative Paths.Output.FullName
