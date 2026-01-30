@@ -44,6 +44,7 @@ namespace ProcNet
 		protected bool Started { get; set; }
 		protected string ProcessName { get; private set; }
 
+		[Obsolete("Task.Run wrapping has been removed. This property has no effect.")]
 		protected bool NoWrapInThread => StartArguments.NoWrapInThread;
 		private int? _processId;
 		public virtual int? ProcessId => _processId;

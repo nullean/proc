@@ -15,13 +15,6 @@ public class TestConsoleOutWriter(ITestOutputHelper output) : IConsoleOutWriter
 	public void Write(ConsoleOut consoleOut)
 	{
 		consoleOut.CharsOrString(c => _sb.Append(new string(c)), s => _sb.AppendLine(s));
-		try
-		{
 			consoleOut.CharsOrString(c => output.WriteLine(new string(c).TrimEnd(NewLineChars)), s => output.WriteLine(s));
 		}
-		catch (InvalidOperationException)
-		{
-			// Test has already ended, ignore output
-		}
-	}
 }

@@ -39,7 +39,6 @@ let private startArgs (opts: ExecOptions) =
     opts.LineOutFilter |> Option.iter(fun f -> startArguments.LineOutFilter <- f)
     opts.Environment |> Option.iter(fun e -> startArguments.Environment <- e)
     opts.WorkingDirectory |> Option.iter(fun d -> startArguments.WorkingDirectory <- d)
-    opts.NoWrapInThread |> Option.iter(fun b -> startArguments.NoWrapInThread <- b)
     opts.SendControlCFirst |> Option.iter(fun b -> startArguments.SendControlCFirst <- b)
     opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> startArguments.WaitForStreamReadersTimeout <- t)
     startArguments.Timeout <- opts.Timeout
@@ -60,7 +59,6 @@ let private longRunningArguments (opts: ExecOptions) =
     opts.LineOutFilter |> Option.iter(fun f -> longRunningArguments.LineOutFilter <- f)
     opts.Environment |> Option.iter(fun e -> longRunningArguments.Environment <- e)
     opts.WorkingDirectory |> Option.iter(fun d -> longRunningArguments.WorkingDirectory <- d)
-    opts.NoWrapInThread |> Option.iter(fun b -> longRunningArguments.NoWrapInThread <- b)
     opts.SendControlCFirst |> Option.iter(fun b -> longRunningArguments.SendControlCFirst <- b)
     opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> longRunningArguments.WaitForStreamReadersTimeout <- t)
     
