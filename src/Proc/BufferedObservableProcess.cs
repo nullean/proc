@@ -44,21 +44,8 @@ namespace ProcNet
 		private Task _stdErrSubscription;
 		private IObserver<CharactersOut> _observer;
 
-		protected override IObservable<CharactersOut> CreateConsoleOutObservable()
-		{
-			if (NoWrapInThread)
-				return Observable.Create<CharactersOut>(observer =>
-				{
-					var disposable = KickOff(observer);
-					return disposable;
-				});
-
-			return Observable.Create<CharactersOut>(async observer =>
-			{
-				var disposable = await Task.Run(() => KickOff(observer));
-				return disposable;
-			});
-		}
+		protected override IObservable<CharactersOut> CreateConsoleOutObservable() =>
+			Observable.Create<CharactersOut>(observer => KickOff(observer));
 
 		/// <summary>
 		/// Expert setting, subclasses can return true if a certain condition is met to break out of the async readers on StandardOut and StandardError
@@ -156,11 +143,23 @@ namespace ProcNet
 			{
 				CancelAsyncReads();
 			}
-			else if (!Task.WaitAll(new[] {stdOutSubscription, stdErrSubscription}, WaitForStreamReadersTimeout.Value))
+			else
 			{
-				CancelAsyncReads();
-				OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout.Value);
-				OnError(observer, new WaitForEndOfStreamsTimeoutException(WaitForStreamReadersTimeout.Value));
+				try
+				{
+					if (!Task.WaitAll([stdOutSubscription, stdErrSubscription], WaitForStreamReadersTimeout.Value))
+					{
+						CancelAsyncReads();
+						OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout.Value);
+						OnError(observer, new WaitForEndOfStreamsTimeoutException(WaitForStreamReadersTimeout.Value));
+					}
+				}
+				catch (AggregateException)
+				{
+					// Tasks may be cancelled or faulted when the process exits abruptly
+					// or when the test framework disposes resources. This is expected.
+					CancelAsyncReads();
+				}
 			}
 		}
 	}

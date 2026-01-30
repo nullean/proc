@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Threading.Tasks;
 using ProcNet.Extensions;
 using ProcNet.Std;
 
@@ -20,17 +19,8 @@ namespace ProcNet
 
 		public EventBasedObservableProcess(StartArguments startArguments) : base(startArguments) { }
 
-		protected override IObservable<LineOut> CreateConsoleOutObservable()
-		{
-			if (NoWrapInThread)
-				return Observable.Create<LineOut>(observer => KickOff(observer));
-
-			return Observable.Create<LineOut>(async observer =>
-			{
-				var disposable = await Task.Run(() => KickOff(observer));
-				return disposable;
-			});
-		}
+		protected override IObservable<LineOut> CreateConsoleOutObservable() =>
+			Observable.Create<LineOut>(observer => KickOff(observer));
 
 		private CompositeDisposable KickOff(IObserver<LineOut> observer)
 		{
@@ -54,6 +44,20 @@ namespace ProcNet
 		}
 
 		private IDisposable CreateProcessExitSubscription(IObservable<EventPattern<object>> processExited, IObserver<LineOut> observer) =>
-			processExited.Subscribe(args => { OnExit(observer); }, e => OnError(observer, e), ()=> OnCompleted(observer));
+			processExited.Subscribe(args =>
+			{
+				// Second WaitForExit() call (parameterless) ensures all async events are flushed
+				// before we proceed with the exit handling. This is the documented .NET pattern
+				// for Process event handling - must be called BEFORE the process is disposed.
+				try
+				{
+					Process?.WaitForExit();
+				}
+				catch (InvalidOperationException)
+				{
+					// Process already disposed
+				}
+				OnExit(observer);
+			}, e => OnError(observer, e), ()=> OnCompleted(observer));
 	}
 }
