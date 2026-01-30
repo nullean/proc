@@ -78,7 +78,7 @@ namespace ProcNet
 
 		private static void HardWaitForExit(Process process, TimeSpan timeSpan)
 		{
-			using var task = Task.Run(() => process.WaitForExit());
+			var task = Task.Run(() => process.WaitForExit());
 			Task.WaitAny(task, Task.Delay(timeSpan));
 		}
 	}
