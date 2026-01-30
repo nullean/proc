@@ -65,7 +65,7 @@ namespace ProcNet
 
 		private static async Task HardWaitForExitAsync(Process process, TimeSpan timeSpan)
 		{
-			using var task = Task.Run(() => process.WaitForExitAsync());
+			var task = Task.Run(() => process.WaitForExitAsync());
 			await Task.WhenAny(task, Task.Delay(timeSpan));
 		}
 	}
