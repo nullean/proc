@@ -23,6 +23,7 @@ namespace ProcNet
 		/// stop at the same time they are all queueing for <see cref="System.Diagnostics.Process.WaitForCompletion()"> which may lead to
 		/// unexpected behaviour
 		/// </summary>
+		[Obsolete("Task.Run wrapping has been removed. This property has no effect.")]
 		public bool NoWrapInThread { get; set; }
 
 		/// <summary>

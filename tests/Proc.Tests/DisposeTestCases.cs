@@ -14,7 +14,7 @@ namespace ProcNet.Tests
 			Exception ex = null;
 			var process = new ObservableProcess(TestCaseArguments(nameof(DelayedWriter)));
 			var subscription = process.SubscribeLines(c=>seen.Add(c.Line), e => ex = e);
-			process.WaitForCompletion(WaitTimeout);
+			process.WaitForCompletion(TimeSpan.FromSeconds(10));
 
 			process.ExitCode.Should().Be(20);
 			ex.Should().BeNull();

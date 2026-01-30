@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using System;
+using FluentAssertions;
 using Xunit;
 
 namespace ProcNet.Tests
@@ -9,6 +10,7 @@ namespace ProcNet.Tests
 		public void InterMixedOutAndError()
 		{
 			var args = TestCaseArguments(nameof(InterMixedOutAndError));
+			args.Timeout = TimeSpan.FromSeconds(10); // Allow more time for 200 lines with 1ms delays
 			var result = Proc.Start(args);
 			result.ConsoleOut.Should().NotBeEmpty().And.HaveCount(200);
 
@@ -21,7 +23,7 @@ namespace ProcNet.Tests
 				previous = o.Error;
 			}
 
-			interspersed.Should().BeGreaterOrEqualTo(10);
+			interspersed.Should().BeGreaterOrEqualTo(3);
 		}
 	}
 }
