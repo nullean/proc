@@ -6,7 +6,6 @@ using System.IO;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using ProcNet.Extensions;
 using ProcNet.Std;
 
@@ -128,7 +127,7 @@ namespace ProcNet
 		private void ExitStop(IObserver<TConsoleOut> observer, int? exitCode)
 		{
 			if (!Started) return;
-			if (_isDisposing) return;
+			if (_disposing) return;
 			lock (_exitLock)
 			{
 				if (!Started) return;
@@ -179,18 +178,37 @@ namespace ProcNet
 		/// Block until the process completes.
 		/// </summary>
 		/// <param name="timeout">The maximum time span we are willing to wait</param>
+		/// <param name="ct">Cancels the wait and stops the process when signalled</param>
 		/// <exception cref="CleanExitExceptionBase">an exception that indicates a problem early in the pipeline</exception>
-		public bool WaitForCompletion(TimeSpan? timeout)
+		/// <exception cref="OperationCanceledException">when <paramref name="ct"/> is cancelled</exception>
+		public bool WaitForCompletion(TimeSpan? timeout, CancellationToken ct = default)
 		{
-			if (_completedHandle.WaitOne(timeout ?? TimeSpan.FromMilliseconds(-1))) return true;
+			if (!ct.CanBeCanceled)
+			{
+				if (_completedHandle.WaitOne(timeout ?? TimeSpan.FromMilliseconds(-1))) return true;
+				Stop();
+				return false;
+			}
 
-			Stop();
-			return false;
+			var handles = new WaitHandle[] { _completedHandle, ct.WaitHandle };
+			var index = WaitHandle.WaitAny(handles, timeout ?? TimeSpan.FromMilliseconds(-1));
+
+			if (index == WaitHandle.WaitTimeout)
+			{
+				Stop();
+				return false;
+			}
+			if (index == 1) // cancellation token fired
+			{
+				Stop();
+				ct.ThrowIfCancellationRequested();
+			}
+			return true;
 		}
 
 		private readonly object _unpackLock = new();
 		private readonly object _sendLock = new();
-		private bool _sentControlC;
+		private int _sentControlC; // 0 = not sent, 1 = sent; written via Interlocked
 
 
 		public bool SendControlC(int processId)
@@ -231,11 +249,11 @@ namespace ProcNet
 
 		public void SendControlC()
 		{
-			if (_sentControlC) return;
+			// CompareExchange atomically sets _sentControlC to 1 only if it was 0.
+			// Returns the old value — if it was already 1, another thread already sent.
+			if (Interlocked.CompareExchange(ref _sentControlC, 1, 0) != 0) return;
 			if (!ProcessId.HasValue) return;
-
-			var success = SendControlC(ProcessId.Value);
-			_sentControlC = true;
+			SendControlC(ProcessId.Value);
 		}
 
 		protected void SendYesForBatPrompt()
@@ -274,7 +292,7 @@ namespace ProcNet
 			}
 		}
 
-		protected bool StopRequested => _stopRequested || _sentControlC;
+		protected bool StopRequested => _stopRequested || _sentControlC != 0;
 		private bool _stopRequested;
 		private void Stop(int? exitCode = null, IObserver<TConsoleOut> observer = null)
 		{
@@ -363,19 +381,19 @@ namespace ProcNet
 
 		protected virtual void OnBeforeSetCompletedHandle() { }
 
-		private bool HardWaitForExit(TimeSpan timeSpan)
-		{
-			var task = Task.Run(() => Process.WaitForExit());
-			return (Task.WaitAny(task, Task.Delay(timeSpan)) == 0);
-		}
+		private bool HardWaitForExit(TimeSpan timeSpan) => Process.HardWaitForExit(timeSpan);
 
-		private bool _isDisposing;
+		// volatile: ensures the write is immediately visible to ExitStop on other threads
+		// without requiring a lock. Never reset to false — once disposed, always disposed.
+		private volatile bool _disposing;
 
 		public void Dispose()
 		{
-			_isDisposing = true;
-			Stop();
-			_isDisposing = false;
+			_disposing = true;       // visible to ExitStop before we enter the lock
+			lock (_exitLock)         // prevents concurrent Stop() from ExitStop + Dispose
+			{
+				Stop();
+			}
 		}
 	}
 }

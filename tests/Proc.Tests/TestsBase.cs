@@ -12,7 +12,7 @@ namespace ProcNet.Tests
 		protected static TimeSpan WaitTimeout { get; } = TimeSpan.FromSeconds(5);
 		protected static TimeSpan WaitTimeoutDebug { get; } = TimeSpan.FromMinutes(5);
 
-		private static string GetWorkingDir()
+		protected static string GetWorkingDir()
 		{
 			var directoryInfo = new DirectoryInfo(Directory.GetCurrentDirectory());
 
@@ -46,6 +46,15 @@ namespace ProcNet.Tests
 			};
 		}
 
+		protected static ExecArguments ExecTestCaseArguments(string testcase, params string[] args)
+		{
+			string[] arguments = [GetDll(), testcase];
+			return new ExecArguments("dotnet", arguments.Concat(args))
+			{
+				WorkingDirectory = GetWorkingDir()
+			};
+		}
+
 		protected static LongRunningArguments LongRunningTestCaseArguments(string testcase) =>
 			new("dotnet", GetDll(), testcase)
 			{
@@ -53,7 +62,7 @@ namespace ProcNet.Tests
 				Timeout = WaitTimeout
 			};
 
-		private static string GetDll()
+		protected static string GetDll()
 		{
 			var dll = Path.Combine("bin", GetRunningConfiguration(), "net10.0", _procTestBinary + ".dll");
 			var fullPath = Path.Combine(GetWorkingDir(), dll);

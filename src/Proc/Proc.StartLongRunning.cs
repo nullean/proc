@@ -21,7 +21,7 @@ namespace ProcNet
 
 		public bool Running { get; internal set; }
 
-		internal ManualResetEvent WaitHandle { get; } = new(false);
+		public ManualResetEvent WaitHandle { get; } = new(false);
 
 		/// <inheritdoc cref="ObservableProcessBase{TConsoleOut}.SendControlC(int)"/>>
 		public bool SendControlC(int processId) => Process.SendControlC(processId);
@@ -33,6 +33,7 @@ namespace ProcNet
 		{
 			Subscription?.Dispose();
 			Process?.Dispose();
+			WaitHandle?.Dispose();
 		}
 	}
 
@@ -56,8 +57,9 @@ namespace ProcNet
 		/// An implementation of <see cref="IConsoleOutWriter"/> that takes care of writing to the console
 		/// <para>defaults to <see cref="ConsoleOutColorWriter"/> which writes standard error messages in red</para>
 		/// </param>
+		/// <param name="ct">Cancels the startup confirmation wait and disposes the subscription when signalled</param>
 		/// <returns>The exit code and whether the process completed</returns>
-		public static LongRunningApplicationSubscription StartLongRunning(LongRunningArguments arguments, TimeSpan waitForStartedConfirmation, IConsoleOutWriter consoleOutWriter = null)
+		public static LongRunningApplicationSubscription StartLongRunning(LongRunningArguments arguments, TimeSpan waitForStartedConfirmation, IConsoleOutWriter consoleOutWriter = null, CancellationToken ct = default)
 		{
 			var composite = new CompositeDisposable();
 			var process = new ObservableProcess(arguments);
@@ -101,14 +103,28 @@ namespace ProcNet
 			}
 			else
 			{
-				 var completed = subscription.WaitHandle.WaitOne(waitForStartedConfirmation);
-				 if (completed) return subscription;
-				 var pwd = arguments.WorkingDirectory;
-				 var args = arguments.Args;
-				 var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
-					 ? $"\"{arguments.Binary}\""
-					 : $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
-				 throw new ProcExecException($"Could not yield started confirmation after {waitForStartedConfirmation} while running {printBinary}");
+				bool confirmed;
+				if (ct.CanBeCanceled)
+				{
+					var handles = new WaitHandle[] { subscription.WaitHandle, ct.WaitHandle };
+					var index = WaitHandle.WaitAny(handles, waitForStartedConfirmation);
+					if (index == 1) // cancellation token fired
+					{
+						subscription.Dispose();
+						ct.ThrowIfCancellationRequested();
+					}
+					confirmed = index == 0;
+				}
+				else
+					confirmed = subscription.WaitHandle.WaitOne(waitForStartedConfirmation);
+
+				if (confirmed) return subscription;
+				var pwd = arguments.WorkingDirectory;
+				var args = arguments.Args;
+				var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
+					? $"\"{arguments.Binary}\""
+					: $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
+				throw new ProcExecException($"Could not yield started confirmation after {waitForStartedConfirmation} while running {printBinary}");
 			}
 
 			return subscription;

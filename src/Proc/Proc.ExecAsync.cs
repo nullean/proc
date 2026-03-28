@@ -40,18 +40,32 @@ namespace ProcNet
 			using var process = new Process { StartInfo = info };
 			if (!process.Start()) throw new ProcExecException($"Failed to start {printBinary}");
 
-			if (arguments.Timeout.HasValue)
+			try
 			{
-				var t = arguments.Timeout.Value;
-				var completedBeforeTimeout =process.WaitForExit((int)t.TotalMilliseconds);
-				if (!completedBeforeTimeout)
+				if (arguments.Timeout.HasValue)
 				{
-					await HardWaitForExitAsync(process, TimeSpan.FromSeconds(1));
-					throw new ProcExecException($"Timeout {t} occured while running {printBinary}");
+					using var linked = CancellationTokenSource.CreateLinkedTokenSource(ctx);
+					linked.CancelAfter(arguments.Timeout.Value);
+					try
+					{
+						await process.WaitForExitAsync(linked.Token);
+					}
+					catch (OperationCanceledException) when (!ctx.IsCancellationRequested)
+					{
+						// Timeout fired (not the caller's token) — kill the process and report timeout.
+						await KillProcessAsync(process);
+						throw new ProcExecException($"Timeout {arguments.Timeout.Value} occured while running {printBinary}");
+					}
 				}
+				else
+					await process.WaitForExitAsync(ctx);
 			}
-			else
-				await process.WaitForExitAsync(ctx);
+			catch (OperationCanceledException)
+			{
+				// Caller cancelled — kill the process so it does not become an orphan.
+				await KillProcessAsync(process);
+				throw;
+			}
 
 			var exitCode = process.ExitCode;
 			if (!arguments.ValidExitCodeClassifier(exitCode))
@@ -63,10 +77,15 @@ namespace ProcNet
 			return exitCode;
 		}
 
-		private static async Task HardWaitForExitAsync(Process process, TimeSpan timeSpan)
+		private static async Task KillProcessAsync(Process process)
 		{
-			var task = Task.Run(() => process.WaitForExitAsync());
-			await Task.WhenAny(task, Task.Delay(timeSpan));
+			try
+			{
+				process.Kill(entireProcessTree: true);
+				using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+				await process.WaitForExitAsync(cts.Token);
+			}
+			catch { /* best effort */ }
 		}
 	}
 }
