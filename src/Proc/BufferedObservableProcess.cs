@@ -68,13 +68,26 @@ namespace ProcNet
 				return Disposable.Empty;
 			}
 
-			StartAsyncReads();
-
+			// Register the Exited handler BEFORE starting async reads so we cannot miss the
+			// event if the process exits between StartAsyncReads() and the += registration.
 			Process.Exited += (o, s) =>
 			{
 				WaitForEndOfStreams(observer, _stdOutSubscription, _stdErrSubscription);
 				OnExit(observer);
 			};
+
+			StartAsyncReads();
+
+			// Re-check HasExited after both the handler and reads are in place.
+			// If the process already exited before Exited+= was registered the event will
+			// not fire again, so we drive the completion path ourselves.
+			// OnExit / WaitForEndOfStreams are idempotent, so a concurrent Exited event
+			// firing at the same time is handled safely via _exitLock and _reading guards.
+			if (Process.HasExited)
+			{
+				WaitForEndOfStreams(observer, _stdOutSubscription, _stdErrSubscription);
+				OnExit(observer);
+			}
 
 			var disposable = Disposable.Create(() =>
 			{
@@ -104,7 +117,9 @@ namespace ProcNet
 				}
 				finally
 				{
+					var old = _ctx;
 					_ctx = new CancellationTokenSource();
+					old.Dispose();
 					_reading = false;
 				}
 			}

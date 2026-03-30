@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reactive.Disposables;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using ProcNet.Std;
 
 namespace ProcNet
@@ -22,7 +23,7 @@ namespace ProcNet
 		/// <para>defaults to <see cref="ConsoleOutColorWriter"/> which writes standard error messages in red</para>
 		/// </param>
 		/// <returns>An object holding a list of console out lines, the exit code and whether the process completed</returns>
-		public static ProcessCaptureResult Start(StartArguments arguments)
+		public static ProcessCaptureResult Start(StartArguments arguments, CancellationToken ct = default)
 		{
 			using var composite = new CompositeDisposable();
 			var process = new ObservableProcess(arguments);
@@ -46,7 +47,7 @@ namespace ProcNet
 				)
 			);
 
-			var completed = process.WaitForCompletion(arguments.Timeout);
+			var completed = process.WaitForCompletion(arguments.Timeout, ct);
 			if (seenException != null) ExceptionDispatchInfo.Capture(seenException).Throw();
 			return new ProcessCaptureResult(completed, consoleOut, process.ExitCode);
 		}

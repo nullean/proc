@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using ProcNet.Extensions;
 
 namespace ProcNet
@@ -56,10 +55,19 @@ namespace ProcNet
 			if (arguments.Timeout.HasValue)
 			{
 				var t = arguments.Timeout.Value;
-				var completedBeforeTimeout =process.WaitForExit((int)t.TotalMilliseconds);
+				var completedBeforeTimeout = process.WaitForExit((int)t.TotalMilliseconds);
 				if (!completedBeforeTimeout)
 				{
-					HardWaitForExit(process, TimeSpan.FromSeconds(1));
+					try
+					{
+#if NET5_0_OR_GREATER
+						process.Kill(entireProcessTree: true);
+#else
+						process.Kill();
+#endif
+					}
+					catch { /* best effort */ }
+					process.HardWaitForExit(TimeSpan.FromSeconds(3));
 					throw new ProcExecException($"Timeout {t} occured while running {printBinary}");
 				}
 			}
@@ -76,10 +84,5 @@ namespace ProcNet
 			return exitCode;
 		}
 
-		private static void HardWaitForExit(Process process, TimeSpan timeSpan)
-		{
-			var task = Task.Run(() => process.WaitForExit());
-			Task.WaitAny(task, Task.Delay(timeSpan));
-		}
 	}
 }

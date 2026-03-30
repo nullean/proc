@@ -40,6 +40,7 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(InterMixedOutAndError).ToLowerInvariant()) return InterMixedOutAndError();
 			if (testCase == nameof(LongRunning).ToLowerInvariant()) return await LongRunning();
 			if (testCase == nameof(TrulyLongRunning).ToLowerInvariant()) return await TrulyLongRunning();
+			if (testCase == nameof(WritePidAndWait).ToLowerInvariant()) return WritePidAndWait();
 
 			return 1;
 		}
@@ -190,6 +191,14 @@ namespace Proc.Tests.Binary
 				Console.WriteLine($"Data after startup: {i}");
 				await Task.Delay(TimeSpan.FromSeconds(10));
 			}
+			return 0;
+		}
+
+		private static int WritePidAndWait()
+		{
+			var pidFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "procnet-orphan-check.txt");
+			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
+			Thread.Sleep(TimeSpan.FromSeconds(30));
 			return 0;
 		}
 
