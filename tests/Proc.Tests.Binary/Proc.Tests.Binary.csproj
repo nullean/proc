@@ -1,10 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <AssemblyName>Proc.Tests.Binary</AssemblyName>
     <RootNamespace>Proc.Tests.Binary</RootNamespace>
     <NoWarn>CS1701,CS1591</NoWarn>
     <IsPackable>false</IsPackable>
+    <!--
+      PublishAot is declared here in the project file rather than passed via `-p:PublishAot=true` on the
+      command line. Passing it on the command line makes it a global property that leaks into every project
+      in the build graph, including Proc.csproj's netstandard2.0/net461 slices which don't support NativeAOT,
+      and MSBuild errors on those before it even picks the slice that will actually be used
+      (see https://github.com/dotnet/sdk/issues/30814 and https://github.com/dotnet/sdk/issues/29395).
+    -->
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Proc\Proc.csproj" />
+  </ItemGroup>
+
+  <!--
+    Tests invoke this project as a NativeAOT-published executable (see TestsBase.GetTestBinaryPath) rather than
+    via `dotnet <dll>`, to avoid dotnet-host/JIT startup overhead and variance in process-lifecycle tests. Plain
+    `dotnet build`/`dotnet test` only run the `Build` target, not `Publish`, so this target republishes the
+    NativeAOT binary after every build for the SDK's own RID. The RuntimeIdentifier=='' condition prevents this
+    from recursing into itself: the nested Publish invocation below runs its own inner Build with
+    RuntimeIdentifier set, so it won't re-enter this target.
+  -->
+  <Target Name="PublishNativeAotAfterBuild" AfterTargets="Build" Condition="'$(RuntimeIdentifier)' == '' AND '$(TargetFramework)' != ''">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish"
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(NETCoreSdkRuntimeIdentifier);SelfContained=true" />
+  </Target>
 </Project>

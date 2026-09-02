@@ -32,7 +32,16 @@ jobs:
         source-url: https://nuget.pkg.github.com/nullean/index.json
       env:
         NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+    # .NET 11 is still in preview, so it needs an explicit preview quality install.
+    # Merge this into the setup-dotnet step above (and drop dotnet-quality) once .NET 11 GAs.
+    - uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: |
+          11.0.1xx
+        dotnet-quality: preview
         
+    - run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+      name: Install NativeAOT toolchain (for Proc.Tests.Binary, published as a native exe to speed up/de-flake process-lifecycle tests)
     - run: ./build.sh build -s true
       name: Build
     - run: ./build.sh test -s true
