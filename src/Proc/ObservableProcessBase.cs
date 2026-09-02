@@ -5,6 +5,9 @@ using System.Globalization;
 using System.IO;
 using System.Reactive.Linq;
 using System.Reflection;
+#if NET11_0_OR_GREATER
+using System.Runtime.InteropServices;
+#endif
 using System.Threading;
 using ProcNet.Extensions;
 using ProcNet.Std;
@@ -166,6 +169,13 @@ namespace ProcNet
 
 			if (!string.IsNullOrWhiteSpace(s.WorkingDirectory)) processStartInfo.WorkingDirectory = s.WorkingDirectory;
 
+#if NET11_0_OR_GREATER
+			if (s.KillOnParentExit && (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
+				processStartInfo.KillOnParentExit = true;
+			if (s.InheritedHandles != null)
+				processStartInfo.InheritedHandles = s.InheritedHandles;
+#endif
+
 			var p = new Process
 			{
 				EnableRaisingEvents = true,
@@ -235,6 +245,20 @@ namespace ProcNet
 			{
 				lock (_sendLock)
 				{
+#if NET11_0_OR_GREATER
+					// .NET 11 exposes SafeProcessHandle.Signal, letting us deliver SIGINT in-process
+					// instead of shelling out to the `kill` binary.
+					try
+					{
+						using var target = Process.GetProcessById(processId);
+						return target.SafeHandle.Signal(PosixSignal.SIGINT);
+					}
+					catch (ArgumentException)
+					{
+						// No process with that id is running.
+						return false;
+					}
+#else
 					// I wish .NET Core had signals baked in but looking at the corefx repos tickets this is not happening any time soon.
 					var args = new StartArguments("kill", "-SIGINT", processId.ToString(CultureInfo.InvariantCulture))
 					{
@@ -243,6 +267,7 @@ namespace ProcNet
 					};
 					var result = Proc.Start(args);
 					return result.ExitCode == 0;
+#endif
 				}
 			}
 		}

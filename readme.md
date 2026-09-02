@@ -94,7 +94,8 @@ var args = new StartArguments("elasticsearch.bat")
 ```
 
 This will attempt to send a `Control+C` into the running process console on windows first before falling back to `Process.Kill`. 
-Linux and OSX support for this flag is still in the works so thats why this behaviour is opt in.
+On Linux and macOS this shells out to `kill -SIGINT`, unless running on .NET 11+ (see below), where it delivers the signal
+in-process instead.
 
 
 Dealing with `byte[]` characters might not be what you want to program against, so `ObservableProcess` allows the following as well.
@@ -145,8 +146,32 @@ Also note that `ObservableProcess` will yield whatever is in the buffer before O
 
 `ObservableProcess`'s sibbling that utilizes `OutputDataReceived` and `ErrorDataReceived` and can only emit lines.
 
+On .NET 11+ this reads through [`Process.ReadAllLinesAsync`](https://devblogs.microsoft.com/dotnet/process-api-improvements-in-dotnet-11/)
+instead, which multiplexes `stdout`/`stderr` on a single thread without blocking any thread pool threads.
 
+# .NET 11
 
+`Proc` targets `net11.0` alongside its other target frameworks and picks up a few of the
+[Process API improvements shipped in .NET 11](https://devblogs.microsoft.com/dotnet/process-api-improvements-in-dotnet-11/)
+when running on that TFM. These are all opt-in/no-op elsewhere, so there's nothing to change if you stay on an older TFM.
+
+* `SendControlC`/`SendControlCFirst` deliver `SIGINT` on Linux/macOS via `SafeProcessHandle.Signal` instead of shelling out
+  to the `kill` binary.
+* `EventBasedObservableProcess` reads through `Process.ReadAllLinesAsync` (see above).
+* Two new options on `StartArguments`/`ExecArguments`, both no-ops on older TFMs or unsupported platforms:
+
+```csharp
+var args = new StartArguments("some-long-running-tool")
+{
+	// Kills the started process if this process exits, including crashes. Backed by Job objects on Windows
+	// and PR_SET_PDEATHSIG on Linux. Only takes effect on .NET 11+ on Windows or Linux.
+	KillOnParentExit = true,
+
+	// Restricts which handles the started process inherits, instead of every inheritable handle from this
+	// process. Only takes effect on .NET 11+.
+	InheritedHandles = new List<SafeHandle>()
+};
+```
 
 
 

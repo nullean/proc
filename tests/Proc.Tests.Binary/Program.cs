@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using ProcNet;
 
 namespace Proc.Tests.Binary
 {
@@ -41,6 +42,8 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(LongRunning).ToLowerInvariant()) return await LongRunning();
 			if (testCase == nameof(TrulyLongRunning).ToLowerInvariant()) return await TrulyLongRunning();
 			if (testCase == nameof(WritePidAndWait).ToLowerInvariant()) return WritePidAndWait();
+			if (testCase == nameof(KillOnParentExitChild).ToLowerInvariant()) return KillOnParentExitChild();
+			if (testCase == nameof(WriteChildPidAndWait).ToLowerInvariant()) return WriteChildPidAndWait();
 
 			return 1;
 		}
@@ -197,6 +200,43 @@ namespace Proc.Tests.Binary
 		private static int WritePidAndWait()
 		{
 			var pidFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "procnet-orphan-check.txt");
+			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
+			Thread.Sleep(TimeSpan.FromSeconds(30));
+			return 0;
+		}
+
+		// Acts as the "middle" process for KillOnParentExit tests: starts a grandchild with
+		// StartArguments.KillOnParentExit = true and then exits, so the test can observe whether the
+		// grandchild was killed along with it.
+		private static int KillOnParentExitChild()
+		{
+			var pidFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "procnet-kill-on-parent-exit-child.txt");
+			if (System.IO.File.Exists(pidFile)) System.IO.File.Delete(pidFile);
+
+			// Environment.ProcessPath (rather than Assembly.Location, which is always empty for
+			// NativeAOT/single-file apps) is the path to this very executable, so it can spawn another
+			// instance of itself as the grandchild.
+			var selfExe = Environment.ProcessPath;
+			var childArgs = new StartArguments(selfExe, nameof(WriteChildPidAndWait))
+			{
+				KillOnParentExit = true,
+				WaitForExit = null
+			};
+			var process = new ObservableProcess(childArgs);
+			process.Subscribe(_ => { }); // cold observable; subscribing starts the underlying process
+
+			// Poll for evidence the grandchild has actually started (written its PID) instead of guessing a
+			// fixed sleep duration, so this isn't sensitive to how long process startup takes on a given machine.
+			var deadline = DateTime.UtcNow.AddSeconds(10);
+			while (!System.IO.File.Exists(pidFile) && DateTime.UtcNow < deadline)
+				Thread.Sleep(25);
+
+			return 0;
+		}
+
+		private static int WriteChildPidAndWait()
+		{
+			var pidFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "procnet-kill-on-parent-exit-child.txt");
 			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
 			Thread.Sleep(TimeSpan.FromSeconds(30));
 			return 0;

@@ -33,6 +33,13 @@ namespace ProcNet
 				foreach (var kv in arguments.Environment)
 					info.Environment[kv.Key] = kv.Value;
 
+#if NET11_0_OR_GREATER
+			if (arguments.KillOnParentExit && (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
+				info.KillOnParentExit = true;
+			if (arguments.InheritedHandles != null)
+				info.InheritedHandles = arguments.InheritedHandles;
+#endif
+
 			var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
 				? $"\"{arguments.Binary}\""
 				: $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
