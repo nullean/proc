@@ -34,7 +34,7 @@ mise run release  # show the release draft; `mise run release publish` releases
 
 release-drafter keeps a draft release up to date from the labels of merged pull requests. **Publishing the draft**
 releases: it creates the tag, and `release.yml` packs at that version and pushes to nuget.org. `mise run release` shows
-the draft. The [release](.claude/skills/release/SKILL.md) and [breaking-changes](.claude/skills/breaking-changes/SKILL.md)
+the draft. The [releasing](.claude/skills/releasing/SKILL.md) and [breaking-changes](.claude/skills/breaking-changes/SKILL.md)
 skills have the details. Every pull request carries exactly one release label. Package output and API reports go to `build/output`.
 
 ## Rules

@@ -1,5 +1,5 @@
 ---
-name: release
+name: releasing
 description: Release this repository. Use when the user asks to release, ship a version, publish to NuGet, or check what the next version will be.
 ---
 
