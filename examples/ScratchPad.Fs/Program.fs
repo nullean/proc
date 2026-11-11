@@ -16,8 +16,7 @@ exec {
     working_dir "."
     send_control_c false
     timeout (TimeSpan.FromSeconds(10))
-    thread_wrap false
-    validExitCode (fun i -> i = 0)
+    valid_exit_code (fun i -> i = 0)
     run
 }
 
