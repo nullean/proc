@@ -9,7 +9,10 @@ open System.IO
 /// </summary>
 type ShellContext() =
     member val WorkingDirectory: string option = None with get, set
+    /// <summary>Variables set for the commands of this block. A <c>null</c> value means unset.</summary>
     member val Environment: Map<string, string> = Map.empty with get, set
+    /// <summary>Directories <c>pushd</c> saved, most recent first</summary>
+    member val DirectoryStack: string list = [] with get, set
     /// <summary>Print <c>$ binary arguments</c> before running each command, like <c>set -x</c></summary>
     member val EchoCommands = false with get, set
 
@@ -118,20 +121,88 @@ module ShellSteps =
     /// <summary>Like <c>shell</c>, but prints <c>$ binary arguments</c> before each command, like <c>set -x</c></summary>
     let shellx = ShellBuilder(true)
 
+    let private currentDirectory (ctx: ShellContext) =
+        ctx.WorkingDirectory |> Option.defaultWith Directory.GetCurrentDirectory
+
+    let private changeDirectory (step: string) (ctx: ShellContext) (directory: string) =
+        let next = Path.GetFullPath(Path.Combine(currentDirectory ctx, directory))
+        if not (Directory.Exists next) then raise (DirectoryNotFoundException $"{step}: no such directory '{next}'")
+        ctx.WorkingDirectory <- Some next
+
+    let private restoring (restore: unit -> unit) =
+        { new IDisposable with member _.Dispose() = restore () }
+
     /// <summary>
     /// Changes the working directory for the commands that follow in this <c>shell { }</c> block.
     /// A relative path resolves against the current one. Throws when the directory does not exist.
     /// </summary>
-    let cd (directory: string) : ShellStep<unit> =
+    let cd (directory: string) : ShellStep<unit> = ShellStep (fun ctx -> changeDirectory "cd" ctx directory)
+
+    /// <summary>Saves the current directory, then changes to <paramref name="directory"/>. <c>popd</c> goes back.</summary>
+    let pushd (directory: string) : ShellStep<unit> =
         ShellStep (fun ctx ->
-            let current = ctx.WorkingDirectory |> Option.defaultWith Directory.GetCurrentDirectory
-            let next = Path.GetFullPath(Path.Combine(current, directory))
-            if not (Directory.Exists next) then raise (DirectoryNotFoundException $"cd: no such directory '{next}'")
-            ctx.WorkingDirectory <- Some next)
+            let current = currentDirectory ctx
+            changeDirectory "pushd" ctx directory
+            ctx.DirectoryStack <- current :: ctx.DirectoryStack)
+
+    /// <summary>Goes back to the directory the last <c>pushd</c> saved. Throws when there is none.</summary>
+    let popd : ShellStep<unit> =
+        ShellStep (fun ctx ->
+            match ctx.DirectoryStack with
+            | previous :: rest ->
+                ctx.WorkingDirectory <- Some previous
+                ctx.DirectoryStack <- rest
+            | [] -> invalidOp "popd: the directory stack is empty")
+
+    /// <summary>
+    /// Changes to <paramref name="directory"/> until the end of the enclosing scope:
+    /// <c>use! _ = inDir "src"</c>. The previous directory comes back even after a <c>cd</c> or an exception.
+    /// </summary>
+    let inDir (directory: string) : ShellStep<IDisposable> =
+        ShellStep (fun ctx ->
+            let saved = ctx.WorkingDirectory
+            changeDirectory "inDir" ctx directory
+            restoring (fun () -> ctx.WorkingDirectory <- saved))
 
     /// <summary>Sets an environment variable for the commands that follow in this <c>shell { }</c> block</summary>
     let setEnv (name: string) (value: string) : ShellStep<unit> =
         ShellStep (fun ctx -> ctx.Environment <- Map.add name value ctx.Environment)
+
+    /// <summary>Sets an environment variable for the commands that follow, like <c>export NAME=value</c></summary>
+    let env (name: string) (value: string) : ShellStep<unit> = setEnv name value
+
+    /// <summary>Sets several environment variables for the commands that follow</summary>
+    let setEnvs (variables: (string * string) list) : ShellStep<unit> =
+        ShellStep (fun ctx -> ctx.Environment <- variables |> List.fold (fun m (k, v) -> Map.add k v m) ctx.Environment)
+
+    /// <summary>Removes an environment variable for the commands that follow, even one this process has</summary>
+    let unsetEnv (name: string) : ShellStep<unit> =
+        ShellStep (fun ctx -> ctx.Environment <- Map.add name null ctx.Environment)
+
+    /// <summary>
+    /// The value commands in this block see for <paramref name="name"/>: the block's own value, else this process's.
+    /// <c>None</c> when it is not set or was unset.
+    /// </summary>
+    let getEnv (name: string) : ShellStep<string option> =
+        ShellStep (fun ctx ->
+            match ctx.Environment.TryFind name with
+            | Some value -> Option.ofObj value
+            | None -> Option.ofObj (Environment.GetEnvironmentVariable name))
+
+    /// <summary>
+    /// Sets environment variables until the end of the enclosing scope: <c>use! _ = withEnv ["CI", "true"]</c>.
+    /// The previous values, or their absence, come back afterwards.
+    /// </summary>
+    let withEnv (variables: (string * string) list) : ShellStep<IDisposable> =
+        ShellStep (fun ctx ->
+            let saved = [ for name, _ in variables -> name, ctx.Environment.TryFind name ]
+            ctx.Environment <- variables |> List.fold (fun m (k, v) -> Map.add k v m) ctx.Environment
+            restoring (fun () ->
+                ctx.Environment <-
+                    saved |> List.fold (fun m (name, previous) ->
+                        match previous with
+                        | Some value -> Map.add name value m
+                        | None -> Map.remove name m) ctx.Environment))
 
     /// <summary>Print <c>$ binary arguments</c> before each command that follows, like <c>set -x</c></summary>
     let echoCommands (enabled: bool) : ShellStep<unit> =
