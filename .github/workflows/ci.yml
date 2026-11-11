@@ -54,14 +54,32 @@ jobs:
             echo "Retrying"; sleep 1
           done
 
+  # packs at the release's tag in the shared workflow...
   release:
     if: github.event_name == 'release'
     needs: [build, zizmor]
-    uses: nullean/.github/.github/workflows/release.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
+    uses: nullean/.github/.github/workflows/release.yml@2454f9081f3c06f5533805afa8f44e6bb67c39c5 # v1.4.0
     permissions:
       contents: write
-      id-token: write
     with:
       packages-path: build/output
-    secrets:
-      NUGET_USER: ${{ secrets.NUGET_USER }}
+
+  # ...and publishes from this file: nuget.org's trusted publishing checks that the token's workflow is this ci.yml,
+  # which a job inside the shared workflow would not be.
+  publish:
+    if: github.event_name == 'release'
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # append the public API changes to the release notes
+      id-token: write # NuGet trusted publishing: exchange the OIDC token for a short-lived key
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-packages
+          path: packages
+      - uses: nullean/.github/actions/nuget-publish@2454f9081f3c06f5533805afa8f44e6bb67c39c5 # v1.4.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+          packages-path: packages
