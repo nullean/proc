@@ -158,3 +158,53 @@ let ``use disposes resources at the end of the block`` () =
         do! test [ "ExitWith"; "0" ]
     }
     Assert.True disposed.Value
+
+[<Fact>]
+let ``commands and steps on a line of their own run without do!`` () =
+    use dir = new TempDir()
+    let ranAfter = ref false
+    let inside = shell {
+        cd dir.Path
+        sh $"{bin} ExitWith 0"
+        test [ "ExitWith"; "0" ]
+        let! inside = text $"{bin} PrintCwd"
+        return inside
+    }
+    Assert.EndsWith(Path.GetFileName dir.Path, inside)
+    let ex = Assert.Throws<ProcExecException>(fun () ->
+        shell {
+            sh $"{bin} ExitWith 3"
+            ranAfter.Value <- true
+        })
+    Assert.Equal(Nullable 3, ex.ExitCode)
+    Assert.False ranAfter.Value
+
+[<Fact>]
+let ``sh strings run pipes and keep values whole`` () =
+    let spaced = "with space"
+    let result = shell {
+        let! piped = lines $"{bin} PrintArgs a {spaced} | {bin} EchoStdin '> '"
+        return piped
+    }
+    Assert.Equal<string list>([ "> a"; "> with space" ], result)
+
+[<Fact>]
+let ``exitCode and succeeds return without throwing`` () =
+    let code, ok, notOk = shell {
+        let! code = exitCode $"{bin} ExitWith 4"
+        let! ok = succeeds $"{bin} ExitWith 0"
+        let! notOk = succeeds $"{bin} ExitWith 1"
+        return code, ok, notOk
+    }
+    Assert.Equal(4, code)
+    Assert.True ok
+    Assert.False notOk
+
+[<Fact>]
+let ``shellx prints each command`` () =
+    let original = Console.Out
+    use writer = new StringWriter()
+    Console.SetOut writer
+    try shellx { sh $"{bin} ExitWith 0" }
+    finally Console.SetOut original
+    Assert.Contains($"$ {bin} ExitWith 0", writer.ToString())

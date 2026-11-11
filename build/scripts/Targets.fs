@@ -75,11 +75,14 @@ let private generateApiChanges (arguments:ParseResults<Arguments>) =
         let outputFile =
             let f = sprintf "breaking-changes-%s.md" p
             Path.Combine(output, f)
+        // Proc.Fs only targets modern .NET: compare its net10.0 build against the previous netstandard2.0 package
+        let tfm =
+            if Directory.Exists(sprintf "src/%s/bin/Release/%s" p Paths.MainTFM) then Paths.MainTFM else "net10.0"
         let args =
             [
                 "assembly-differ"
                 (sprintf "previous-nuget|%s|%s|%s" p currentVersion Paths.MainTFM);
-                (sprintf "directory|src/%s/bin/Release/%s" p Paths.MainTFM);
+                (sprintf "directory|src/%s/bin/Release/%s" p tfm);
                 "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
             ]
         

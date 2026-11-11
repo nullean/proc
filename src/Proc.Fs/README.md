@@ -4,7 +4,7 @@ F# bindings for Proc.
 
 Proc is a library that turns `System.Diagnostics.Process` into a stream based `IObservable` capable of capturing a process's true output while still emitting line based events.
 
-The library ships with two computation expression builders, `shell { }` and `exec { }`, and a `Cmd` module for running commands with `|>`.
+The library ships with two computation expression builders, `shell { }` and `exec { }`, and a `Cmd` module for running commands with `|>`. It targets .NET 10 and .NET 11.
 
 # Shell
 
@@ -16,29 +16,75 @@ The first command that fails throws a `ProcExecException` and stops the block.
 open Proc.Fs
 
 let sha = shell {
-    do! cmd "git" ["fetch"]                                  // do! runs a command
-    let! sha = cmd "git" ["rev-parse"; "HEAD"] |> Cmd.text   // let! binds what it prints
-    for file in cmd "git" ["diff"; "--name-only"] |> Cmd.lines |> Cmd.where (fun f -> f.EndsWith ".fs") do
-        do! cmd "dotnet" ["fantomas"; file]
+    sh $"git fetch"                                       // a command on its own line runs
+    let! sha = text $"git rev-parse HEAD"                 // let! binds what it prints
+    let! files = lines $"git diff --name-only | grep \.fs$"
+    for file in files do
+        sh $"dotnet fantomas {file}"                      // {file} is always one argument
     return sha
 }
 ```
 
 The block runs as soon as it is evaluated and returns the value of its `return`.
+`shellx { }` does the same, and prints `$ binary arguments` before each command, like `set -x`.
+
+| Inside `shell { }` | Does |
+|---|---|
+| `sh $"…"` | runs the command; a failure stops the block |
+| `let! s = text $"…"` | standard out as one trimmed string |
+| `let! ls = lines $"…"` | standard out as a list of lines |
+| `let! code = exitCode $"…"` | the exit code, without throwing |
+| `let! ok = succeeds $"…"` | whether the exit code is `0`, without throwing |
 
 These steps change the commands that follow them in the same block:
 
 ```fsharp
 shell {
-    do! cd "src"                  // relative to the current directory; throws if it does not exist
-    do! setEnv "CI" "true"
-    do! echoCommands true         // print "$ binary arguments" before each command, like set -x
+    cd "src"                      // relative to the current directory; throws if it does not exist
+    setEnv "CI" "true"
+    echoCommands true             // print "$ binary arguments" before each command, like set -x
     let! here = pwd
-    do! cmd "dotnet" ["build"]
+    sh $"dotnet build"
 }
 ```
 
 A command's own `Cmd.cwd` resolves against the shell's directory, and its own `Cmd.env` wins over `setEnv`.
+`do!` still works in front of commands and steps, for example `do! cd "src"`.
+
+## Writing commands with `sh`
+
+`sh` takes an interpolated string, `$"…"`. It splits **only the text you wrote**:
+
+- Whitespace, including new lines, separates arguments.
+- `'…'` and `"…"` group words into one argument. Inside `"…"`, `\"` and `\\` are escapes.
+- An unquoted `|` pipes into the next command.
+- A `\` at the end of a line continues the command, so commands copied from bash scripts work.
+- Unquoted `>`, `<`, `;` and `&` throw. Quote them to pass them as arguments.
+
+Each `{value}` is always part of exactly one argument, whatever it contains: spaces, quotes, `|` or `$(…)`.
+A list standing alone, such as `{files}`, adds one argument per item. Formats such as `{n:F2}` use the invariant culture.
+No shell runs, so a value can never start another command, and there is no glob or `$VAR` expansion.
+
+| You write | The program gets |
+|---|---|
+| `sh $"wc -l {file}"` with `file = "my file.fs"` | `wc` with `-l`, `my file.fs` |
+| `sh $"git commit -m {msg}"` with `msg = "fix; rm -rf ~"` | `git` with `commit`, `-m`, `fix; rm -rf ~` |
+| `sh $"dotnet test {projects}"` with a list | `dotnet` with `test`, then one argument per project |
+| `sh $"grep 'a\|b' {f}"` | one command: `grep` with `a\|b` and the file |
+
+Triple-quoted strings span lines and contain `"` without escaping:
+
+```fsharp
+sh $"""
+    docker run --rm
+      -e "CI=true"
+      -v {dir}:/src
+      alpine ls
+"""
+```
+
+Use `$$"""…"""` when the command contains literal braces; its placeholders are `{{value}}`.
+A plain string without `$` does not compile. `Cmd.ofString` parses text that only exists at runtime.
 
 # Cmd
 

@@ -265,6 +265,25 @@ module Cmd =
     let create (binary: string) (arguments: string list) =
         { Cmd.Empty with Binary = binary; Arguments = Some arguments }
 
+    /// <summary>
+    /// Streams the standard out of <paramref name="upstream"/> into the standard input of <paramref name="downstream"/>.
+    /// Standard error of <paramref name="upstream"/> goes to the console. Prefer the <c>|&gt;|</c> operator.
+    /// </summary>
+    let pipe (downstream: Cmd) (upstream: Cmd) = { downstream with Stdin = Some (StdinSource.Upstream upstream) }
+
+    /// One command per stage, piped together
+    let internal ofStages (stages: string list list) =
+        stages
+        |> List.map (fun stage -> create (List.head stage) (List.tail stage))
+        |> List.reduce (fun upstream downstream -> pipe downstream upstream)
+
+    /// <summary>
+    /// Parses command text that only exists at runtime, such as a value read from configuration.
+    /// The whole string is split like the literal text of <c>sh</c>, so prefer <c>sh $"…"</c> for values.
+    /// </summary>
+    let ofString (command: string) =
+        ShellSyntax.parse command [ ShellSyntax.Text command ] |> ofStages
+
     /// <summary>Appends arguments</summary>
     let args (arguments: string list) (cmd: Cmd) =
         { cmd with Arguments = Some ((cmd.Arguments |> Option.defaultValue []) @ arguments) }
@@ -289,12 +308,6 @@ module Cmd =
     /// <summary>Writes <paramref name="lines"/> to the standard input of the process, then closes it</summary>
     let stdin (lines: string seq) (cmd: Cmd) = { cmd with Stdin = Some (StdinSource.Lines lines) }
 
-    /// <summary>
-    /// Streams the standard out of <paramref name="upstream"/> into the standard input of <paramref name="downstream"/>.
-    /// Standard error of <paramref name="upstream"/> goes to the console. Prefer the <c>|&gt;|</c> operator.
-    /// </summary>
-    let pipe (downstream: Cmd) (upstream: Cmd) = { downstream with Stdin = Some (StdinSource.Upstream upstream) }
-
     /// <summary>Captures the lines the command writes to standard out. Fails when the command fails.</summary>
     let lines (cmd: Cmd) : Capture<string list> =
         { Cmd = cmd; EchoStdout = false
@@ -308,6 +321,10 @@ module Cmd =
     /// <summary>Runs the command, printing its output, and returns the exit code without throwing on a non-zero one</summary>
     let exitCode (cmd: Cmd) : Capture<int> =
         { Cmd = Args.acceptAnyExitCode cmd; EchoStdout = true; Read = fun r -> r.ExitCode.Value }
+
+    /// <summary>Runs the command, printing its output, and returns whether it exited with <c>0</c>, without throwing</summary>
+    let succeeds (cmd: Cmd) : Capture<bool> =
+        { Cmd = Args.acceptAnyExitCode cmd; EchoStdout = true; Read = fun r -> r.ExitCode.Value = 0 }
 
     /// <summary>Captures every line plus the exit code, without throwing on a non-zero exit code</summary>
     let result (cmd: Cmd) : Capture<ProcessCaptureResult> =
@@ -350,3 +367,29 @@ module CmdOperators =
     /// Every command in the pipe must succeed. Pipes carry lines of text, not raw bytes.
     /// </summary>
     let (|>|) (upstream: Cmd) (downstream: Cmd) = Cmd.pipe downstream upstream
+
+    /// <summary>
+    /// A command written as one interpolated string: <c>sh $"wc -l {file}"</c>.
+    /// <para>
+    /// The text you write splits on whitespace; <c>'…'</c> and <c>"…"</c> group words; an unquoted <c>|</c> pipes into
+    /// the next command; a <c>\</c> at the end of a line continues the command. Each <c>{value}</c> is always part of
+    /// exactly one argument, whatever it contains. A list standing alone, such as <c>{files}</c>, adds one argument
+    /// per item. No shell runs, so values can not start other commands.
+    /// </para>
+    /// <para>A plain string without <c>$</c> does not compile; use <c>Cmd.ofString</c> for text built at runtime.</para>
+    /// </summary>
+    let sh (command: FormattableString) : Cmd =
+        let segments = ShellSyntax.segmentsOf command.Format (command.GetArguments())
+        ShellSyntax.parse command.Format segments |> Cmd.ofStages
+
+    /// <summary>Runs <c>sh</c> and captures standard out as one trimmed string, for <c>let!</c> or <c>Cmd.get</c></summary>
+    let text (command: FormattableString) = sh command |> Cmd.text
+
+    /// <summary>Runs <c>sh</c> and captures the lines of standard out, for <c>let!</c> or <c>Cmd.get</c></summary>
+    let lines (command: FormattableString) = sh command |> Cmd.lines
+
+    /// <summary>Runs <c>sh</c>, printing its output, and returns the exit code without throwing</summary>
+    let exitCode (command: FormattableString) = sh command |> Cmd.exitCode
+
+    /// <summary>Runs <c>sh</c>, printing its output, and returns whether it exited with <c>0</c>, without throwing</summary>
+    let succeeds (command: FormattableString) = sh command |> Cmd.succeeds

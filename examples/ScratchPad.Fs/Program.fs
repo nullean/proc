@@ -1,13 +1,12 @@
 ﻿open System
 open Proc.Fs
 
-let head = shell {
-    do! echoCommands true
-    do! cmd "dotnet" ["--version"]
-    let! sha = cmd "git" ["rev-parse"; "--short"; "HEAD"] |> Cmd.text
-    let! fsFiles = cmd "git" ["ls-files"] |>| cmd "grep" ["\\.fs$"] |>| cmd "sort" ["-r"] |> Cmd.lines
+let head = shellx {
+    sh $"dotnet --version"
+    let! sha = text $"git rev-parse --short HEAD"
+    let! fsFiles = lines $"git ls-files | grep \\.fs$ | sort -r"
     for file in fsFiles |> List.truncate 3 do
-        do! cmd "wc" ["-l"; file]
+        sh $"wc -l {file}"
     return sha
 }
 printfn $"HEAD is %s{head}"
