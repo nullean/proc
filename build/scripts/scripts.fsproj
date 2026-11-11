@@ -13,6 +13,7 @@
     <PackageReference Include="Nullean.Make.Fs" />
     <!-- the released Proc.Fs, never the one in src: the build must not depend on the code it builds -->
     <PackageReference Include="Proc.Fs" />
+    <PackageReference Include="System.Reactive" />
   </ItemGroup>
 
   <ItemGroup>
