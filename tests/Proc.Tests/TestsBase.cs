@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace ProcNet.Tests
 {
@@ -26,8 +27,11 @@ namespace ProcNet.Tests
 			return binaryFolder;
 		}
 
+		// Test cases run against a NativeAOT-published executable rather than `dotnet <dll>`, to avoid
+		// dotnet-host/JIT startup overhead and variance in tests that depend on process lifecycle timing.
+		// See Proc.Tests.Binary.csproj's PublishNativeAotAfterBuild target, which republishes it on every build.
 		protected static StartArguments CmdTestCaseArguments(string testcase, params string[] args) {
-			string[] arguments = ["/C", "dotnet", GetDll(), testcase];
+			string[] arguments = ["/C", GetTestBinaryPath(), testcase];
 
 			return new StartArguments("cmd", arguments.Concat(args)) {
 				WorkingDirectory = GetWorkingDir(),
@@ -37,9 +41,9 @@ namespace ProcNet.Tests
 
 		protected static StartArguments TestCaseArguments(string testcase, params string[] args)
 		{
-			string[] arguments = [GetDll(), testcase];
+			string[] arguments = [testcase];
 
-			return new StartArguments("dotnet", arguments.Concat(args))
+			return new StartArguments(GetTestBinaryPath(), arguments.Concat(args))
 			{
 				WorkingDirectory = GetWorkingDir(),
 				Timeout = WaitTimeout
@@ -48,27 +52,38 @@ namespace ProcNet.Tests
 
 		protected static ExecArguments ExecTestCaseArguments(string testcase, params string[] args)
 		{
-			string[] arguments = [GetDll(), testcase];
-			return new ExecArguments("dotnet", arguments.Concat(args))
+			string[] arguments = [testcase];
+			return new ExecArguments(GetTestBinaryPath(), arguments.Concat(args))
 			{
 				WorkingDirectory = GetWorkingDir()
 			};
 		}
 
 		protected static LongRunningArguments LongRunningTestCaseArguments(string testcase) =>
-			new("dotnet", GetDll(), testcase)
+			new(GetTestBinaryPath(), testcase)
 			{
 				WorkingDirectory = GetWorkingDir(),
 				Timeout = WaitTimeout
 			};
 
-		protected static string GetDll()
+		protected static string GetTestBinaryPath()
 		{
-			var dll = Path.Combine("bin", GetRunningConfiguration(), "net10.0", _procTestBinary + ".dll");
-			var fullPath = Path.Combine(GetWorkingDir(), dll);
+#if NET11_0_OR_GREATER
+			const string tfm = "net11.0";
+#else
+			const string tfm = "net10.0";
+#endif
+			var rid = RuntimeInformation.RuntimeIdentifier;
+			var exeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? _procTestBinary + ".exe" : _procTestBinary;
+			var exe = Path.Combine("bin", GetRunningConfiguration(), tfm, rid, "publish", exeName);
+			var fullPath = Path.Combine(GetWorkingDir(), exe);
 			if (!File.Exists(fullPath)) throw new Exception($"Can not find {fullPath}");
 
-			return dll;
+			// Unlike `dotnet <relative-dll-path>` (where dotnet itself resolves the dll relative to its own,
+			// already-started, working directory), the executable path passed to Process.Start is resolved
+			// relative to *this* process's cwd, not the child's ProcessStartInfo.WorkingDirectory. So this must
+			// be absolute.
+			return fullPath;
 		}
 
 		private static string GetRunningConfiguration()

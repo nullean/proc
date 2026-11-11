@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using ProcNet;
 
 namespace Proc.Tests.Binary
 {
@@ -20,6 +21,8 @@ namespace Proc.Tests.Binary
 			var testCase = args[0].ToLowerInvariant();
 
 			if (testCase == nameof(PrintArgs).ToLowerInvariant()) return PrintArgs(args.Skip(1).ToArray());
+			if (testCase == nameof(ExitWith).ToLowerInvariant()) return ExitWith(args[1]);
+			if (testCase == nameof(PrintEnv).ToLowerInvariant()) return PrintEnv(args.Skip(1).ToArray());
 			if (testCase == nameof(SingleLineNoEnter).ToLowerInvariant()) return SingleLineNoEnter();
 			if (testCase == nameof(TwoWrites).ToLowerInvariant()) return TwoWrites();
 
@@ -40,7 +43,9 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(InterMixedOutAndError).ToLowerInvariant()) return InterMixedOutAndError();
 			if (testCase == nameof(LongRunning).ToLowerInvariant()) return await LongRunning();
 			if (testCase == nameof(TrulyLongRunning).ToLowerInvariant()) return await TrulyLongRunning();
-			if (testCase == nameof(WritePidAndWait).ToLowerInvariant()) return WritePidAndWait();
+			if (testCase == nameof(WritePidAndWait).ToLowerInvariant()) return WritePidAndWait(args[1]);
+			if (testCase == nameof(KillOnParentExitChild).ToLowerInvariant()) return KillOnParentExitChild(args[1]);
+			if (testCase == nameof(WriteChildPidAndWait).ToLowerInvariant()) return WriteChildPidAndWait(args[1]);
 
 			return 1;
 		}
@@ -48,6 +53,15 @@ namespace Proc.Tests.Binary
 		{
 			foreach (var arg in args)
 				Console.WriteLine(arg);
+			return 0;
+		}
+		private static int ExitWith(string exitCode) => int.Parse(exitCode, CultureInfo.InvariantCulture);
+
+		// Prints the value of each named environment variable on its own line, or <unset> if it is not set.
+		private static int PrintEnv(string[] names)
+		{
+			foreach (var name in names)
+				Console.WriteLine(Environment.GetEnvironmentVariable(name) ?? "<unset>");
 			return 0;
 		}
 		private static int DelayedWriter()
@@ -194,9 +208,45 @@ namespace Proc.Tests.Binary
 			return 0;
 		}
 
-		private static int WritePidAndWait()
+		// The test passes a pid file path unique to itself: the net10.0 and net11.0 test runs execute concurrently,
+		// and a shared path let one run read the PID of the other run's still-living child.
+		private static int WritePidAndWait(string pidFile)
 		{
-			var pidFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "procnet-orphan-check.txt");
+			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
+			Thread.Sleep(TimeSpan.FromSeconds(30));
+			return 0;
+		}
+
+		// Acts as the "middle" process for KillOnParentExit tests: starts a grandchild with
+		// StartArguments.KillOnParentExit = true and then exits, so the test can observe whether the
+		// grandchild was killed along with it.
+		private static int KillOnParentExitChild(string pidFile)
+		{
+			if (System.IO.File.Exists(pidFile)) System.IO.File.Delete(pidFile);
+
+			// Environment.ProcessPath (rather than Assembly.Location, which is always empty for
+			// NativeAOT/single-file apps) is the path to this very executable, so it can spawn another
+			// instance of itself as the grandchild.
+			var selfExe = Environment.ProcessPath;
+			var childArgs = new StartArguments(selfExe, nameof(WriteChildPidAndWait), pidFile)
+			{
+				KillOnParentExit = true,
+				WaitForExit = null
+			};
+			var process = new ObservableProcess(childArgs);
+			process.Subscribe(_ => { }); // cold observable; subscribing starts the underlying process
+
+			// Poll for evidence the grandchild has actually started (written its PID) instead of guessing a
+			// fixed sleep duration, so this isn't sensitive to how long process startup takes on a given machine.
+			var deadline = DateTime.UtcNow.AddSeconds(10);
+			while (!System.IO.File.Exists(pidFile) && DateTime.UtcNow < deadline)
+				Thread.Sleep(25);
+
+			return 0;
+		}
+
+		private static int WriteChildPidAndWait(string pidFile)
+		{
 			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
 			Thread.Sleep(TimeSpan.FromSeconds(30));
 			return 0;

@@ -44,9 +44,24 @@ namespace ProcNet
 				foreach (var kv in arguments.Environment)
 					info.Environment[kv.Key] = kv.Value;
 
+#if NET11_0_OR_GREATER
+			if (arguments.KillOnParentExit && (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
+				info.KillOnParentExit = true;
+			if (arguments.InheritedHandles != null)
+				info.InheritedHandles = arguments.InheritedHandles;
+#endif
+
 			var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
 				? $"\"{arguments.Binary}\""
 				: $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
+
+#if NET11_0_OR_GREATER
+			// Without a timeout this is exactly Process.Run: start with inherited stdio, block until exit, return the
+			// exit code. With a timeout it is not: Process.Run SIGKILLs only the root process on timeout, whereas Proc
+			// kills the entire process tree, so that path stays below.
+			if (!arguments.Timeout.HasValue)
+				return ValidateExitCode(arguments, Process.Run(info).ExitCode, printBinary);
+#endif
 
 			using var process = new Process { StartInfo = info };
 			if (!process.Start())
@@ -74,7 +89,11 @@ namespace ProcNet
 			else
 				process.WaitForExit();
 
-			var exitCode = process.ExitCode;
+			return ValidateExitCode(arguments, process.ExitCode, printBinary);
+		}
+
+		private static int ValidateExitCode(ExecArguments arguments, int exitCode, string printBinary)
+		{
 			if (!arguments.ValidExitCodeClassifier(exitCode))
 				throw new ProcExecException($"Process exited with '{exitCode}' {printBinary}")
 				{

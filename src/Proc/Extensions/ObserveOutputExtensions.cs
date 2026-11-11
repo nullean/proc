@@ -48,6 +48,25 @@ namespace ProcNet.Extensions
 		public static Task ObserveStandardOutBuffered(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering, CancellationToken token) =>
 			BufferedRead(process, process.StandardOutput, observer, bufferSize, ConsoleOut.Out, keepBuffering, token);
 
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+		// StreamReader.ReadAsync has had a cancellable Memory<char> overload since netstandard2.1/.NET Core 2.1,
+		// with a documented contract that it returns 0 if and only if the stream has reached its end. That makes
+		// CancellableStreamReader's hand-rolled cancellation and EndOfStreamAsync (both written back when no such
+		// overload existed at all) unnecessary here.
+		private static async Task BufferedRead(Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering, CancellationToken token)
+		{
+			while (keepBuffering())
+			{
+				var buffer = new char[b];
+				var read = await r.ReadAsync(buffer.AsMemory(0, b), token).ConfigureAwait(true);
+				if (read == 0) break;
+
+				o.OnNext(m(buffer));
+			}
+
+			token.ThrowIfCancellationRequested();
+		}
+#else
 		private static async Task BufferedRead(Process p, StreamReader r, IObserver<CharactersOut> o, int b, Func<char[], CharactersOut> m, Func<bool> keepBuffering, CancellationToken token)
 		{
 			using (var sr = new CancellableStreamReader(r.BaseStream, Encoding.UTF8, true, b, true, token))
@@ -69,6 +88,7 @@ namespace ProcNet.Extensions
 
 			token.ThrowIfCancellationRequested();
 		}
+#endif
 
 		public static void ReadStandardErrBlocking(this Process process, IObserver<CharactersOut> observer, int bufferSize, Func<bool> keepBuffering) =>
 			BufferedReadBlocking(process, process.StandardError, observer, bufferSize, ConsoleOut.ErrorOut, keepBuffering);

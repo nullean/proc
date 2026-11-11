@@ -33,9 +33,27 @@ namespace ProcNet
 				foreach (var kv in arguments.Environment)
 					info.Environment[kv.Key] = kv.Value;
 
+#if NET11_0_OR_GREATER
+			if (arguments.KillOnParentExit && (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
+				info.KillOnParentExit = true;
+			if (arguments.InheritedHandles != null)
+				info.InheritedHandles = arguments.InheritedHandles;
+#endif
+
 			var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
 				? $"\"{arguments.Binary}\""
 				: $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
+
+#if NET11_0_OR_GREATER
+			// With no timeout and a token that can never be cancelled this is exactly Process.RunAsync. Otherwise it is
+			// not: on timeout/cancellation Process.RunAsync SIGKILLs only the root process and returns a canceled
+			// status, whereas Proc kills the entire process tree and throws, so those paths stay below.
+			if (!arguments.Timeout.HasValue && !ctx.CanBeCanceled)
+			{
+				var status = await Process.RunAsync(info, CancellationToken.None);
+				return ValidateExitCode(arguments, status.ExitCode, printBinary);
+			}
+#endif
 
 			using var process = new Process { StartInfo = info };
 			if (!process.Start()) throw new ProcExecException($"Failed to start {printBinary}");
@@ -67,14 +85,7 @@ namespace ProcNet
 				throw;
 			}
 
-			var exitCode = process.ExitCode;
-			if (!arguments.ValidExitCodeClassifier(exitCode))
-				throw new ProcExecException($"Process exited with '{exitCode}' {printBinary}")
-				{
-					ExitCode = exitCode
-				};
-
-			return exitCode;
+			return ValidateExitCode(arguments, process.ExitCode, printBinary);
 		}
 
 		private static async Task KillProcessAsync(Process process)

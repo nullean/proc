@@ -37,10 +37,10 @@ namespace ProcNet.Tests
 			// Bug: on OperationCanceledException the using-block disposes the Process handle,
 			// but Process.Dispose() does not kill the child — it becomes an orphan.
 			// After fix: process.Kill(entireProcessTree: true) is called on cancellation.
-			var pidFile = Path.Combine(Path.GetTempPath(), "procnet-orphan-check.txt");
+			var pidFile = Path.Combine(Path.GetTempPath(), $"procnet-{Guid.NewGuid():N}.pid");
 			if (File.Exists(pidFile)) File.Delete(pidFile);
 
-			var args = ExecTestCaseArguments("WritePidAndWait"); // writes PID then sleeps 30s
+			var args = ExecTestCaseArguments("WritePidAndWait", pidFile); // writes PID then sleeps 30s
 			using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
 
 			await Assert.ThrowsAnyAsync<OperationCanceledException>(

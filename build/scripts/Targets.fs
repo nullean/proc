@@ -54,10 +54,14 @@ let private validatePackages (arguments:ParseResults<Arguments>) =
         |> Seq.map (fun p -> Paths.RootRelative p.FullName)
         
     let jenkinsOnWindowsArgs =
-        if Fake.Core.Environment.hasEnvironVar "JENKINS_URL" && Fake.Core.Environment.isWindows then ["-r"; "true"] else []
+        if Fake.Core.Environment.hasEnvironVar "JENKINS_URL" && Fake.Core.Environment.isWindows then ["-r"] else []
     
     let args = ["-v"; currentVersionInformational.Value; "-k"; Paths.SignKey; "-t"; output] @ jenkinsOnWindowsArgs
-    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["nupkg-validator"; p] @ args) |> ignore)
+    // nupkg-validator 0.11+ ships per-RID NativeAOT packages, so it validates net11.0 dlls without needing a matching
+    // runtime. Its RID packages (nupkg-validator.linux-x64, ...) only live on nuget.org, not on the GitHub Packages feed CI
+    // configures, so it runs through `dotnet tool exec` pinned to nuget.org rather than through the tool manifest.
+    let validator = ["tool"; "exec"; "nupkg-validator@0.11.4"; "--source"; "https://api.nuget.org/v3/index.json"; "--"; "validate"]
+    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (validator @ [p] @ args) |> ignore)
     
 
 let private generateApiChanges (arguments:ParseResults<Arguments>) =
