@@ -6,7 +6,7 @@ description: Release this repository. Use when the user asks to release, ship a 
 # Release
 
 Releases are never cut from a pushed tag. release-drafter keeps a **draft release** up to date from the labels of
-merged pull requests; **publishing that draft** creates the tag and fires `.github/workflows/release.yml`, which builds
+merged pull requests; **publishing that draft** creates the tag and runs `.github/workflows/ci.yml` on it, whose `release` job builds
 any binary assets, packs at the tag's version (MinVer) and pushes to nuget.org with trusted publishing.
 
 ## Steps
@@ -34,7 +34,7 @@ any binary assets, packs at the tag's version (MinVer) and pushes to nuget.org w
 4. Follow the run and report the outcome, packages and assets included:
 
    ```bash
-   gh run watch "$(gh run list --workflow release.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+   gh run watch "$(gh run list --workflow ci.yml --event release --limit 1 --json databaseId --jq '.[0].databaseId')"
    gh release view <tag>
    ```
 
@@ -42,6 +42,6 @@ any binary assets, packs at the tag's version (MinVer) and pushes to nuget.org w
 
 - Re-run the failed jobs (`gh run rerun <id> --failed`). The push uses `--skip-duplicate` and asset uploads use
   `--clobber`, so a re-run is safe.
-- `trusted publishing` errors mean nuget.org's policy does not name this repo's `release.yml` in the `nuget`
-  environment. Only the maintainer can fix that on nuget.org.
+- `trusted publishing` errors mean nuget.org's policy no longer names this repo's `ci.yml`. Only the maintainer can
+  fix that on nuget.org.
 - Never delete a published tag or release to retry. Fix forward with a patch release.
