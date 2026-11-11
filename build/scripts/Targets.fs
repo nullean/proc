@@ -29,7 +29,11 @@ let private currentVersionInformational =
 
 let private clean (arguments:ParseResults<Arguments>) =
     if (Paths.Output.Exists) then Paths.Output.Delete (true)
-    exec "dotnet" ["clean"] |> ignore
+    // clean every project but this build itself: `dotnet clean` on the solution would delete the assemblies the
+    // running build still loads lazily (Fake, Proc) and fail the next target
+    ["src"; "tests"; "examples"]
+    |> Seq.collect (fun d -> Directory.EnumerateFiles(d, "*.?sproj", SearchOption.AllDirectories))
+    |> Seq.iter (fun p -> exec "dotnet" ["clean"; p; "-c"; "Release"; "-v"; "q"] |> ignore)
     
 let private build (arguments:ParseResults<Arguments>) = exec "dotnet" ["build"; "-c"; "Release"] |> ignore
 
@@ -152,6 +156,15 @@ let Setup (parsed:ParseResults<Arguments>) (subCommand:Arguments) =
     
     cmd Test.Name (Some [Build.Name;]) None <| fun _ -> test parsed
     
+    cmd Pack.Name
+        (Some [Build.Name;])
+        (Some [GeneratePackages.Name; ValidatePackages.Name; GenerateApiChanges.Name])
+        ignore
+    cmd Ci.Name
+        (Some [Test.Name;])
+        (Some [GeneratePackages.Name; ValidatePackages.Name; GenerateApiChanges.Name])
+        ignore
+
     step PristineCheck.Name pristineCheck
     step GeneratePackages.Name generatePackages 
     step ValidatePackages.Name validatePackages 

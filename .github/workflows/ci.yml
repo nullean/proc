@@ -1,81 +1,101 @@
-name: Always be deploying
+name: ci
 
 on:
   pull_request:
-    paths-ignore: 
-      - 'README.md'
-      - '.editorconfig'
   push:
-    paths-ignore:
-      - 'README.md'
-      - '.editorconfig'
-    branches:
-      - master 
-    tags:
-      - "*.*.*"
+    branches: [main]
+    tags: ["*.*.*"]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    # Listing permissions replaces the defaults, so this names everything the job needs.
+    uses: nullean/.github/.github/workflows/dotnet-ci.yml@f6c87e1598a3e21ae0404577cadd975783f79579 # v1.0.0
     permissions:
-      contents: write   # create GitHub release
-      packages: write   # push to GitHub Packages, restore from it
-      issues: write     # release-notes creates labels for its categories
-      id-token: write   # NuGet trusted publishing: exchange the workflow's OIDC token for a short-lived key
+      contents: read
+    with:
+      # Windows: a test run can still hold Proc.Tests.Binary.exe while the next target framework republishes it
+      os: '["ubuntu-latest", "macos-latest"]'
+      packages-path: build/output
+
+  zizmor:
+    uses: nullean/.github/.github/workflows/zizmor.yml@f6c87e1598a3e21ae0404577cadd975783f79579 # v1.0.0
+    permissions:
+      contents: read
+
+  # every push to main publishes a canary build to GitHub Packages
+  canary:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
     steps:
-    - uses: actions/checkout@v5
-      with:
-        fetch-depth: 1
-    - run: |
-        git fetch --prune --unshallow --tags
-        echo exit code $?
-        git tag --list
-    - uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: |
-          10.0.x
-          11.0.x
-        source-url: https://nuget.pkg.github.com/nullean/index.json
-      env:
-        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: packages
+          path: packages
+      - name: Push to GitHub Packages
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          until dotnet nuget push 'packages/*.nupkg' -k "$GITHUB_TOKEN" \
+            -s https://nuget.pkg.github.com/nullean/index.json --skip-duplicate --no-symbols; do
+            echo "Retrying"; sleep 1
+          done
 
-    - run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
-      name: Install NativeAOT toolchain (for Proc.Tests.Binary, published as a native exe to speed up/de-flake process-lifecycle tests)
-    - run: ./build.sh build -s true
-      name: Build
-    - run: ./build.sh test -s true
-      name: Test
-    - run: ./build.sh generatepackages -s true
-      name: Generate local nuget packages
-    - run: ./build.sh validatepackages -s true
-      name: "validate *.npkg files that were created"
-    - run: ./build.sh generateapichanges -s true
-      name: "Inspect public API changes"
+  # a pushed tag releases: release notes, the GitHub release, then nuget.org
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # create the GitHub release
+      issues: write # release-notes creates labels for its categories
+      id-token: write # NuGet trusted publishing: exchange the workflow's OIDC token for a short-lived key
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-    - name: publish to github package repository
-      if: github.event_name == 'push' && startswith(github.ref, 'refs/heads')
-      shell: bash
-      run:  |
-         until dotnet nuget push 'build/output/*.nupkg' -k ${{secrets.GITHUB_TOKEN}} --skip-duplicate --no-symbols; do echo "Retrying"; sleep 1; done;
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          cache: false # a release never restores a cache PR builds could have written
+        env:
+          MISE_JOBS: "1" # dotnet versions share one DOTNET_ROOT; installing them in parallel races
 
-    - run: ./build.sh generatereleasenotes -s true
-      name: Generate release notes for tag
-      if: github.event_name == 'push' && startswith(github.ref, 'refs/tags')
-    - run: ./build.sh createreleaseongithub -s true --token ${{secrets.GITHUB_TOKEN}}
-      if: github.event_name == 'push' && startswith(github.ref, 'refs/tags')
-      name: Create or update release for tag on github
-      
-    # Trusted publishing: nuget.org trusts this repository's ci.yml (a policy owned by the nullean
-    # organization), so there is no long-lived API key to expire. The key it returns lasts an hour, so the
-    # login sits right before the push. NUGET_USER is the nuget.org profile name, set at the org level.
-    - name: Log in to nuget.org (trusted publishing)
-      id: nuget-login
-      if: github.event_name == 'push' && startswith(github.ref, 'refs/tags')
-      uses: NuGet/login@v1
-      with:
-        user: ${{ secrets.NUGET_USER }}
+      - name: Pack, validate and report public API changes
+        run: mise run pack
 
-    - run: dotnet nuget push 'build/output/*.nupkg' -k ${{ steps.nuget-login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols 
-      name: release to nuget.org
-      if: github.event_name == 'push' && startswith(github.ref, 'refs/tags')
+      - name: Generate release notes for the tag
+        run: dotnet run --project build/scripts -- generatereleasenotes -s true
+
+      - name: Create or update the release for the tag on GitHub
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: dotnet run --project build/scripts -- createreleaseongithub -s true --token "$GITHUB_TOKEN"
+
+      # Trusted publishing: nuget.org trusts this repository's ci.yml (a policy owned by the nullean
+      # organization), so there is no long-lived API key to expire. The key it returns lasts an hour, so the
+      # login sits right before the push. NUGET_USER is the nuget.org profile name, set at the org level.
+      - name: Log in to nuget.org (trusted publishing)
+        id: nuget-login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Release to nuget.org
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: |
+          dotnet nuget push 'build/output/*.nupkg' -k "$NUGET_API_KEY" \
+            -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
