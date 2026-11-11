@@ -24,6 +24,7 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(ExitWith).ToLowerInvariant()) return ExitWith(args[1]);
 			if (testCase == nameof(PrintEnv).ToLowerInvariant()) return PrintEnv(args.Skip(1).ToArray());
 			if (testCase == nameof(EchoStdin).ToLowerInvariant()) return EchoStdin(args.Length > 1 ? args[1] : "");
+			if (testCase == nameof(PrintCwd).ToLowerInvariant()) return PrintCwd();
 			if (testCase == nameof(SingleLineNoEnter).ToLowerInvariant()) return SingleLineNoEnter();
 			if (testCase == nameof(TwoWrites).ToLowerInvariant()) return TwoWrites();
 
@@ -57,6 +58,12 @@ namespace Proc.Tests.Binary
 			return 0;
 		}
 		private static int ExitWith(string exitCode) => int.Parse(exitCode, CultureInfo.InvariantCulture);
+
+		private static int PrintCwd()
+		{
+			Console.WriteLine(Environment.CurrentDirectory);
+			return 0;
+		}
 
 		// Reads standard input until end of stream and prints every line back with the given prefix.
 		// Used as the downstream end of pipes; exits only once its stdin is closed.

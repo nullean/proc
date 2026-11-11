@@ -149,6 +149,25 @@ Also note that `ObservableProcess` will yield whatever is in the buffer before O
 On .NET 11+ this reads through [`Process.ReadAllLinesAsync`](https://devblogs.microsoft.com/dotnet/process-api-improvements-in-dotnet-11/)
 instead, which multiplexes `stdout`/`stderr` on a single thread without blocking any thread pool threads.
 
+# F# bindings
+
+The `Proc.Fs` package wraps Proc for F#. A `shell { }` block runs commands in order and stops at the first one that fails.
+The `|>|` operator pipes the output of one command into the next.
+
+```fsharp
+open Proc.Fs
+
+let sha = shell {
+    do! cmd "dotnet" ["build"]
+    let! sha = cmd "git" ["rev-parse"; "HEAD"] |> Cmd.text
+    for file in cmd "git" ["ls-files"] |>| cmd "grep" ["\\.fs$"] |> Cmd.lines do
+        do! cmd "dotnet" ["fantomas"; file]
+    return sha
+}
+```
+
+See [src/Proc.Fs/README.md](src/Proc.Fs/README.md) for `shell { }`, the `Cmd` module, pipes and the `exec { }` builder.
+
 # .NET 11
 
 `Proc` targets `net11.0` alongside its other target frameworks and picks up a few of the

@@ -10,6 +10,8 @@
   <ItemGroup>
     <Compile Include="TestBinary.fs" />
     <Compile Include="ExecTests.fs" />
+    <Compile Include="CmdTests.fs" />
+    <Compile Include="ShellTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />

@@ -28,6 +28,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Cmd.fs" />
+    <Compile Include="Shell.fs" />
     <Compile Include="Bindings.fs" />
   </ItemGroup>
 

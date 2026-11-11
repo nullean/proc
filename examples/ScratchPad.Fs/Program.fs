@@ -1,11 +1,20 @@
 ﻿open System
 open Proc.Fs
 
-(*
-let _ = shell {
-    exec "dotnet" "--version"
-    exec "uname"
+let head = shell {
+    do! echoCommands true
+    do! cmd "dotnet" ["--version"]
+    let! sha = cmd "git" ["rev-parse"; "--short"; "HEAD"] |> Cmd.text
+    let! fsFiles = cmd "git" ["ls-files"] |>| cmd "grep" ["\\.fs$"] |>| cmd "sort" ["-r"] |> Cmd.lines
+    for file in fsFiles |> List.truncate 3 do
+        do! cmd "wc" ["-l"; file]
+    return sha
 }
+printfn $"HEAD is %s{head}"
+
+cmd "git" ["log"; "--oneline"; "-3"] |> Cmd.iter (fun l -> printfn $"commit: %s{l}")
+
+(*
 
 exec { run "dotnet" "--help"}
 
@@ -51,18 +60,20 @@ let args: string list = ["--help"]
 exec { run "dotnet" "--help"}
 exec { run "dotnet" args }
 
-let _ = shell { exec "dotnet" args }
+let _ = shell { do! cmd "dotnet" args }
 let statusCode = exec { exit_code_of "dotnet" "--help"}
 
 exec { run "dotnet" "run" "--project" "examples/ScratchPad.Fs.ArgumentPrinter" "--" "With Space" }
 *)
 
+(*
 let runningProcess = exec {
     binary "dotnet"
     arguments "run" "--project" "tests/Proc.Tests.Binary" "--" "TrulyLongRunning"
     //wait_until (fun l -> l.Line = "Started!")
     wait_until_and_disconnect (fun l -> l.Line = "Started!")
 }
+*)
 
 
 printfn "That's all folks!"
