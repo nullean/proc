@@ -43,9 +43,9 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(InterMixedOutAndError).ToLowerInvariant()) return InterMixedOutAndError();
 			if (testCase == nameof(LongRunning).ToLowerInvariant()) return await LongRunning();
 			if (testCase == nameof(TrulyLongRunning).ToLowerInvariant()) return await TrulyLongRunning();
-			if (testCase == nameof(WritePidAndWait).ToLowerInvariant()) return WritePidAndWait();
-			if (testCase == nameof(KillOnParentExitChild).ToLowerInvariant()) return KillOnParentExitChild();
-			if (testCase == nameof(WriteChildPidAndWait).ToLowerInvariant()) return WriteChildPidAndWait();
+			if (testCase == nameof(WritePidAndWait).ToLowerInvariant()) return WritePidAndWait(args[1]);
+			if (testCase == nameof(KillOnParentExitChild).ToLowerInvariant()) return KillOnParentExitChild(args[1]);
+			if (testCase == nameof(WriteChildPidAndWait).ToLowerInvariant()) return WriteChildPidAndWait(args[1]);
 
 			return 1;
 		}
@@ -208,9 +208,10 @@ namespace Proc.Tests.Binary
 			return 0;
 		}
 
-		private static int WritePidAndWait()
+		// The test passes a pid file path unique to itself: the net10.0 and net11.0 test runs execute concurrently,
+		// and a shared path let one run read the PID of the other run's still-living child.
+		private static int WritePidAndWait(string pidFile)
 		{
-			var pidFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "procnet-orphan-check.txt");
 			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
 			Thread.Sleep(TimeSpan.FromSeconds(30));
 			return 0;
@@ -219,16 +220,15 @@ namespace Proc.Tests.Binary
 		// Acts as the "middle" process for KillOnParentExit tests: starts a grandchild with
 		// StartArguments.KillOnParentExit = true and then exits, so the test can observe whether the
 		// grandchild was killed along with it.
-		private static int KillOnParentExitChild()
+		private static int KillOnParentExitChild(string pidFile)
 		{
-			var pidFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "procnet-kill-on-parent-exit-child.txt");
 			if (System.IO.File.Exists(pidFile)) System.IO.File.Delete(pidFile);
 
 			// Environment.ProcessPath (rather than Assembly.Location, which is always empty for
 			// NativeAOT/single-file apps) is the path to this very executable, so it can spawn another
 			// instance of itself as the grandchild.
 			var selfExe = Environment.ProcessPath;
-			var childArgs = new StartArguments(selfExe, nameof(WriteChildPidAndWait))
+			var childArgs = new StartArguments(selfExe, nameof(WriteChildPidAndWait), pidFile)
 			{
 				KillOnParentExit = true,
 				WaitForExit = null
@@ -245,9 +245,8 @@ namespace Proc.Tests.Binary
 			return 0;
 		}
 
-		private static int WriteChildPidAndWait()
+		private static int WriteChildPidAndWait(string pidFile)
 		{
-			var pidFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "procnet-kill-on-parent-exit-child.txt");
 			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
 			Thread.Sleep(TimeSpan.FromSeconds(30));
 			return 0;

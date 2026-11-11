@@ -11,12 +11,12 @@ namespace ProcNet.Tests
 		[SkipUnlessKillOnParentExitSupportedFact]
 		public void KillOnParentExit_KillsGrandchildWhenMiddleProcessExits()
 		{
-			var pidFile = Path.Combine(Path.GetTempPath(), "procnet-kill-on-parent-exit-child.txt");
+			var pidFile = Path.Combine(Path.GetTempPath(), $"procnet-{Guid.NewGuid():N}.pid");
 			if (File.Exists(pidFile)) File.Delete(pidFile);
 
 			// KillOnParentExitChild starts a grandchild process with StartArguments.KillOnParentExit = true
 			// and then exits itself; the grandchild should be terminated as a result.
-			var args = ExecTestCaseArguments("KillOnParentExitChild");
+			var args = ExecTestCaseArguments("KillOnParentExitChild", pidFile);
 			args.Timeout = TimeSpan.FromSeconds(15);
 			Proc.Exec(args);
 

@@ -16,10 +16,10 @@ namespace ProcNet.Tests
 			// never called — HardWaitForExit is called on a still-running process, giving it
 			// a 1s grace period that does nothing, and the child process keeps running.
 			// After fix: process.Kill(entireProcessTree: true) is called before HardWaitForExit.
-			var pidFile = Path.Combine(Path.GetTempPath(), "procnet-orphan-check.txt");
+			var pidFile = Path.Combine(Path.GetTempPath(), $"procnet-{Guid.NewGuid():N}.pid");
 			if (File.Exists(pidFile)) File.Delete(pidFile);
 
-			var args = ExecTestCaseArguments("WritePidAndWait"); // writes PID then sleeps 30s
+			var args = ExecTestCaseArguments("WritePidAndWait", pidFile); // writes PID then sleeps 30s
 			args.Timeout = TimeSpan.FromMilliseconds(500);
 
 			Action call = () => Proc.Exec(args);
