@@ -7,185 +7,192 @@ using System.Threading.Tasks;
 using ProcNet.Extensions;
 using ProcNet.Std;
 
-namespace ProcNet
+namespace ProcNet;
+
+/// <summary>
+/// This reads <see cref="Process.StandardOutput"/> and <see cref="Process.StandardError"/> using <see cref="StreamReader.ReadAsync"/>.
+///
+/// When the process exits it waits for these stream readers to finish up to whatever <see cref="WaitForStreamReadersTimeout"/>
+/// is configured to.
+///
+/// This catches all cases where <see cref="EventBasedObservableProcess"/> would fall short to capture all the process output.
+///
+/// <see cref="CharactersOut"/> contains the current char[] buffer which could be fed to <see cref="Console.Write(string,object)"/> directly.
+///
+/// Note that there is a subclass <use cref="ObservableProcess"/> that allows you to subscribe console output per line
+/// instead whilst still reading the actual process output using asynchronous stream readers.
+/// </summary>
+public class BufferedObservableProcess : ObservableProcessBase<CharactersOut>
 {
+	public BufferedObservableProcess(string binary, params string[] arguments) : base(binary, arguments)
+	{ }
+
+	public BufferedObservableProcess(StartArguments startArguments) : base(startArguments)
+	{ }
+
 	/// <summary>
-	/// This reads <see cref="Process.StandardOutput"/> and <see cref="Process.StandardError"/> using <see cref="StreamReader.ReadAsync"/>.
-	///
-	/// When the process exits it waits for these stream readers to finish up to whatever <see cref="WaitForStreamReadersTimeout"/>
-	/// is configured to.
-	///
-	/// This catches all cases where <see cref="EventBasedObservableProcess"/> would fall short to capture all the process output.
-	///
-	/// <see cref="CharactersOut"/> contains the current char[] buffer which could be fed to <see cref="Console.Write(string,object)"/> directly.
-	///
-	/// Note that there is a subclass <use cref="ObservableProcess"/> that allows you to subscribe console output per line
-	/// instead whilst still reading the actual process output using asynchronous stream readers.
+	/// How long we should wait for the output stream readers to finish when the process exits before we call
+	/// <see cref="ObservableProcessBase{TConsoleOut}.OnCompleted"/> is called. By default waits for 10 seconds.
 	/// </summary>
-	public class BufferedObservableProcess : ObservableProcessBase<CharactersOut>
+	private TimeSpan? WaitForStreamReadersTimeout => StartArguments.WaitForStreamReadersTimeout;
+
+	/// <summary>
+	/// Expert level setting: the maximum number of characters to read per iteration. Defaults to 1024
+	/// </summary>
+	public int BufferSize { get; set; } = 1024;
+
+	private CancellationTokenSource _ctx = new();
+	private Task _stdOutSubscription;
+	private Task _stdErrSubscription;
+	private IObserver<CharactersOut> _observer;
+
+	protected override IObservable<CharactersOut> CreateConsoleOutObservable() => Observable.Create<CharactersOut>(observer => KickOff(observer));
+
+	/// <summary>
+	/// Expert setting, subclasses can return true if a certain condition is met to break out of the async readers on StandardOut and StandardError
+	/// </summary>
+	/// <returns></returns>
+	protected virtual bool ContinueReadingFromProcessReaders() => true;
+
+	private IDisposable KickOff(IObserver<CharactersOut> observer)
 	{
-		public BufferedObservableProcess(string binary, params string[] arguments) : base(binary, arguments) { }
+		if (!StartProcess(observer))
+			return Disposable.Empty;
 
-		public BufferedObservableProcess(StartArguments startArguments) : base(startArguments) { }
+		Started = true;
+		_observer = observer;
 
-		/// <summary>
-		/// How long we should wait for the output stream readers to finish when the process exits before we call
-		/// <see cref="ObservableProcessBase{TConsoleOut}.OnCompleted"/> is called. By default waits for 10 seconds.
-		/// </summary>
-		private TimeSpan? WaitForStreamReadersTimeout => StartArguments.WaitForStreamReadersTimeout;
-
-		/// <summary>
-		/// Expert level setting: the maximum number of characters to read per iteration. Defaults to 1024
-		/// </summary>
-		public int BufferSize { get; set; } = 1024;
-
-		private CancellationTokenSource _ctx = new();
-		private Task _stdOutSubscription;
-		private Task _stdErrSubscription;
-		private IObserver<CharactersOut> _observer;
-
-		protected override IObservable<CharactersOut> CreateConsoleOutObservable() =>
-			Observable.Create<CharactersOut>(observer => KickOff(observer));
-
-		/// <summary>
-		/// Expert setting, subclasses can return true if a certain condition is met to break out of the async readers on StandardOut and StandardError
-		/// </summary>
-		/// <returns></returns>
-		protected virtual bool ContinueReadingFromProcessReaders() => true;
-
-		private IDisposable KickOff(IObserver<CharactersOut> observer)
+		if (Process.HasExited)
 		{
-			if (!StartProcess(observer)) return Disposable.Empty;
+			Process.ReadStandardErrBlocking(observer, BufferSize, () => ContinueReadingFromProcessReaders());
+			Process.ReadStandardOutBlocking(observer, BufferSize, () => ContinueReadingFromProcessReaders());
+			OnExit(observer);
+			return Disposable.Empty;
+		}
 
-			Started = true;
-			_observer = observer;
+		// Start the async reads BEFORE registering the Exited handler. The handler completes the observable and
+		// disposes the process (OnExit -> Stop), so if it were registered first a process exiting in between
+		// would be disposed before StartAsyncReads() gets to its StandardOutput/StandardError.
+		StartAsyncReads();
 
-			if (Process.HasExited)
-			{
-				Process.ReadStandardErrBlocking(observer, BufferSize, () => ContinueReadingFromProcessReaders());
-				Process.ReadStandardOutBlocking(observer, BufferSize, () => ContinueReadingFromProcessReaders());
-				OnExit(observer);
-				return Disposable.Empty;
-			}
+		Process.Exited += (o, s) =>
+		{
+			WaitForEndOfStreams(observer, _stdOutSubscription, _stdErrSubscription);
+			OnExit(observer);
+		};
 
-			// Start the async reads BEFORE registering the Exited handler. The handler completes the observable and
-			// disposes the process (OnExit -> Stop), so if it were registered first a process exiting in between
-			// would be disposed before StartAsyncReads() gets to its StandardOutput/StandardError.
-			StartAsyncReads();
+		// Re-check HasExited after both the reads and the handler are in place.
+		// If the process already exited before Exited+= was registered the event will
+		// not fire again, so we drive the completion path ourselves.
+		// OnExit / WaitForEndOfStreams are idempotent, so a concurrent Exited event
+		// firing at the same time is handled safely via _exitLock and _reading guards.
+		bool exited;
+		try
+		{
+			exited = Process.HasExited;
+		}
+		// Includes ObjectDisposedException: the Exited handler already ran to completion and disposed the process.
+		catch (InvalidOperationException)
+		{
+			exited = false;
+		}
+		if (exited)
+		{
+			WaitForEndOfStreams(observer, _stdOutSubscription, _stdErrSubscription);
+			OnExit(observer);
+		}
 
-			Process.Exited += (o, s) =>
-			{
-				WaitForEndOfStreams(observer, _stdOutSubscription, _stdErrSubscription);
-				OnExit(observer);
-			};
+		var disposable = Disposable.Create(() =>
+		{ });
 
-			// Re-check HasExited after both the reads and the handler are in place.
-			// If the process already exited before Exited+= was registered the event will
-			// not fire again, so we drive the completion path ourselves.
-			// OnExit / WaitForEndOfStreams are idempotent, so a concurrent Exited event
-			// firing at the same time is handled safely via _exitLock and _reading guards.
-			bool exited;
+		return disposable;
+	}
+
+	private readonly object _lock = new object();
+	private bool _reading = false;
+
+	/// <summary>
+	/// Allows you to stop reading the console output after subscribing on the observable while leaving the underlying
+	/// process running.
+	/// </summary>
+	public void CancelAsyncReads()
+	{
+		if (!_reading)
+			return;
+		lock (_lock)
+		{
+			if (!_reading)
+				return;
 			try
 			{
-				exited = Process.HasExited;
-			}
-			// Includes ObjectDisposedException: the Exited handler already ran to completion and disposed the process.
-			catch (InvalidOperationException)
-			{
-				exited = false;
-			}
-			if (exited)
-			{
-				WaitForEndOfStreams(observer, _stdOutSubscription, _stdErrSubscription);
-				OnExit(observer);
-			}
-
-			var disposable = Disposable.Create(() =>
-			{
-			});
-
-			return disposable;
-		}
-
-		private readonly object _lock = new object();
-		private bool _reading = false;
-
-		/// <summary>
-		/// Allows you to stop reading the console output after subscribing on the observable while leaving the underlying
-		/// process running.
-		/// </summary>
-		public void CancelAsyncReads()
-		{
-			if (!_reading) return;
-			lock (_lock)
-			{
-				if (!_reading) return;
-				try
-				{
-					Process.StandardOutput.BaseStream.Flush();
-					Process.StandardError.BaseStream.Flush();
-					_ctx.Cancel();
-				}
-				finally
-				{
-					var old = _ctx;
-					_ctx = new CancellationTokenSource();
-					old.Dispose();
-					_reading = false;
-				}
-			}
-		}
-
-		public bool IsActivelyReading => IsNotCompletedTask(_stdOutSubscription) && IsNotCompletedTask(_stdErrSubscription);
-
-		private static bool IsNotCompletedTask(Task t) => t.Status != TaskStatus.Canceled && t.Status != TaskStatus.RanToCompletion && t.Status != TaskStatus.Faulted;
-
-		/// <summary>
-		/// Start reading the console output again after calling <see cref="CancelAsyncReads"/>
-		/// </summary>
-		public void StartAsyncReads()
-		{
-			if (_reading) return;
-			lock (_lock)
-			{
-				if (_reading) return;
-
 				Process.StandardOutput.BaseStream.Flush();
 				Process.StandardError.BaseStream.Flush();
-
-				_stdOutSubscription = Process.ObserveStandardOutBuffered(_observer, BufferSize, () => ContinueReadingFromProcessReaders(), _ctx.Token);
-				_stdErrSubscription = Process.ObserveErrorOutBuffered(_observer, BufferSize, () => ContinueReadingFromProcessReaders(), _ctx.Token);
-				_reading = true;
+				_ctx.Cancel();
+			}
+			finally
+			{
+				var old = _ctx;
+				_ctx = new CancellationTokenSource();
+				old.Dispose();
+				_reading = false;
 			}
 		}
+	}
 
-		protected virtual void OnBeforeWaitForEndOfStreamsError(TimeSpan waited) { }
+	public bool IsActivelyReading => IsNotCompletedTask(_stdOutSubscription) && IsNotCompletedTask(_stdErrSubscription);
 
-		private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)
+	private static bool IsNotCompletedTask(Task t) =>
+		t.Status != TaskStatus.Canceled && t.Status != TaskStatus.RanToCompletion && t.Status != TaskStatus.Faulted;
+
+	/// <summary>
+	/// Start reading the console output again after calling <see cref="CancelAsyncReads"/>
+	/// </summary>
+	public void StartAsyncReads()
+	{
+		if (_reading)
+			return;
+		lock (_lock)
 		{
-			if (!_reading) return;
-			SendYesForBatPrompt();
-			if (!WaitForStreamReadersTimeout.HasValue)
+			if (_reading)
+				return;
+
+			Process.StandardOutput.BaseStream.Flush();
+			Process.StandardError.BaseStream.Flush();
+
+			_stdOutSubscription = Process.ObserveStandardOutBuffered(_observer, BufferSize, () => ContinueReadingFromProcessReaders(), _ctx.Token);
+			_stdErrSubscription = Process.ObserveErrorOutBuffered(_observer, BufferSize, () => ContinueReadingFromProcessReaders(), _ctx.Token);
+			_reading = true;
+		}
+	}
+
+	protected virtual void OnBeforeWaitForEndOfStreamsError(TimeSpan waited)
+	{ }
+
+	private void WaitForEndOfStreams(IObserver<CharactersOut> observer, Task stdOutSubscription, Task stdErrSubscription)
+	{
+		if (!_reading)
+			return;
+		SendYesForBatPrompt();
+		if (!WaitForStreamReadersTimeout.HasValue)
+		{
+			CancelAsyncReads();
+		}
+		else
+		{
+			try
 			{
-				CancelAsyncReads();
-			}
-			else
-			{
-				try
+				if (!Task.WaitAll([stdOutSubscription, stdErrSubscription], WaitForStreamReadersTimeout.Value))
 				{
-					if (!Task.WaitAll([stdOutSubscription, stdErrSubscription], WaitForStreamReadersTimeout.Value))
-					{
-						CancelAsyncReads();
-						OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout.Value);
-						OnError(observer, new WaitForEndOfStreamsTimeoutException(WaitForStreamReadersTimeout.Value));
-					}
-				}
-				catch (AggregateException)
-				{
-					// Tasks may be cancelled or faulted when the process exits abruptly
-					// or when the test framework disposes resources. This is expected.
 					CancelAsyncReads();
+					OnBeforeWaitForEndOfStreamsError(WaitForStreamReadersTimeout.Value);
+					OnError(observer, new WaitForEndOfStreamsTimeoutException(WaitForStreamReadersTimeout.Value));
 				}
+			}
+			catch (AggregateException)
+			{
+				// Tasks may be cancelled or faulted when the process exits abruptly
+				// or when the test framework disposes resources. This is expected.
+				CancelAsyncReads();
 			}
 		}
 	}

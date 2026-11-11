@@ -35,38 +35,43 @@ public class PublicApiPropertyTests : TestsBase
 
 	private static readonly Gen<string[]> Arguments = Argument.Array[0, 8];
 
-	private static readonly Gen<(string Name, string Value)[]> EnvironmentVariables =
-		Gen.Select(Gen.String[Gen.Char['A', 'Z'], 1, 12], Argument)
-			.Array[1, 6]
-			.Select(vars => vars
-				.GroupBy(v => v.Item1)
-				.Select(g => ("PROC_CSCHECK_" + g.Key, g.First().Item2))
-				.ToArray());
+	private static readonly Gen<(string Name, string Value)[]> EnvironmentVariables = Gen
+		.Select(Gen.String[Gen.Char['A', 'Z'], 1, 12], Argument)
+		.Array[1, 6]
+		.Select(vars => vars.GroupBy(v => v.Item1).Select(g => ("PROC_CSCHECK_" + g.Key, g.First().Item2)).ToArray());
 
 	[Test]
 	public void StartRoundTripsArguments() =>
-		Arguments.Sample(args =>
-		{
-			var result = Proc.Start(TestCaseArguments("PrintArgs", args));
+		Arguments.Sample(
+			args =>
+			{
+				var result = Proc.Start(TestCaseArguments("PrintArgs", args));
 
-			result.Completed.Should().BeTrue();
-			result.ExitCode.Should().Be(0);
-			result.ConsoleOut.Select(l => l.Line).Should().Equal(args);
-			result.ConsoleOut.Should().NotContain(l => l.Error);
-		}, iter: ProcessIterations, threads: 1);
+				result.Completed.Should().BeTrue();
+				result.ExitCode.Should().Be(0);
+				result.ConsoleOut.Select(l => l.Line).Should().Equal(args);
+				result.ConsoleOut.Should().NotContain(l => l.Error);
+			},
+			iter: ProcessIterations,
+			threads: 1
+		);
 
 	[Test]
 	public void StartPassesEnvironmentVariables() =>
-		EnvironmentVariables.Sample(vars =>
-		{
-			var args = TestCaseArguments("PrintEnv", vars.Select(v => v.Name).ToArray());
-			args.Environment = vars.ToDictionary(v => v.Name, v => v.Value);
+		EnvironmentVariables.Sample(
+			vars =>
+			{
+				var args = TestCaseArguments("PrintEnv", vars.Select(v => v.Name).ToArray());
+				args.Environment = vars.ToDictionary(v => v.Name, v => v.Value);
 
-			var result = Proc.Start(args);
+				var result = Proc.Start(args);
 
-			result.ExitCode.Should().Be(0);
-			result.ConsoleOut.Select(l => l.Line).Should().Equal(vars.Select(v => v.Value));
-		}, iter: ProcessIterations, threads: 1);
+				result.ExitCode.Should().Be(0);
+				result.ConsoleOut.Select(l => l.Line).Should().Equal(vars.Select(v => v.Value));
+			},
+			iter: ProcessIterations,
+			threads: 1
+		);
 
 	[Test]
 	public void NullEnvironmentValueRemovesAnInheritedVariable()
@@ -91,63 +96,85 @@ public class PublicApiPropertyTests : TestsBase
 
 	[Test]
 	public void StartReportsExitCode() =>
-		ExitCodes.Sample(code =>
-		{
-			var result = Proc.Start(TestCaseArguments("ExitWith", Code(code)));
+		ExitCodes.Sample(
+			code =>
+			{
+				var result = Proc.Start(TestCaseArguments("ExitWith", Code(code)));
 
-			result.Completed.Should().BeTrue();
-			result.ExitCode.Should().Be(code);
-		}, iter: ProcessIterations, threads: 1);
+				result.Completed.Should().BeTrue();
+				result.ExitCode.Should().Be(code);
+			},
+			iter: ProcessIterations,
+			threads: 1
+		);
 
 	[Test]
 	public void StartRedirectedReportsExitCode() =>
-		ExitCodes.Sample(code =>
-		{
-			var result = Proc.StartRedirected(TestCaseArguments("ExitWith", Code(code)));
+		ExitCodes.Sample(
+			code =>
+			{
+				var result = Proc.StartRedirected(TestCaseArguments("ExitWith", Code(code)));
 
-			result.Completed.Should().BeTrue();
-			result.ExitCode.Should().Be(code);
-		}, iter: ProcessIterations, threads: 1);
+				result.Completed.Should().BeTrue();
+				result.ExitCode.Should().Be(code);
+			},
+			iter: ProcessIterations,
+			threads: 1
+		);
 
 	[Test]
 	public void ExecReturnsExitCodeTheClassifierAccepts() =>
-		ExitCodes.Sample(code =>
-		{
-			var args = ExecTestCaseArguments("ExitWith", Code(code));
-			args.ValidExitCodeClassifier = _ => true;
+		ExitCodes.Sample(
+			code =>
+			{
+				var args = ExecTestCaseArguments("ExitWith", Code(code));
+				args.ValidExitCodeClassifier = _ => true;
 
-			Proc.Exec(args).Should().Be(code);
-		}, iter: ProcessIterations, threads: 1);
+				Proc.Exec(args).Should().Be(code);
+			},
+			iter: ProcessIterations,
+			threads: 1
+		);
 
 	[Test]
 	public void ExecThrowsWithExitCodeTheClassifierRejects() =>
-		ExitCodes.Sample(code =>
-		{
-			var args = ExecTestCaseArguments("ExitWith", Code(code));
+		ExitCodes.Sample(
+			code =>
+			{
+				var args = ExecTestCaseArguments("ExitWith", Code(code));
 
-			if (code == 0)
-				Proc.Exec(args).Should().Be(0);
-			else
-				FluentActions.Invoking(() => Proc.Exec(args))
-					.Should().Throw<ProcExecException>()
-					.Where(e => e.ExitCode == code)
-					.WithMessage($"Process exited with '{code}'*");
-		}, iter: ProcessIterations, threads: 1);
+				if (code == 0)
+					Proc.Exec(args).Should().Be(0);
+				else
+					FluentActions
+						.Invoking(() => Proc.Exec(args))
+						.Should()
+						.Throw<ProcExecException>()
+						.Where(e => e.ExitCode == code)
+						.WithMessage($"Process exited with '{code}'*");
+			},
+			iter: ProcessIterations,
+			threads: 1
+		);
 
 	/// <summary> Without a timeout net11.0 goes through Process.Run, with one through Proc's own wait/kill loop. </summary>
 	[Test]
 	public void ExecAgreesWithAndWithoutTimeout() =>
-		Gen.Select(ExitCodes, Arguments).Sample((code, extra) =>
-		{
-			string[] args = [Code(code), .. extra];
-			var direct = ExecTestCaseArguments("ExitWith", args);
-			direct.ValidExitCodeClassifier = _ => true;
-			var timed = ExecTestCaseArguments("ExitWith", args);
-			timed.ValidExitCodeClassifier = _ => true;
-			timed.Timeout = TimeSpan.FromSeconds(30);
+		Gen.Select(ExitCodes, Arguments).Sample(
+			(code, extra) =>
+			{
+				string[] args = [Code(code), .. extra];
+				var direct = ExecTestCaseArguments("ExitWith", args);
+				direct.ValidExitCodeClassifier = _ => true;
+				var timed = ExecTestCaseArguments("ExitWith", args);
+				timed.ValidExitCodeClassifier = _ => true;
+				timed.Timeout = TimeSpan.FromSeconds(30);
 
-			Proc.Exec(direct).Should().Be(Proc.Exec(timed));
-		}, iter: ProcessIterations, threads: 1);
+				Proc.Exec(direct).Should().Be(Proc.Exec(timed));
+			},
+			iter: ProcessIterations,
+			threads: 1
+		);
 
 	/// <summary>
 	/// A non-cancellable token takes the Process.RunAsync path on net11.0, a cancellable one Proc's own path. Both
@@ -155,15 +182,19 @@ public class PublicApiPropertyTests : TestsBase
 	/// </summary>
 	[Test]
 	public Task ExecAsyncAgreesWithAndWithoutCancellableToken() =>
-		ExitCodes.SampleAsync(async code =>
-		{
-			using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-			var uncancellable = await Capture(() => Proc.ExecAsync(ExecTestCaseArguments("ExitWith", Code(code))));
-			var cancellable = await Capture(() => Proc.ExecAsync(ExecTestCaseArguments("ExitWith", Code(code)), cts.Token));
+		ExitCodes.SampleAsync(
+			async code =>
+			{
+				using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+				var uncancellable = await Capture(() => Proc.ExecAsync(ExecTestCaseArguments("ExitWith", Code(code))));
+				var cancellable = await Capture(() => Proc.ExecAsync(ExecTestCaseArguments("ExitWith", Code(code)), cts.Token));
 
-			uncancellable.Should().BeEquivalentTo(cancellable);
-			uncancellable.ExitCode.Should().Be(code);
-		}, iter: ProcessIterations, threads: 1);
+				uncancellable.Should().BeEquivalentTo(cancellable);
+				uncancellable.ExitCode.Should().Be(code);
+			},
+			iter: ProcessIterations,
+			threads: 1
+		);
 
 	[Test]
 	public void ExecFailsTheSameWayWithAndWithoutTimeoutWhenTheBinaryDoesNotExist()

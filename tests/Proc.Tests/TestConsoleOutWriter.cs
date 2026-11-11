@@ -8,9 +8,10 @@ using TUnit.Core;
 public class TestConsoleOutWriter : IConsoleOutWriter
 {
 	// captured up front: the process reports its output on other threads, where TestContext.Current may not flow
-	private readonly TextWriter output = (TestContext.Current ?? throw new InvalidOperationException("Create a TestConsoleOutWriter inside a test")).OutputWriter;
+	private readonly TextWriter output = (TestContext.Current ??
+		throw new InvalidOperationException("Create a TestConsoleOutWriter inside a test")).OutputWriter;
 	private readonly StringBuilder _sb = new();
-	public string[] Lines => _sb.ToString().Replace("\r\n", "\n").Split(new [] {"\n"}, StringSplitOptions.None);
+	public string[] Lines => _sb.ToString().Replace("\r\n", "\n").Split(new[] { "\n" }, StringSplitOptions.None);
 	public string Text => _sb.ToString();
 	private static char[] NewLineChars = Environment.NewLine.ToCharArray();
 
@@ -19,6 +20,6 @@ public class TestConsoleOutWriter : IConsoleOutWriter
 	public void Write(ConsoleOut consoleOut)
 	{
 		consoleOut.CharsOrString(c => _sb.Append(new string(c)), s => _sb.AppendLine(s));
-			consoleOut.CharsOrString(c => output.WriteLine(new string(c).TrimEnd(NewLineChars)), s => output.WriteLine(s));
-		}
+		consoleOut.CharsOrString(c => output.WriteLine(new string(c).TrimEnd(NewLineChars)), s => output.WriteLine(s));
+	}
 }

@@ -1,11 +1,9 @@
 using System;
 
-namespace ProcNet.Std
+namespace ProcNet.Std;
+
+public interface IConsoleLineHandler
 {
-	public interface IConsoleLineHandler
-	{
-		void Handle(LineOut lineOut);
-		void Handle(Exception e);
-	}
-	
+	void Handle(LineOut lineOut);
+	void Handle(Exception e);
 }

@@ -1,10 +1,9 @@
 using System;
 
-namespace ProcNet.Std
+namespace ProcNet.Std;
+
+public interface IConsoleOutWriter
 {
-	public interface IConsoleOutWriter
-	{
-		void Write(Exception e);
-		void Write(ConsoleOut consoleOut);
-	}
+	void Write(Exception e);
+	void Write(ConsoleOut consoleOut);
 }
