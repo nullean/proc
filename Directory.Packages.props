@@ -5,19 +5,19 @@
 
   <!-- the library -->
   <ItemGroup>
-    <PackageVersion Include="System.Reactive" Version="5.0.0" />
+    <PackageVersion Include="System.Reactive" Version="7.0.0" />
     <!-- Proc.Fs's floor for consumers, which the tests use too; build/scripts overrides it for Nullean.Make.Fs -->
-    <PackageVersion Include="FSharp.Core" Version="10.0.100" />
+    <PackageVersion Include="FSharp.Core" Version="10.1.403" />
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.3" />
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.3" />
-    <PackageVersion Include="MinVer" Version="6.0.0" />
+    <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
 
   <!-- tests -->
   <ItemGroup>
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="CsCheck" Version="5.0.1" />
-    <PackageVersion Include="System.Reactive.Linq" Version="4.4.1" />
+    <PackageVersion Include="System.Reactive.Linq" Version="6.1.0" />
     <PackageVersion Include="TUnit" Version="1.83.0" />
   </ItemGroup>
 
