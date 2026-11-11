@@ -25,6 +25,7 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(PrintEnv).ToLowerInvariant()) return PrintEnv(args.Skip(1).ToArray());
 			if (testCase == nameof(EchoStdin).ToLowerInvariant()) return EchoStdin(args.Length > 1 ? args[1] : "");
 			if (testCase == nameof(PrintCwd).ToLowerInvariant()) return PrintCwd();
+			if (testCase == nameof(FailTimes).ToLowerInvariant()) return FailTimes(args[1], args[2]);
 			if (testCase == nameof(SingleLineNoEnter).ToLowerInvariant()) return SingleLineNoEnter();
 			if (testCase == nameof(TwoWrites).ToLowerInvariant()) return TwoWrites();
 
@@ -58,6 +59,18 @@ namespace Proc.Tests.Binary
 			return 0;
 		}
 		private static int ExitWith(string exitCode) => int.Parse(exitCode, CultureInfo.InvariantCulture);
+
+		// Counts its runs in the given file and exits with 1 for the first <times> runs, 0 after that.
+		// Prints "attempt N" to standard out and "failed N" to standard error on a failing run.
+		private static int FailTimes(string counterFile, string times)
+		{
+			var attempt = (System.IO.File.Exists(counterFile) ? int.Parse(System.IO.File.ReadAllText(counterFile), CultureInfo.InvariantCulture) : 0) + 1;
+			System.IO.File.WriteAllText(counterFile, attempt.ToString(CultureInfo.InvariantCulture));
+			Console.WriteLine($"attempt {attempt}");
+			if (attempt > int.Parse(times, CultureInfo.InvariantCulture)) return 0;
+			Console.Error.WriteLine($"failed {attempt}");
+			return 1;
+		}
 
 		private static int PrintCwd()
 		{

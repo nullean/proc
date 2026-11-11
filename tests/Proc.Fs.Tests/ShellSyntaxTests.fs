@@ -84,7 +84,43 @@ let ``a value can never add a pipe`` () =
     Gen.String.Sample(fun (v: string) ->
         eq [ [ "a"; v ]; [ "b" ] ] (stages (sh $"a {v} | b")))
 
+let private stdinFile (c: Cmd) =
+    let rec first (c: Cmd) =
+        match c.Stdin with
+        | Some (StdinSource.Upstream u) -> first u
+        | Some (StdinSource.File f) -> Some f
+        | _ -> None
+    first c
+
+[<Fact>]
+let ``any value is exactly the file name of a redirect`` () =
+    Gen.String.Sample(fun (v: string) ->
+        let c = sh $"a < {v} | b >> {v}"
+        eq [ [ "a" ]; [ "b" ] ] (stages c)
+        eq (Some v) (stdinFile c)
+        eq (Some (StdoutTarget.Append v)) c.Stdout)
+
+[<Fact>]
+let ``a value can never add a redirect`` () =
+    Gen.String.Sample(fun (v: string) ->
+        let c = sh $"a {v}"
+        eq None c.Stdout
+        eq None c.Stdin)
+
 // ---- examples ----
+
+[<Fact>]
+let ``redirects attach to the first and last command`` () =
+    let c = Cmd.ofString "sort -r < 'in file.txt' | uniq > out.txt"
+    eq [ [ "sort"; "-r" ]; [ "uniq" ] ] (stages c)
+    eq (Some "in file.txt") (stdinFile c)
+    eq (Some (StdoutTarget.File "out.txt")) c.Stdout
+    let c = Cmd.ofString "a >>log.txt b"
+    eq [ "b" ] (args c)
+    eq (Some (StdoutTarget.Append "log.txt")) c.Stdout
+    let files = [ "a"; "b" ]
+    Assert.Throws<ArgumentException>(fun () -> sh $"a > {files}" |> ignore) |> ignore
+
 
 [<Fact>]
 let ``the README examples parse as documented`` () =
@@ -151,8 +187,19 @@ let ``a value can be the binary`` () =
 [<InlineData("a || b")>]
 [<InlineData("a 'b")>]
 [<InlineData("a \"b")>]
-[<InlineData("echo hi > out.txt")>]
-[<InlineData("a < in.txt")>]
+[<InlineData("a >")>]
+[<InlineData("a <")>]
+[<InlineData("a > | b")>]
+[<InlineData("a > out | b")>]
+[<InlineData("a | b < in")>]
+[<InlineData("a > x > y")>]
+[<InlineData("a >> x > y")>]
+[<InlineData("a < x < y")>]
+[<InlineData("a > > b")>]
+[<InlineData("a >>> b")>]
+[<InlineData("a 2> err")>]
+[<InlineData("a>b")>]
+[<InlineData("> out")>]
 [<InlineData("a; b")>]
 [<InlineData("a && b")>]
 [<InlineData("a &")>]

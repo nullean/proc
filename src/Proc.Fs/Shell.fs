@@ -204,6 +204,29 @@ module ShellSteps =
                         | Some value -> Map.add name value m
                         | None -> Map.remove name m) ctx.Environment))
 
+    let private blockVariable (ctx: ShellContext) (name: string) =
+        match ctx.Environment.TryFind name with
+        | Some value -> Option.ofObj value
+        | None -> Option.ofObj (Environment.GetEnvironmentVariable name)
+
+    /// <summary>
+    /// The full path of the program <paramref name="name"/> on the PATH commands in this block see, or <c>None</c>:
+    /// <c>let! docker = which "docker"</c>. A name with a directory in it resolves against the current directory.
+    /// </summary>
+    let which (name: string) : ShellStep<string option> =
+        ShellStep (fun ctx -> Which.find (currentDirectory ctx) (blockVariable ctx "PATH") (blockVariable ctx "PATHEXT") name)
+
+    /// <summary>
+    /// Stops the block with a <see cref="FileNotFoundException"/> when the program <paramref name="name"/> is not on
+    /// the PATH, before any later command runs: <c>require "git"</c> on a line of its own.
+    /// </summary>
+    let require (name: string) : ShellStep<unit> =
+        ShellStep (fun ctx ->
+            let path = blockVariable ctx "PATH"
+            match Which.find (currentDirectory ctx) path (blockVariable ctx "PATHEXT") name with
+            | Some _ -> ()
+            | None -> raise (FileNotFoundException($"require: '{name}' is not on the PATH", name)))
+
     /// <summary>Print <c>$ binary arguments</c> before each command that follows, like <c>set -x</c></summary>
     let echoCommands (enabled: bool) : ShellStep<unit> =
         ShellStep (fun ctx -> ctx.EchoCommands <- enabled)
