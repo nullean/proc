@@ -11,6 +11,7 @@
     <PackageReference Include="Bullseye" />
     <PackageReference Include="Proc" />
     <PackageReference Include="Fake.Tools.Git" />
+    <PackageReference Include="System.Reactive" />
   </ItemGroup>
 
   <ItemGroup>
