@@ -12,7 +12,7 @@ open ProcNet
 let exec binary args =
     Proc.Exec (binary, args |> List.toArray)
     
-let private restoreTools = lazy(exec "dotnet" ["tool"; "restore"; "--disable-parallel"])
+let private restoreTools = lazy(exec "dotnet" ["tool"; "restore"])
 let private currentVersion =
     lazy(
         restoreTools.Value |> ignore
@@ -57,7 +57,10 @@ let private validatePackages (arguments:ParseResults<Arguments>) =
         if Fake.Core.Environment.hasEnvironVar "JENKINS_URL" && Fake.Core.Environment.isWindows then ["-r"] else []
     
     let args = ["-v"; currentVersionInformational.Value; "-k"; Paths.SignKey; "-t"; output] @ jenkinsOnWindowsArgs
-    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["nupkg-validator"; "validate"; p] @ args) |> ignore)
+    // nupkg-validator 0.11+ ships per-RID NativeAOT packages, so it validates net11.0 dlls without needing a matching
+    // runtime. It runs through `dotnet tool exec` instead of the tool manifest: on Linux, restoring the manifest with a
+    // RID-specific tool next to assembly-differ fails with "The command assembly-differ ... is not contained in the package".
+    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["tool"; "exec"; "nupkg-validator@0.11.4"; "--"; "validate"; p] @ args) |> ignore)
     
 
 let private generateApiChanges (arguments:ParseResults<Arguments>) =
