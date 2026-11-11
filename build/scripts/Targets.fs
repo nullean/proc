@@ -58,9 +58,10 @@ let private validatePackages (arguments:ParseResults<Arguments>) =
     
     let args = ["-v"; currentVersionInformational.Value; "-k"; Paths.SignKey; "-t"; output] @ jenkinsOnWindowsArgs
     // nupkg-validator 0.11+ ships per-RID NativeAOT packages, so it validates net11.0 dlls without needing a matching
-    // runtime. It runs through `dotnet tool exec` instead of the tool manifest: on Linux, restoring the manifest with a
-    // RID-specific tool next to assembly-differ fails with "The command assembly-differ ... is not contained in the package".
-    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["tool"; "exec"; "nupkg-validator@0.11.4"; "--"; "validate"; p] @ args) |> ignore)
+    // runtime. Its RID packages (nupkg-validator.linux-x64, ...) only live on nuget.org, not on the GitHub Packages feed CI
+    // configures, so it runs through `dotnet tool exec` pinned to nuget.org rather than through the tool manifest.
+    let validator = ["tool"; "exec"; "nupkg-validator@0.11.4"; "--source"; "https://api.nuget.org/v3/index.json"; "--"; "validate"]
+    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (validator @ [p] @ args) |> ignore)
     
 
 let private generateApiChanges (arguments:ParseResults<Arguments>) =
