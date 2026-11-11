@@ -1,12 +1,40 @@
 # Proc.Fs
 
-F# bindings for Proc. 
+![Proc](https://raw.githubusercontent.com/nullean/nullean.github.io/main/assets/nullean-mark-128.png)
 
-Proc is a library that turns `System.Diagnostics.Process` into a stream based `IObservable` capable of capturing a process's true output while still emitting line based events.
+F# bindings for Proc: run commands the way a shell script does, with every interpolated value passed as exactly one
+argument, so values never need quoting.
 
-The library ships with two computation expression builders, `shell { }` and `exec { }`, and a `Cmd` module for running commands with `|>`. It targets .NET 10 and .NET 11.
+[![NuGet](https://img.shields.io/nuget/v/Proc.Fs?style=flat-square)](https://www.nuget.org/packages/Proc.Fs)
 
-# Shell
+[Proc](https://www.nuget.org/packages/Proc) turns `System.Diagnostics.Process` into a stream based `IObservable`
+capable of capturing a process's true output while still emitting line based events. This package ships two
+computation expression builders, `shell { }` and `exec { }`, and a `Cmd` module for running commands with `|>`.
+It targets .NET 10 and .NET 11.
+
+## Install
+
+```sh
+dotnet add package Proc.Fs
+```
+
+## Quick start
+
+```fsharp
+open Proc.Fs
+
+let sha = shell {
+    sh $"dotnet build"
+    let! sha = text $"git rev-parse HEAD"
+    for file in lines $"git ls-files | grep \.fs$" do
+        sh $"dotnet fantomas {file}"
+    return sha
+}
+```
+
+The first command that fails throws a `ProcExecException` and stops the block.
+
+## Shell
 
 `shell { }` runs commands one after the other, the way a shell script does.
 The first command that fails throws a `ProcExecException` and stops the block.
@@ -70,7 +98,7 @@ shell {
 A command's own `Cmd.cwd` resolves against the shell's directory, and its own `Cmd.env` wins over `setEnv`.
 `do!` still works in front of commands and steps, for example `do! cd "src"`.
 
-## Background processes, clean-up and running steps at the same time
+### Background processes, clean-up and running steps at the same time
 
 ```fsharp
 shell {
@@ -121,7 +149,7 @@ failure of the deferred command goes to standard error.
 - A background process the block started that fails also fails the branches.
 - Output of the branches interleaves line by line on the console.
 
-## Writing commands with `sh`
+### Writing commands with `sh`
 
 `sh` takes an interpolated string, `$"…"`. It splits **only the text you wrote**:
 
@@ -160,7 +188,7 @@ sh $"""
 Use `$$"""…"""` when the command contains literal braces; its placeholders are `{{value}}`.
 A plain string without `$` does not compile. `Cmd.ofString` parses text that only exists at runtime.
 
-# Cmd
+## Cmd
 
 `cmd binary arguments` builds a command without running it. The `Cmd` module adjusts and runs it, and reads well with `|>`.
 
@@ -198,7 +226,7 @@ cmd "dotnet" ["test"] |> Cmd.iter (fun line -> if line.Contains "Failed" then pr
 
 `Cmd.validExitCode` decides which exit codes count as success; the default is only `0`.
 
-## Files, failures and retries
+### Files, failures and retries
 
 | Function | Does | Like |
 |---|---|---|
@@ -225,7 +253,7 @@ Relative file names resolve against the working directory of the command, so ins
 Standard error stays on the console. A capture such as `Cmd.lines` reads nothing from a command whose standard out goes to a file.
 `Cmd.iter` passes lines on again when a retried command runs again.
 
-## Pipes
+### Pipes
 
 `|>|` streams the standard out of one command into the standard input of the next, like `|` in a shell:
 
@@ -247,7 +275,7 @@ let sorted = cmd "sort" [] |> Cmd.stdin ["b"; "a"] |> Cmd.lines |> Cmd.get
 
 A command without `Cmd.stdin` or a pipe gets its standard input closed straight away.
 
-# Exec
+## Exec
 
 A `CE` to make it **REAL** easy to execute processes.
 
@@ -283,7 +311,7 @@ exec {
     env Map[("key", "value")]
     working_dir "."
     send_control_c false
-    timeout (TimeSpan.FromSeconds(10))
+    timeout (TimeSpan.FromSeconds 10.)
     kill_on_parent_exit true
     filter_output (fun l -> l.Line.Contains "clean")
     valid_exit_code (fun i -> i <> 0)
@@ -362,7 +390,7 @@ returns the exit code and the full console output.
 
 ```fsharp
 
-let process = exec {
+let running = exec {
     binary "dotnet"
     arguments "--help"
     wait_until (fun l -> l.Line.Contains "clean")
@@ -372,7 +400,7 @@ let process = exec {
 returns an already running process but only after it confirms a line was printed
 ```fsharp
 
-let process = exec {
+let running = exec {
     binary "dotnet"
     arguments "--help"
     wait_until_and_disconnect (fun l -> l.Line.Contains "clean")
@@ -380,3 +408,9 @@ let process = exec {
 ```
 
 returns an already running process but only after it confirms a line was printed. This version will stop the yielding standard/out lines which may utilize memory consumption which is no longer needed.
+
+## Learn more
+
+- The C# API underneath: [Proc](https://www.nuget.org/packages/Proc)
+- Source and issues: https://github.com/nullean/proc
+- [Releases](https://github.com/nullean/proc/releases)

@@ -1,61 +1,105 @@
 # Proc
 
-A dependency free `System.Diagnostics.Process` supercharger. 
+![Proc](https://raw.githubusercontent.com/nullean/nullean.github.io/main/assets/nullean-mark-128.png)
 
-1. `Proc.Exec()` for the quick one-liners
-2. `Proc.Start()` for the quick one-liners 
-   - Use if you want to capture the console output as well as print these message in real time.
-   - Proc.Start() also allows you to script StandardIn and react to messages
-3. Wraps `System.Diagnostics.Process` as an `IObservable` 
-    * `ProcessObservable` stream based wrapper
-    * `EventBasedObservableProcess` event based wrapper
-4. Built in support to send `SIGINT` to any process before doing a hard `SIGKILL` (`Process.Kill()`)
-    * Has to be set using `SendControlCFirst = true` on `StartArguments`
-    
+A `System.Diagnostics.Process` supercharger: one-liners that run a program, capture or stream its output, and stop it
+with Ctrl+C before killing it.
+
+[![NuGet](https://img.shields.io/nuget/v/Proc?style=flat-square)](https://www.nuget.org/packages/Proc)
+
+## Install
+
+```sh
+dotnet add package Proc
+```
+
+## Quick start
+
+```csharp
+using ProcNet;
+
+// run a program on the shared console; throws ProcExecException on a non-zero exit code
+Proc.Exec("dotnet", "--version");
+
+// capture its output, while still writing it to the console as it arrives
+var result = Proc.Start("git", "status", "--short");
+foreach (var line in result.ConsoleOut)
+	Console.WriteLine($"{(line.Error ? "err" : "out")}: {line.Line}");
+Console.WriteLine($"exit code {result.ExitCode}");
+```
+
+Proc does four things:
+
+1. `Proc.Exec()` for the quick one-liners.
+2. `Proc.Start()` when you want to capture the console output as well as print it in real time.
+   It also lets you script standard input and react to messages.
+3. It wraps `System.Diagnostics.Process` as an `IObservable`:
+   - `ObservableProcess`, a stream based wrapper;
+   - `EventBasedObservableProcess`, an event based wrapper.
+4. It can send `SIGINT` to a process before falling back to a hard `SIGKILL` (`Process.Kill()`).
+   Set `SendControlCFirst = true` on `StartArguments` to opt in.
+
+Pick the call by what you need back:
+
+| Need | Call | Returns |
+|---|---|---|
+| run it, fail on a non-zero exit | `Proc.Exec("dotnet", "build")` | exit code; throws `ProcExecException` otherwise |
+| the same, async | `await Proc.ExecAsync(new ExecArguments("dotnet", "build"), ct)` | exit code |
+| its output | `Proc.Start("git", "status", "--short")` | `ProcessCaptureResult`: `Completed`, `ExitCode`, `ConsoleOut` |
+| each line as it arrives | `Proc.StartRedirected(handler, "dotnet", "test")` | `ProcessResult` |
+| a long-running server you wait on | `Proc.StartLongRunning(args, waitForStartedConfirmation)` | a subscription with `ProcessId` and `ExitCode`; dispose it to stop |
+
+Pass every argument separately, `Proc.Exec("git", "commit", "-m", message)`, never one string with spaces: each one
+reaches the process unchanged. There is no default timeout: without `Timeout` a call waits for the process to exit.
+
 ## Proc.Exec
 
-Execute a process and blocks using a default timeout of 4 minutes. This method uses the same console session
-as and as such will print the binaries console output. Throws a `ProcExecException` if the command fails to execute.
-See also `ExecArguments` for more options
+Executes a process and blocks until it exits. It uses the same console session as your program, so the program's
+output goes straight to the console. Throws a `ProcExecException` when the program fails to start, exits with an exit
+code that `ValidExitCodeClassifier` does not accept (by default anything but `0`), or runs past its `Timeout`.
+See `ExecArguments` for more options.
 
 ```csharp
 Proc.Exec("ipconfig", "/all");
 ```
 
+```csharp
+Proc.Exec(new ExecArguments("npm", "ci")
+{
+	WorkingDirectory = "web",
+	Environment = new Dictionary<string, string> { ["CI"] = "true" }, // a null value removes a variable
+	Timeout = TimeSpan.FromMinutes(5),                                  // kills the whole process tree, then throws
+	ValidExitCodeClassifier = code => code is 0 or 2
+});
+```
+
 ## Proc.Start
 
-start a process and block using the default timeout of 4 minutes
+Starts a process and blocks until it exits, capturing its output.
+
 ```csharp
 var result = Proc.Start("ipconfig", "/all");
 ```
 
-Provide a custom timeout and an `IConsoleOutWriter` that can output to console 
-while this line is blocking. The following example writes `stderr` in red.
+Pass `StartArguments` to control how the process starts, for instance with a timeout and an `IConsoleOutWriter` that
+writes to the console while the call blocks. `ConsoleOutColorWriter`, the default, writes `stderr` in red.
 
 ```csharp
-var result = Proc.Start("ipconfig", TimeSpan.FromSeconds(10), new ConsoleOutColorWriter());
-```
-
-More options can be passed by passing `StartArguments` instead to control how the process should start.
-
-```csharp
-var args = new StartArguments("ipconfig", "/all")
+var result = Proc.Start(new StartArguments("ipconfig", "/all")
 {
-  WorkingDirectory = ..
-}
-Proc.Start(args, TimeSpan.FromSeconds(10));
+	WorkingDirectory = "..",
+	Timeout = TimeSpan.FromSeconds(10),
+	ConsoleOutWriter = new ConsoleOutColorWriter()
+});
 ```
 
-The static  `Proc.Start` has a timeout of `4 minutes` if not specified.
+`Proc.Start` does not throw on a non-zero exit code. `result` has these properties:
 
-`result` has the following properties
+- `Completed`: true if the program completed before the timeout.
+- `ConsoleOut`: the console output as a list of `LineOut`, where `Error` says whether a line was written on `stderr`.
+- `ExitCode`.
 
-* `Completed` true if the program completed before the timeout
-* `ConsoleOut` a list the console out message as `LineOut` 
-   instances where `Error` on each indicating whether it was written on `stderr` or not
-* `ExitCode` 
-
-**NOTE** `ConsoleOut` will always be set regardless of whether an `IConsoleOutWriter` is provided
+`ConsoleOut` is always set, whether or not an `IConsoleOutWriter` is provided.
 
 ## Proc.StartLongRunning
 
@@ -80,12 +124,13 @@ When no such line comes in time, it stops the process and throws `ProcExecExcept
 
 ## ObservableProcess
 
-The heart of it all this is an `IObservable<CharactersOut>`. It listens on the output buffers directly and does not wait on 
+The heart of it all is an `IObservable<CharactersOut>`. It listens on the output buffers directly and does not wait on
 newlines to emit.
 
-To create an observable process manually follow the following pattern:
+To create an observable process manually, follow this pattern:
 
 ```csharp
+var args = new StartArguments("dotnet", "--info");
 using (var p = new ObservableProcess(args))
 {
 	p.Subscribe(c => Console.Write(c.Characters));
@@ -93,14 +138,13 @@ using (var p = new ObservableProcess(args))
 }
 ```
 
-The observable is `cold` untill subscribed and is not intended to be reused or subscribed to multiple times. If you need to 
-share a subscription look into RX's `Publish`.
+The observable is cold until subscribed, and is not meant to be reused or subscribed to more than once. To share a
+subscription, look into Rx's `Publish`.
 
-The `WaitForCompletion()` call blocks so that `p` is not disposed which would attempt to shutdown the started process.
+The `WaitForCompletion()` call blocks so that `p` is not disposed, which would shut down the started process.
 
-The default for doing a shutdown is through `Process.Kill` this is a hard `SIGKILL` on the process.
-
-The cool thing about `Proc` is that it supports `SIGINT` interoptions as well to allow for processes to be cleanly shutdown. 
+By default a shutdown goes through `Process.Kill`, a hard `SIGKILL` on the process. Proc also supports `SIGINT`, so a
+process can shut down cleanly:
 
 ```csharp
 var args = new StartArguments("elasticsearch.bat")
@@ -109,12 +153,11 @@ var args = new StartArguments("elasticsearch.bat")
 };
 ```
 
-This will attempt to send a `Control+C` into the running process console on windows first before falling back to `Process.Kill`. 
-Linux and OSX support for this flag is still in the works so thats why this behaviour is opt in.
+This sends a Ctrl+C into the running process's console first, then falls back to `Process.Kill`. On Windows Proc
+delivers it through a small helper program it ships. On Linux and macOS it shells out to `kill -SIGINT`, unless running
+on .NET 11+ (see below), where it delivers the signal in-process instead.
 
-
-Dealing with `byte[]` characters might not be what you want to program against, so `ObservableProcess` allows the following as well.
-
+Dealing with `char[]` buffers might not be what you want to program against, so `ObservableProcess` also emits lines:
 
 ```csharp
 using (var p = new ObservableProcess(args))
@@ -124,9 +167,9 @@ using (var p = new ObservableProcess(args))
 }
 ```
 
-Instead of proxying `byte[]` as they are received on the socket this buffers and only emits on lines. 
+Instead of passing on the buffers as they are received, this buffers and only emits whole lines.
 
-In some cases it can be very useful to introduce your own word boundaries
+In some cases it is useful to introduce your own line boundaries:
 
 ```csharp
 public class MyProcObservable : ObservableProcess
@@ -142,36 +185,59 @@ public class MyProcObservable : ObservableProcess
 }
 ```
 
-returning true inside `BufferBoundary` will yield the line to `SubscribeLine()`. This could be usefull e.g if your process 
+Returning true from `BufferBoundary` yields the buffered text to `SubscribeLines()`. This is useful when your process
 prompts without a new line:
 
 > Continue [Y/N]: <no newline here>
 
-A more concrete example of this is when you call a `bat` file on windows and send a `SIGINT` signal it will *always* prompt:
+A more concrete example: a `bat` file on Windows that gets a `SIGINT` *always* prompts
 
 > Terminate batch job (Y/N)?
 
-Which would not yield to `SubscribeLines` and block any waithandles unnecessary. `ObservableProcess` handles this edgecase
-therefor OOTB and automatically replies with `Y` on `stdin` in this case.
+which would not yield to `SubscribeLines` and would block wait handles unnecessarily. `ObservableProcess` handles this
+case out of the box and replies with `Y` on `stdin`.
 
-Also note that `ObservableProcess` will yield whatever is in the buffer before OnCompleted().
+`ObservableProcess` also yields whatever is left in the buffer before `OnCompleted()`.
 
+## EventBasedObservableProcess
 
-# EventBasedObservable
+The sibling of `ObservableProcess` that uses `OutputDataReceived` and `ErrorDataReceived`, and so can only emit lines.
 
-`ObservableProcess`'s sibbling that utilizes `OutputDataReceived` and `ErrorDataReceived` and can only emit lines.
+On .NET 11+ it reads through [`Process.ReadAllLinesAsync`](https://devblogs.microsoft.com/dotnet/process-api-improvements-in-dotnet-11/)
+instead, which multiplexes `stdout` and `stderr` on a single thread without blocking any thread pool threads.
 
+## .NET 11
 
+Proc targets `net11.0` alongside its other target frameworks, and picks up a few of the
+[Process API improvements shipped in .NET 11](https://devblogs.microsoft.com/dotnet/process-api-improvements-in-dotnet-11/)
+when running on it. They are opt-in or no-ops elsewhere, so there is nothing to change if you stay on an older target
+framework.
 
+- `SendControlC` and `SendControlCFirst` deliver `SIGINT` on Linux and macOS through `SafeProcessHandle.Signal`
+  instead of shelling out to the `kill` binary.
+- `EventBasedObservableProcess` reads through `Process.ReadAllLinesAsync` (see above).
+- `Proc.Exec` without a `Timeout` calls `Process.Run` directly, and `Proc.ExecAsync` without a `Timeout` and with a
+  token that cannot be cancelled calls `Process.RunAsync` directly. With a timeout or a cancellable token both keep
+  using Proc's own wait loop: on timeout or cancellation `Process.Run` and `RunAsync` kill only the started process,
+  whereas Proc kills its entire process tree and throws.
+- Two new options on `StartArguments` and `ExecArguments`, both no-ops on older target frameworks or unsupported
+  platforms:
 
+```csharp
+var args = new StartArguments("some-long-running-tool")
+{
+	// Kills the started process if this process exits, including crashes. Backed by Job objects on Windows
+	// and PR_SET_PDEATHSIG on Linux. Only takes effect on .NET 11+ on Windows or Linux.
+	KillOnParentExit = true,
 
+	// Restricts which handles the started process inherits, instead of every inheritable handle from this
+	// process. Only takes effect on .NET 11+.
+	InheritedHandles = new List<SafeHandle>()
+};
+```
 
+## Learn more
 
-
-
-
-
-
-
-
-
+- F# bindings: [Proc.Fs](https://www.nuget.org/packages/Proc.Fs), with `shell { }`, `exec { }` and the `Cmd` module
+- Source and issues: https://github.com/nullean/proc
+- [Releases](https://github.com/nullean/proc/releases)
