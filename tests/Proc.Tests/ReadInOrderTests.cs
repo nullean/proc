@@ -1,12 +1,11 @@
 ﻿using System;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class ReadInOrderTests : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void InterMixedOutAndError()
 		{
 			var args = TestCaseArguments(nameof(InterMixedOutAndError));
@@ -23,7 +22,7 @@ namespace ProcNet.Tests
 				previous = o.Error;
 			}
 
-			interspersed.Should().BeGreaterOrEqualTo(3);
+			interspersed.Should().BeGreaterThanOrEqualTo(3);
 		}
 	}
 }

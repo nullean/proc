@@ -5,9 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CsCheck;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProcNet.Std;
-using Xunit;
 
 namespace ProcNet.Tests;
 
@@ -44,7 +43,7 @@ public class PublicApiPropertyTests : TestsBase
 				.Select(g => ("PROC_CSCHECK_" + g.Key, g.First().Item2))
 				.ToArray());
 
-	[Fact]
+	[Test]
 	public void StartRoundTripsArguments() =>
 		Arguments.Sample(args =>
 		{
@@ -56,7 +55,7 @@ public class PublicApiPropertyTests : TestsBase
 			result.ConsoleOut.Should().NotContain(l => l.Error);
 		}, iter: ProcessIterations, threads: 1);
 
-	[Fact]
+	[Test]
 	public void StartPassesEnvironmentVariables() =>
 		EnvironmentVariables.Sample(vars =>
 		{
@@ -69,7 +68,7 @@ public class PublicApiPropertyTests : TestsBase
 			result.ConsoleOut.Select(l => l.Line).Should().Equal(vars.Select(v => v.Value));
 		}, iter: ProcessIterations, threads: 1);
 
-	[Fact]
+	[Test]
 	public void NullEnvironmentValueRemovesAnInheritedVariable()
 	{
 		const string name = "PROC_TESTS_INHERITED";
@@ -90,7 +89,7 @@ public class PublicApiPropertyTests : TestsBase
 		}
 	}
 
-	[Fact]
+	[Test]
 	public void StartReportsExitCode() =>
 		ExitCodes.Sample(code =>
 		{
@@ -100,7 +99,7 @@ public class PublicApiPropertyTests : TestsBase
 			result.ExitCode.Should().Be(code);
 		}, iter: ProcessIterations, threads: 1);
 
-	[Fact]
+	[Test]
 	public void StartRedirectedReportsExitCode() =>
 		ExitCodes.Sample(code =>
 		{
@@ -110,7 +109,7 @@ public class PublicApiPropertyTests : TestsBase
 			result.ExitCode.Should().Be(code);
 		}, iter: ProcessIterations, threads: 1);
 
-	[Fact]
+	[Test]
 	public void ExecReturnsExitCodeTheClassifierAccepts() =>
 		ExitCodes.Sample(code =>
 		{
@@ -120,7 +119,7 @@ public class PublicApiPropertyTests : TestsBase
 			Proc.Exec(args).Should().Be(code);
 		}, iter: ProcessIterations, threads: 1);
 
-	[Fact]
+	[Test]
 	public void ExecThrowsWithExitCodeTheClassifierRejects() =>
 		ExitCodes.Sample(code =>
 		{
@@ -136,7 +135,7 @@ public class PublicApiPropertyTests : TestsBase
 		}, iter: ProcessIterations, threads: 1);
 
 	/// <summary> Without a timeout net11.0 goes through Process.Run, with one through Proc's own wait/kill loop. </summary>
-	[Fact]
+	[Test]
 	public void ExecAgreesWithAndWithoutTimeout() =>
 		Gen.Select(ExitCodes, Arguments).Sample((code, extra) =>
 		{
@@ -154,7 +153,7 @@ public class PublicApiPropertyTests : TestsBase
 	/// A non-cancellable token takes the Process.RunAsync path on net11.0, a cancellable one Proc's own path. Both
 	/// must report the same exit code and throw the same way.
 	/// </summary>
-	[Fact]
+	[Test]
 	public Task ExecAsyncAgreesWithAndWithoutCancellableToken() =>
 		ExitCodes.SampleAsync(async code =>
 		{
@@ -166,7 +165,7 @@ public class PublicApiPropertyTests : TestsBase
 			uncancellable.ExitCode.Should().Be(code);
 		}, iter: ProcessIterations, threads: 1);
 
-	[Fact]
+	[Test]
 	public void ExecFailsTheSameWayWithAndWithoutTimeoutWhenTheBinaryDoesNotExist()
 	{
 		var direct = new ExecArguments("this-binary-does-not-exist-proc-cscheck");
@@ -181,7 +180,7 @@ public class PublicApiPropertyTests : TestsBase
 
 #if NET11_0_OR_GREATER
 	/// <summary> Differential against the runtime: Proc.Exec must report exactly what Process.Run reports. </summary>
-	[Fact]
+	[Test]
 	public void ExecMatchesProcessRun() =>
 		ExitCodes.Sample(code =>
 		{
@@ -193,7 +192,7 @@ public class PublicApiPropertyTests : TestsBase
 		}, iter: ProcessIterations, threads: 1);
 
 	/// <summary> Differential against the runtime: Proc.Start must capture exactly the stdout Process.RunAndCaptureText captures. </summary>
-	[Fact]
+	[Test]
 	public void StartMatchesProcessRunAndCaptureText() =>
 		Arguments.Sample(args =>
 		{
@@ -214,7 +213,7 @@ public class PublicApiPropertyTests : TestsBase
 		}, iter: ProcessIterations, threads: 1);
 #endif
 
-	[Fact]
+	[Test]
 	public void DefaultExitCodeClassifierOnlyAcceptsZero() =>
 		Gen.Int.Sample(code =>
 		{
@@ -226,7 +225,7 @@ public class PublicApiPropertyTests : TestsBase
 			args.ValidExitCodeClassifier(code).Should().Be(code == 0, "setting null restores the default");
 		});
 
-	[Fact]
+	[Test]
 	public void ArgumentsAreExposedAsGiven() =>
 		Gen.Select(Argument, Arguments).Sample((binary, args) =>
 		{
@@ -235,7 +234,7 @@ public class PublicApiPropertyTests : TestsBase
 			new LongRunningArguments(binary, args).Binary.Should().Be(binary);
 		});
 
-	[Fact]
+	[Test]
 	public void ProcessResultToStringReportsEveryLine() =>
 		Gen.Select(Gen.Bool, Gen.Int.Nullable(), Gen.Select(Gen.Bool, Argument).Array[0, 10]).Sample((completed, exitCode, lines) =>
 		{
@@ -248,7 +247,7 @@ public class PublicApiPropertyTests : TestsBase
 			reported.Should().Equal(lines.Select(l => $"[std{(l.Item1 ? "err" : "out")}]: {l.Item2}"));
 		});
 
-	[Fact]
+	[Test]
 	public void ProcessCaptureResultNeverExposesNullConsoleOut() =>
 		Gen.Select(Gen.Bool, Gen.Int.Nullable()).Sample((completed, exitCode) =>
 		{

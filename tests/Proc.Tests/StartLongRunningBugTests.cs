@@ -1,12 +1,11 @@
 using System;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class StartLongRunningBugTests : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void StartLongRunning_Dispose_AlsoDisposesWaitHandle()
 		{
 			// Bug: LongRunningApplicationSubscription.Dispose() disposes the subscription and

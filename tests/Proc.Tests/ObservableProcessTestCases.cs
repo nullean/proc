@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class ObservableProcessTestCases : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void SingleLineNoEnter()
 		{
 			var seen = new List<string>();
@@ -19,7 +18,7 @@ namespace ProcNet.Tests
 			seen.Should().NotBeEmpty().And.HaveCount(1, string.Join(Environment.NewLine, seen));
 			seen[0].Should().Be(nameof(SingleLineNoEnter));
 		}
-		[Fact]
+		[Test]
 		public void TwoWrites()
 		{
 			var seen = new List<string>();
@@ -31,7 +30,7 @@ namespace ProcNet.Tests
 			seen[0].Should().Be($"{nameof(TwoWrites)}{nameof(TwoWrites)}");
 		}
 
-		[Fact]
+		[Test]
 		public void SingleLine()
 		{
 			var seen = new List<string>();
@@ -43,7 +42,7 @@ namespace ProcNet.Tests
 			seen[0].Should().Be(nameof(SingleLine));
 		}
 
-		[Fact]
+		[Test]
 		public void SingleLineNoEnterCharacters()
 		{
 			var seen = new List<char[]>();
@@ -58,7 +57,7 @@ namespace ProcNet.Tests
 				.And.ContainInOrder(chars);
 
 		}
-		[Fact]
+		[Test]
 		public void SingleLineCharacters()
 		{
 			var seen = new List<char[]>();

@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class ReadLineTestCases : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void ReadKeyFirst()
 		{
 			var seen = new List<string>();
@@ -24,7 +23,7 @@ namespace ProcNet.Tests
 			seen.Should().NotBeEmpty().And.HaveCount(1, string.Join(Environment.NewLine, seen));
 			seen[0].Should().Be($"y{nameof(ReadKeyFirst)}");
 		}
-		[Fact]
+		[Test]
 		public void ReadKeyAfter()
 		{
 			var seen = new List<string>();

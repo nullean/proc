@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProcNet.Std;
-using Xunit;
 
 namespace ProcNet.Tests
 {
@@ -19,7 +18,7 @@ namespace ProcNet.Tests
 			public void Write(ConsoleOut consoleOut) => Out.Add(consoleOut);
 		}
 
-		[Fact]
+		[Test]
 		public void ReadKeyFirst()
 		{
 			var args = TestCaseArguments(nameof(ReadKeyFirst));
@@ -33,7 +32,7 @@ namespace ProcNet.Tests
 			writer.Out.Should().NotBeEmpty();
 		}
 
-		[Fact]
+		[Test]
 		public void BadBinary()
 		{
 			Action call = () => Proc.Start("this-does-not-exist.exe");

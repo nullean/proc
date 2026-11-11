@@ -2,14 +2,13 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class ExecBugTests : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void Exec_OnTimeout_KillsChildProcess()
 		{
 			// Bug: when the timeout fires, ProcExecException is thrown but process.Kill() is

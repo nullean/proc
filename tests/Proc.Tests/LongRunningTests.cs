@@ -1,21 +1,19 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Xunit;
-using Xunit.Abstractions;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
-	public class LongRunningTests(ITestOutputHelper output) : TestsBase
+	public class LongRunningTests : TestsBase
 	{
-		[Fact]
+		[Test]
 		public async Task LongRunningShouldSeeAllOutput()
 		{
 			var args = LongRunningTestCaseArguments("LongRunning");
 			args.StartedConfirmationHandler = l => l.Line == "Started!";
 
-			var outputWriter = new TestConsoleOutWriter(output);
+			var outputWriter = new TestConsoleOutWriter();
 
 			using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
 			{
@@ -31,14 +29,14 @@ namespace ProcNet.Tests
 			lines.Should().Contain(s => s.StartsWith("Data after startup:"));
 		}
 
-		[Fact]
+		[Test]
 		public async Task LongRunningShouldStopBufferingOutputWhenAsked()
 		{
 			var args = LongRunningTestCaseArguments("TrulyLongRunning");
 			args.StartedConfirmationHandler = l => l.Line == "Started!";
 			args.StopBufferingAfterStarted = true;
 
-			var outputWriter = new TestConsoleOutWriter(output);
+			var outputWriter = new TestConsoleOutWriter();
 			var sw = Stopwatch.StartNew();
 
 			using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
@@ -59,11 +57,11 @@ namespace ProcNet.Tests
 
 		}
 
-		[Fact]
+		[Test]
 		public async Task LongRunningWithoutConfirmationHandler()
 		{
 			var args = LongRunningTestCaseArguments("LongRunning");
-			var outputWriter = new TestConsoleOutWriter(output);
+			var outputWriter = new TestConsoleOutWriter();
 
 			using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
 			{

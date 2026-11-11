@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProcNet.Std;
-using Xunit;
 
 namespace ProcNet.Tests
 {
@@ -17,7 +16,7 @@ namespace ProcNet.Tests
 ";
 		private readonly string[] _expectedLines = _expected.Split(Environment.NewLine.ToCharArray());
 
-		[Fact]
+		[Test]
 		public void ProcSeesAllLines()
 		{
 			var args = TestCaseArguments("TrailingLines");
@@ -27,7 +26,7 @@ namespace ProcNet.Tests
 				result.ConsoleOut[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}
 
-		[Fact]
+		[Test]
 		public void SubscribeLinesSeesAllLines()
 		{
 			var args = TestCaseArguments("TrailingLines");
@@ -39,7 +38,7 @@ namespace ProcNet.Tests
 			for (var i = 0; i < seen.Count; i++)
 				seen[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}
-		[Fact]
+		[Test]
 		public void ConsoleWriterSeesAllLines()
 		{
 			var writer = new TestConsoleOutWriter();

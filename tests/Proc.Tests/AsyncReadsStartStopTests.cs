@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProcNet.Std;
-using Xunit;
 
 namespace ProcNet.Tests
 {
 	public class AsyncReadsStartStopTests : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void SlowOutput()
 		{
 			var args = TestCaseArguments(nameof(SlowOutput));

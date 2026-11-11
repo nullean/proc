@@ -2,13 +2,13 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class KillOnParentExitTests : TestsBase
 	{
-		[SkipUnlessKillOnParentExitSupportedFact]
+		[Test, SkipUnlessKillOnParentExitSupported]
 		public void KillOnParentExit_KillsGrandchildWhenMiddleProcessExits()
 		{
 			var pidFile = Path.Combine(Path.GetTempPath(), $"procnet-{Guid.NewGuid():N}.pid");

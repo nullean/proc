@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <!-- TUnit test projects are self-hosting Microsoft.Testing.Platform executables; F# has no source generators,
+         so TUnit discovers these tests by reflection -->
+    <OutputType>Exe</OutputType>
     <AssemblyName>Proc.Fs.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
     <LangVersion>Latest</LangVersion>
@@ -8,6 +11,8 @@
     <NoWarn>$(NoWarn);FS0044</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Assert.fs" />
     <Compile Include="TestBinary.fs" />
     <Compile Include="ExecTests.fs" />
     <Compile Include="CmdTests.fs" />
@@ -16,26 +21,14 @@
     <Compile Include="RedirectRetryTests.fs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="FSharp.Core" />
     <ProjectReference Include="..\..\src\Proc.Fs\Proc.Fs.fsproj" />
     <!-- Not referenced for its API: makes sure the NativeAOT test binary is built and published first -->
     <ProjectReference Include="..\Proc.Tests.Binary\Proc.Tests.Binary.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="GitHubActionsTestLogger">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="CsCheck" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Nullean.VsTest.Pretty.TestLogger" PrivateAssets="All" />
+    <PackageReference Include="TUnit" />
   </ItemGroup>
 </Project>

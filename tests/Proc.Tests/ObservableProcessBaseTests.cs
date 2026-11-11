@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class ObservableProcessBaseTests : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void ObservableProcess_ConcurrentExitAndDispose_DoesNotThrow()
 		{
 			// Bug (#8): Dispose() called Stop() without holding _exitLock, while the process

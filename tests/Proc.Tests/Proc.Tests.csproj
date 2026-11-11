@@ -1,34 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <!-- TUnit test projects are self-hosting Microsoft.Testing.Platform executables -->
+    <OutputType>Exe</OutputType>
     <AssemblyName>Proc.Tests</AssemblyName>
     <RootNamespace>ProcNet.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <LangVersion>preview</LangVersion>
+    <!-- assertions are AwesomeAssertions; do not bring TUnit's own Assert.That into scope -->
+    <TUnitAssertionsImplicitUsings>false</TUnitAssertionsImplicitUsings>
   </PropertyGroup>
-  <ItemGroup>
-    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Proc\Proc.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="GitHubActionsTestLogger">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="System.Reactive.Linq" />
     <PackageReference Include="CsCheck" />
-    <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Nullean.VsTest.Pretty.TestLogger" PrivateAssets="All" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="TUnit" />
   </ItemGroup>
 </Project>

@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProcNet.Std;
-using Xunit;
 
 namespace ProcNet.Tests
 {
@@ -15,7 +14,7 @@ namespace ProcNet.Tests
 			public void Handle(Exception e) { }
 		}
 
-		[Fact]
+		[Test]
 		public void StartRedirected_WithLineHandlerOverload_DoesNotRecurse()
 		{
 			// Bug: StartRedirected(IConsoleLineHandler, string, params string[]) calls itself

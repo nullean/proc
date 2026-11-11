@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class DisposeTestCases : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void DelayedWriterRunsToCompletion()
 		{
 			var seen = new List<string>();
@@ -22,7 +21,7 @@ namespace ProcNet.Tests
 			seen.Should().NotBeEmpty().And.HaveCount(1, string.Join(Environment.NewLine, seen));
 			seen[0].Should().Be(nameof(DelayedWriter));
 		}
-		[Fact]
+		[Test]
 		public void DelayedWriterStopNoWaitDispose()
 		{
 			var seen = new List<string>();
@@ -36,7 +35,7 @@ namespace ProcNet.Tests
 			process.ExitCode.Should().NotHaveValue();
 			seen.Should().BeEmpty(string.Join(Environment.NewLine, seen));
 		}
-		[Fact]
+		[Test]
 		public void DelayedWriterStopWaitToShort()
 		{
 			var seen = new List<string>();
@@ -49,7 +48,7 @@ namespace ProcNet.Tests
 			process.ExitCode.Should().NotHaveValue();
 			seen.Should().BeEmpty(string.Join(Environment.NewLine, seen));
 		}
-		[Fact]
+		[Test]
 		public void DelayedWriter()
 		{
 			var seen = new List<string>();
