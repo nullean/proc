@@ -15,14 +15,16 @@ concurrency:
 
 jobs:
   build:
-    uses: nullean/.github/.github/workflows/dotnet-ci.yml@da04ab864e6e2eeccf238033a5b848711d0fdebe # nullean/.github
+    uses: nullean/.github/.github/workflows/dotnet-ci.yml@f6c87e1598a3e21ae0404577cadd975783f79579 # v1.0.0
     permissions:
       contents: read
     with:
+      # Windows: a test run can still hold Proc.Tests.Binary.exe while the next target framework republishes it
+      os: '["ubuntu-latest", "macos-latest"]'
       packages-path: build/output
 
   zizmor:
-    uses: nullean/.github/.github/workflows/zizmor.yml@da04ab864e6e2eeccf238033a5b848711d0fdebe # nullean/.github
+    uses: nullean/.github/.github/workflows/zizmor.yml@f6c87e1598a3e21ae0404577cadd975783f79579 # v1.0.0
     permissions:
       contents: read
 
@@ -68,6 +70,8 @@ jobs:
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           cache: false # a release never restores a cache PR builds could have written
+        env:
+          MISE_JOBS: "1" # dotnet versions share one DOTNET_ROOT; installing them in parallel races
 
       - name: Pack, validate and report public API changes
         run: mise run pack
