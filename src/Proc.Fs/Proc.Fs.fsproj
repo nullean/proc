@@ -7,15 +7,10 @@
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\build\keys\keypair.snk</AssemblyOriginatorKeyFile>
 
-    <PackageIcon>nuget-icon.png</PackageIcon>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/nullean/proc</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/nullean/proc</PackageProjectUrl>
-    <PackageReleaseNotes>https://github.com/nullean/proc/releases</PackageReleaseNotes>
-
     <PackageId>Proc.Fs</PackageId>
     <Title>Proc.Fs - F# bindings for the easiest and full featured way to execute Processes in .NET</Title>
     <Description>Dependency free reactive abstraction around Process, exposes handy static methods for the quick one-liners</Description>
+    <PackageTags>fsharp;process;shell;exec;scripting;build;cli</PackageTags>
 
     <Version>$(ProcCurrentVersion)</Version>
     <InformationalVersion>$(ProcCurrentVersion)</InformationalVersion>
@@ -24,7 +19,6 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <LangVersion>Latest</LangVersion>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,16 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="README.md" Pack="true" PackagePath="README.md" CopyToOutputDirectory="PreserveNewest"/>
-    <Content Include="..\..\nuget-icon.png" CopyToOutputDirectory="PreserveNewest">
-      <Link>nuget-icon.png</Link>
-      <Pack>True</Pack>
-      <PackagePath>nuget-icon.png</PackagePath>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="10.0.100" />
+    <PackageReference Include="FSharp.Core" />
     <ProjectReference Include="..\Proc\Proc.csproj" />
   </ItemGroup>
 
