@@ -41,10 +41,27 @@ These steps change the commands that follow them in the same block:
 ```fsharp
 shell {
     cd "src"                      // relative to the current directory; throws if it does not exist
-    setEnv "CI" "true"
+    pushd "tests"                 // save the current directory, then change
+    popd                          // back to the saved one; throws when nothing was saved
+    env "CI" "true"               // like export CI=true; setEnv is the same
+    setEnvs ["A", "1"; "B", "2"]
+    unsetEnv "NUGET_API_KEY"      // also removes variables this process has
     echoCommands true             // print "$ binary arguments" before each command, like set -x
     let! here = pwd
+    let! home = getEnv "HOME"     // string option: the block's value, else this process's
     sh $"dotnet build"
+}
+```
+
+`inDir` and `withEnv` last until the end of the enclosing scope, such as a `for` body or a `try`.
+The previous directory and values come back afterwards, also after a `cd` or an exception:
+
+```fsharp
+shell {
+    for project in ["src/Proc"; "src/Proc.Fs"] do
+        use! _ = inDir project
+        use! _ = withEnv ["Configuration", "Release"]
+        sh $"dotnet pack"
 }
 ```
 

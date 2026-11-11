@@ -208,3 +208,105 @@ let ``shellx prints each command`` () =
     try shellx { sh $"{bin} ExitWith 0" }
     finally Console.SetOut original
     Assert.Contains($"$ {bin} ExitWith 0", writer.ToString())
+
+[<Fact>]
+let ``pushd and popd move through a stack of directories`` () =
+    use dir = new TempDir()
+    Directory.CreateDirectory(Path.Combine(dir.Path, "a", "b")) |> ignore
+    let seen = shell {
+        cd dir.Path
+        pushd "a"
+        let! inA = text $"{bin} PrintCwd"
+        pushd "b"
+        let! inB = text $"{bin} PrintCwd"
+        popd
+        let! backInA = text $"{bin} PrintCwd"
+        popd
+        let! backHome = text $"{bin} PrintCwd"
+        return [ inA; inB; backInA; backHome ]
+    }
+    let name = Path.GetFileName dir.Path
+    Assert.Equal<string list>(
+        [ Path.Combine(name, "a"); Path.Combine(name, "a", "b"); Path.Combine(name, "a"); name ],
+        seen |> List.map (fun p -> p.Substring(p.IndexOf name)))
+
+[<Fact>]
+let ``popd without pushd throws`` () =
+    Assert.Throws<InvalidOperationException>(fun () -> shell { popd }) |> ignore
+
+[<Fact>]
+let ``inDir restores the directory after an exception`` () =
+    use dir = new TempDir()
+    Directory.CreateDirectory(Path.Combine(dir.Path, "a")) |> ignore
+    let after = shell {
+        cd dir.Path
+        try
+            use! _ = inDir "a"
+            sh $"{bin} ExitWith 1"
+        with :? ProcExecException -> ()
+        return! pwd
+    }
+    Assert.Equal(Path.GetFullPath dir.Path, after)
+
+[<Fact>]
+let ``inDir restores the directory at the end of its scope, even after a cd`` () =
+    use dir = new TempDir()
+    Directory.CreateDirectory(Path.Combine(dir.Path, "a", "b")) |> ignore
+    let insideScope, afterScope = shell {
+        cd dir.Path
+        let inside = ref ""
+        for _ in [ 1 ] do
+            use! _ = inDir "a"
+            cd "b"
+            let! here = pwd
+            inside.Value <- here
+        let! after = pwd
+        return inside.Value, after
+    }
+    Assert.Equal(Path.Combine(Path.GetFullPath dir.Path, "a", "b"), insideScope)
+    Assert.Equal(Path.GetFullPath dir.Path, afterScope)
+
+[<Fact>]
+let ``env, setEnvs and unsetEnv reach the child`` () =
+    Environment.SetEnvironmentVariable("PROC_FS_PARENT", "from-parent")
+    try
+        let seen = shell {
+            env "PROC_FS_A" "a"
+            setEnvs [ "PROC_FS_B", "b"; "PROC_FS_C", "c" ]
+            unsetEnv "PROC_FS_C"
+            unsetEnv "PROC_FS_PARENT"
+            return! lines $"{bin} PrintEnv PROC_FS_A PROC_FS_B PROC_FS_C PROC_FS_PARENT"
+        }
+        Assert.Equal<string list>([ "a"; "b"; "<unset>"; "<unset>" ], seen)
+    finally Environment.SetEnvironmentVariable("PROC_FS_PARENT", null)
+
+[<Fact>]
+let ``getEnv reads the block's value, else the process's`` () =
+    Environment.SetEnvironmentVariable("PROC_FS_PARENT", "from-parent")
+    try
+        let values = shell {
+            let! parent = getEnv "PROC_FS_PARENT"
+            env "PROC_FS_A" "a"
+            let! own = getEnv "PROC_FS_A"
+            unsetEnv "PROC_FS_PARENT"
+            let! unset = getEnv "PROC_FS_PARENT"
+            let! missing = getEnv "PROC_FS_NEVER_SET"
+            return [ parent; own; unset; missing ]
+        }
+        Assert.Equal<string option list>([ Some "from-parent"; Some "a"; None; None ], values)
+    finally Environment.SetEnvironmentVariable("PROC_FS_PARENT", null)
+
+[<Fact>]
+let ``withEnv restores previous values and absences at the end of its scope`` () =
+    let inside, after = shell {
+        env "PROC_FS_A" "outer"
+        let inside = ref []
+        for _ in [ 1 ] do
+            use! _ = withEnv [ "PROC_FS_A", "inner"; "PROC_FS_B", "inner" ]
+            let! seen = lines $"{bin} PrintEnv PROC_FS_A PROC_FS_B"
+            inside.Value <- seen
+        let! after = lines $"{bin} PrintEnv PROC_FS_A PROC_FS_B"
+        return inside.Value, after
+    }
+    Assert.Equal<string list>([ "inner"; "inner" ], inside)
+    Assert.Equal<string list>([ "outer"; "<unset>" ], after)

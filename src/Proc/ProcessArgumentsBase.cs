@@ -17,7 +17,10 @@ namespace ProcNet
 		public string Binary { get; }
 		public IEnumerable<string> Args { get; }
 
-		/// <summary>Provide environment variable scoped to the process being executed</summary>
+		/// <summary>
+		/// Provide environment variable scoped to the process being executed.
+		/// A <c>null</c> value removes the variable from the environment the process inherits.
+		/// </summary>
 		public IDictionary<string, string> Environment { get; set; }
 
 		/// <summary> Set the current working directory</summary>

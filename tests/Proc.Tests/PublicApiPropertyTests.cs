@@ -70,6 +70,27 @@ public class PublicApiPropertyTests : TestsBase
 		}, iter: ProcessIterations, threads: 1);
 
 	[Fact]
+	public void NullEnvironmentValueRemovesAnInheritedVariable()
+	{
+		const string name = "PROC_TESTS_INHERITED";
+		Environment.SetEnvironmentVariable(name, "from-parent");
+		try
+		{
+			var inherited = Proc.Start(TestCaseArguments("PrintEnv", name));
+			inherited.ConsoleOut.Select(l => l.Line).Should().Equal("from-parent");
+
+			var args = TestCaseArguments("PrintEnv", name);
+			args.Environment = new Dictionary<string, string> { [name] = null };
+			var removed = Proc.Start(args);
+			removed.ConsoleOut.Select(l => l.Line).Should().Equal("<unset>");
+		}
+		finally
+		{
+			Environment.SetEnvironmentVariable(name, null);
+		}
+	}
+
+	[Fact]
 	public void StartReportsExitCode() =>
 		ExitCodes.Sample(code =>
 		{

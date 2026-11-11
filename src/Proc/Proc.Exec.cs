@@ -42,7 +42,10 @@ namespace ProcNet
 			if (!string.IsNullOrWhiteSpace(pwd)) info.WorkingDirectory = pwd;
 			if (arguments.Environment != null)
 				foreach (var kv in arguments.Environment)
-					info.Environment[kv.Key] = kv.Value;
+				{
+					if (kv.Value == null) info.Environment.Remove(kv.Key);
+					else info.Environment[kv.Key] = kv.Value;
+				}
 
 #if NET11_0_OR_GREATER
 			if (arguments.KillOnParentExit && (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
