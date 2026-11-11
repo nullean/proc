@@ -225,15 +225,18 @@ module internal Runner =
                 lock buffer (fun () -> for line in buffer do console line)
                 reraise ()
 
-    /// Runs attempt again while it throws ProcExecException and the command's retry policy allows
-    let retrying (cmd: Cmd) (attempt: unit -> 'T) : 'T =
+    /// Runs attempt again while it throws ProcExecException and the command's retry policy allows.
+    /// Stops retrying once ct is cancelled.
+    let retrying (cmd: Cmd) (ct: CancellationToken) (attempt: unit -> 'T) : 'T =
         let policy = cmd.Retry |> Option.defaultValue { Retries = 0; Delay = TimeSpan.Zero }
         let rec go tries =
             try attempt ()
-            with :? ProcExecException as e when tries < policy.Retries ->
+            with :? ProcExecException as e when tries < policy.Retries && not ct.IsCancellationRequested ->
                 if cmd.Quiet <> Some true then
                     Console.Error.WriteLine $"Retrying ({tries + 1} of {policy.Retries}) after: {e.Message}"
-                if policy.Delay > TimeSpan.Zero then Thread.Sleep policy.Delay
+                if policy.Delay > TimeSpan.Zero then
+                    if ct.CanBeCanceled then ct.WaitHandle.WaitOne policy.Delay |> ignore else Thread.Sleep policy.Delay
+                ct.ThrowIfCancellationRequested()
                 go (tries + 1)
         go 0
 
@@ -310,22 +313,24 @@ module internal Runner =
                     with :? OperationCanceledException when feedCts.IsCancellationRequested -> None
                 completed |> Option.iter (validate upstream))
 
-    /// Runs the command on the shared console and throws when it fails
-    let run (cmd: Cmd) =
-        retrying cmd (fun () ->
+    /// Runs the command on the shared console and throws when it fails.
+    /// Cancelling ct stops the process and throws OperationCanceledException.
+    let run (ct: CancellationToken) (cmd: Cmd) =
+        retrying cmd ct (fun () ->
             match cmd with
-            | { Stdin = None; Stdout = None; Quiet = (None | Some false) } ->
+            // Proc.Exec takes no cancellation token, so a cancellable run streams instead
+            | { Stdin = None; Stdout = None; Quiet = (None | Some false) } when not ct.CanBeCanceled ->
                 Proc.Exec(Args.exec { cmd with Retry = None }) |> ignore
             | _ ->
                 withConsole cmd printLine (fun console ->
-                    stream cmd CancellationToken.None console console |> validate cmd))
+                    stream cmd ct console console |> validate cmd))
 
     /// Calls f for each line of standard out as it is printed; standard error goes to the console
-    let iter (f: string -> unit) (cmd: Cmd) =
-        retrying cmd (fun () ->
+    let iter (ct: CancellationToken) (f: string -> unit) (cmd: Cmd) =
+        retrying cmd ct (fun () ->
             withConsole cmd printLine (fun console ->
                 let mutable error: exn = null
-                use cts = new CancellationTokenSource()
+                use cts = CancellationTokenSource.CreateLinkedTokenSource ct
                 let onLine (line: LineOut) =
                     if line.Error then console line
                     elif isNull error then
@@ -340,14 +345,14 @@ module internal Runner =
                 result |> Option.iter (validate cmd)))
 
     /// Runs the command, collecting every line, and reads the result
-    let get (capture: Capture<'T>) : 'T =
-        retrying capture.Cmd (fun () ->
+    let get (ct: CancellationToken) (capture: Capture<'T>) : 'T =
+        retrying capture.Cmd ct (fun () ->
             withConsole capture.Cmd printLine (fun console ->
                 let lines = ResizeArray<LineOut>()
                 let onLine (line: LineOut) =
                     lock lines (fun () -> lines.Add line)
                     if line.Error || capture.EchoStdout then console line
-                let result = stream capture.Cmd CancellationToken.None console onLine
+                let result = stream capture.Cmd ct console onLine
                 validate capture.Cmd result
                 capture.Read (ProcessCaptureResult(result.Completed, lines, result.ExitCode))))
 
@@ -436,6 +441,13 @@ module Cmd =
 
     /// <summary>Terminates the process when this process exits (.NET 11+ on Windows and Linux only)</summary>
     let killOnParentExit (cmd: Cmd) = { cmd with KillOnParentExit = Some true }
+
+    /// <summary>
+    /// For <c>background</c> in a <c>shell { }</c> block: wait until the command prints a line, on standard out or
+    /// standard error, for which <paramref name="isReady"/> is true. <c>Cmd.timeout</c> limits that wait.
+    /// </summary>
+    let waitFor (isReady: string -> bool) (cmd: Cmd) =
+        { cmd with StartedConfirmationHandler = Some (fun (line: LineOut) -> isReady line.Line) }
 
     /// <summary>Writes <paramref name="lines"/> to the standard input of the process, then closes it</summary>
     let stdin (lines: string seq) (cmd: Cmd) = { cmd with Stdin = Some (StdinSource.Lines lines) }
@@ -531,16 +543,16 @@ module Cmd =
     let choose (f: string -> 'U option) (capture: Capture<string list>) = mapCapture (List.choose f) capture
 
     /// <summary>Runs the command on the shared console. Throws <see cref="ProcExecException"/> when it fails.</summary>
-    let run (cmd: Cmd) = Runner.run cmd
+    let run (cmd: Cmd) = Runner.run CancellationToken.None cmd
 
     /// <summary>Runs the command and returns what the capture reads</summary>
-    let get (capture: Capture<'T>) : 'T = Runner.get capture
+    let get (capture: Capture<'T>) : 'T = Runner.get CancellationToken.None capture
 
     /// <summary>
     /// Calls <paramref name="f"/> for each line of standard out while the command runs, without buffering.
     /// Standard error goes to the console. Throws when the command fails or <paramref name="f"/> throws.
     /// </summary>
-    let iter (f: string -> unit) (cmd: Cmd) = Runner.iter f cmd
+    let iter (f: string -> unit) (cmd: Cmd) = Runner.iter CancellationToken.None f cmd
 
 /// <summary>Brought into scope by <c>open Proc.Fs</c></summary>
 [<AutoOpen>]

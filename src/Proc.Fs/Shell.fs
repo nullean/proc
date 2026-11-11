@@ -2,6 +2,44 @@ namespace Proc.Fs
 
 open System
 open System.IO
+open System.Runtime.ExceptionServices
+open System.Threading
+open System.Threading.Tasks
+open ProcNet
+open ProcNet.Std
+
+/// <summary>
+/// A process that <c>background</c> started in a <c>shell { }</c> block. Disposing it stops the process: Ctrl+C
+/// first, then a kill when it has not exited after 10 seconds. <c>use!</c> stops it at the end of the scope.
+/// </summary>
+[<Sealed>]
+type Background internal (cmd: Cmd, subscription: LongRunningApplicationSubscription) =
+    let mutable stopped = 0
+
+    /// <summary>The command, with the directory and environment of the shell applied</summary>
+    member _.Cmd = cmd
+    /// <summary>The id of the process</summary>
+    member _.ProcessId = Option.ofNullable subscription.ProcessId
+    /// <summary>The exit code once the process exited on its own; <c>None</c> while it runs or after <c>Stop</c></summary>
+    member _.ExitCode = Option.ofNullable subscription.ExitCode
+    /// <summary>Whether the process exited on its own</summary>
+    member b.HasExited = b.ExitCode.IsSome
+    /// <summary>Sends Ctrl+C (SIGINT) to the process</summary>
+    member _.SendControlC() = subscription.SendControlC()
+
+    member internal _.IsStopped = stopped = 1
+    member internal _.Subscription = subscription
+    /// Marks the process as handled, so the shell no longer checks or stops it
+    member internal _.Release() = Interlocked.Exchange(&stopped, 1) = 0
+
+    /// <summary>Stops the process: Ctrl+C first, a kill after 10 seconds. Never throws.</summary>
+    member b.Stop() =
+        if b.Release() then
+            try subscription.Dispose()
+            with e -> Console.Error.WriteLine $"Stopping \"{Runner.describe cmd}\" failed: {e.Message}"
+
+    interface IDisposable with
+        member b.Dispose() = b.Stop()
 
 /// <summary>
 /// The working directory, environment and echo setting shared by every command in one <c>shell { }</c> block.
@@ -15,6 +53,38 @@ type ShellContext() =
     member val DirectoryStack: string list = [] with get, set
     /// <summary>Print <c>$ binary arguments</c> before running each command, like <c>set -x</c></summary>
     member val EchoCommands = false with get, set
+
+    /// Cancelled when a sibling branch of <c>concurrently</c> fails
+    member val internal Token = CancellationToken.None with get, set
+    /// The context this one was forked from, whose background processes it also checks
+    member val internal Parent: ShellContext option = None with get, set
+    /// Background processes started in this context, oldest first
+    member val internal Backgrounds = ResizeArray<Background>() with get
+
+    /// A copy for one branch of <c>concurrently</c>: changes to it do not reach this context
+    member internal ctx.Fork(token: CancellationToken) =
+        ShellContext(
+            WorkingDirectory = ctx.WorkingDirectory, Environment = ctx.Environment,
+            DirectoryStack = ctx.DirectoryStack, EchoCommands = ctx.EchoCommands,
+            Token = token, Parent = Some ctx)
+
+    /// Throws when a background process of this context, or of one it was forked from, exited with an exit code
+    /// its command does not accept
+    member internal ctx.CheckBackgrounds() =
+        for background in ctx.Backgrounds do
+            match background.ExitCode with
+            | Some code when not background.IsStopped ->
+                let isValid = background.Cmd.ValidExitCodeClassifier |> Option.defaultValue (fun c -> c = 0)
+                if not (isValid code) && background.Release() then
+                    raise (ProcExecException(
+                        $"Background process exited with '{code}' \"{Runner.describe background.Cmd}\"", ExitCode = Nullable code))
+            | _ -> ()
+        ctx.Parent |> Option.iter (fun parent -> parent.CheckBackgrounds())
+
+    /// Stops the background processes this context started and nobody stopped, newest first
+    member internal ctx.StopBackgrounds() =
+        for i in ctx.Backgrounds.Count - 1 .. -1 .. 0 do ctx.Backgrounds[i].Stop()
+        ctx.Backgrounds.Clear()
 
     /// Fills in what the command does not set itself: a relative working directory resolves against the shell's,
     /// and the command's own environment variables win over the shell's
@@ -36,6 +106,8 @@ type ShellContext() =
         { cmd with WorkingDirectory = workingDirectory; Environment = environment; Stdin = stdin }
 
     member internal ctx.Prepare(cmd: Cmd) =
+        ctx.Token.ThrowIfCancellationRequested()
+        ctx.CheckBackgrounds()
         let cmd = ctx.Apply cmd
         if ctx.EchoCommands then Console.Out.WriteLine $"$ {Runner.describe cmd}"
         cmd
@@ -58,23 +130,23 @@ type ShellBuilder(echoCommands: bool) =
 
     member _.Zero() : ShellStep<unit> = ShellStep ignore
     /// <summary>A command on a line of its own: runs it and stops the block when it fails</summary>
-    member _.Yield(cmd: Cmd) : ShellStep<unit> = ShellStep (fun ctx -> Runner.run (ctx.Prepare cmd))
+    member _.Yield(cmd: Cmd) : ShellStep<unit> = ShellStep (fun ctx -> Runner.run ctx.Token (ctx.Prepare cmd))
     /// <summary>A step such as <c>cd "src"</c> on a line of its own</summary>
     member _.Yield(step: ShellStep<unit>) : ShellStep<unit> = step
     member _.Return(value: 'T) : ShellStep<'T> = ShellStep (fun _ -> value)
     member _.ReturnFrom(step: ShellStep<'T>) = step
     member _.ReturnFrom(capture: Capture<'T>) : ShellStep<'T> =
-        ShellStep (fun ctx -> Runner.get { capture with Cmd = ctx.Prepare capture.Cmd })
+        ShellStep (fun ctx -> Runner.get ctx.Token { capture with Cmd = ctx.Prepare capture.Cmd })
 
     member _.Bind(step: ShellStep<'T>, f: 'T -> ShellStep<'U>) : ShellStep<'U> =
         ShellStep (fun ctx -> ShellStep.run ctx step |> f |> ShellStep.run ctx)
     member _.Bind(cmd: Cmd, f: unit -> ShellStep<'U>) : ShellStep<'U> =
         ShellStep (fun ctx ->
-            Runner.run (ctx.Prepare cmd)
+            Runner.run ctx.Token (ctx.Prepare cmd)
             ShellStep.run ctx (f ()))
     member _.Bind(capture: Capture<'T>, f: 'T -> ShellStep<'U>) : ShellStep<'U> =
         ShellStep (fun ctx ->
-            Runner.get { capture with Cmd = ctx.Prepare capture.Cmd } |> f |> ShellStep.run ctx)
+            Runner.get ctx.Token { capture with Cmd = ctx.Prepare capture.Cmd } |> f |> ShellStep.run ctx)
 
     member _.Delay(f: unit -> ShellStep<'T>) : ShellStep<'T> = ShellStep (fun ctx -> ShellStep.run ctx (f ()))
     member _.Combine(first: ShellStep<unit>, second: ShellStep<'T>) : ShellStep<'T> =
@@ -87,7 +159,7 @@ type ShellBuilder(echoCommands: bool) =
     /// <summary><c>for line in cmd "git" ["ls-files"] |> Cmd.lines do</c> runs the command, then loops</summary>
     member _.For(capture: Capture<'T list>, body: 'T -> ShellStep<unit>) : ShellStep<unit> =
         ShellStep (fun ctx ->
-            for item in Runner.get { capture with Cmd = ctx.Prepare capture.Cmd } do ShellStep.run ctx (body item))
+            for item in Runner.get ctx.Token { capture with Cmd = ctx.Prepare capture.Cmd } do ShellStep.run ctx (body item))
     member _.While(guard: unit -> bool, body: ShellStep<unit>) : ShellStep<unit> =
         ShellStep (fun ctx -> while guard () do ShellStep.run ctx body)
 
@@ -95,12 +167,37 @@ type ShellBuilder(echoCommands: bool) =
         ShellStep (fun ctx -> try ShellStep.run ctx body with e -> ShellStep.run ctx (handler e))
     member _.TryFinally(body: ShellStep<'T>, compensation: unit -> unit) : ShellStep<'T> =
         ShellStep (fun ctx -> try ShellStep.run ctx body finally compensation ())
+    /// <summary>
+    /// Disposes <paramref name="resource"/> at the end of the scope. When the scope failed and disposing fails too,
+    /// the failure of the scope propagates and the failure to dispose goes to standard error.
+    /// </summary>
     member _.Using(resource: 'R :> IDisposable, body: 'R -> ShellStep<'T>) : ShellStep<'T> =
         ShellStep (fun ctx ->
-            try ShellStep.run ctx (body resource)
-            finally if not (isNull (box resource)) then resource.Dispose())
+            let dispose () = if not (isNull (box resource)) then resource.Dispose()
+            let result =
+                try ShellStep.run ctx (body resource)
+                with _ ->
+                    try dispose ()
+                    with cleanup -> Console.Error.WriteLine $"Cleanup failed after an earlier error: {cleanup.Message}"
+                    reraise ()
+            dispose ()
+            result)
 
-    member _.Run(step: ShellStep<'T>) : 'T = ShellStep.run (ShellContext(EchoCommands = echoCommands)) step
+    /// <summary>Runs the block. Background processes still running at its end are stopped.</summary>
+    member _.Run(step: ShellStep<'T>) : 'T =
+        let ctx = ShellContext(EchoCommands = echoCommands)
+        try ShellStep.run ctx step
+        finally ctx.StopBackgrounds()
+
+/// <summary>
+/// Builds <c>steps { }</c> blocks: the same as <c>shell { }</c>, but the block does not run when it is evaluated.
+/// It runs where it is used inside a <c>shell { }</c> block, in that block's directory and environment, or as one
+/// branch of <c>concurrently</c>.
+/// </summary>
+type StepsBuilder() =
+    inherit ShellBuilder(false)
+    /// <summary>Returns the block as a step, without running it</summary>
+    member _.Run(step: ShellStep<'T>) : ShellStep<'T> = step
 
 /// <summary>Brought into scope by <c>open Proc.Fs</c></summary>
 [<AutoOpen>]
@@ -121,6 +218,111 @@ module ShellSteps =
     /// <summary>Like <c>shell</c>, but prints <c>$ binary arguments</c> before each command, like <c>set -x</c></summary>
     let shellx = ShellBuilder(true)
 
+    /// <summary>
+    /// A block of steps that runs later, where it is used: <c>do! build</c> inside a <c>shell { }</c> block runs it
+    /// in that block's directory and environment.
+    /// <code>
+    /// let build = steps { cd "src"; sh $"dotnet build" }
+    /// shell { do! build }
+    /// </code>
+    /// </summary>
+    let steps = StepsBuilder()
+
+    let private runParallel (limit: int option) (branches: ShellStep<'T> list) : ShellStep<'T list> =
+        ShellStep (fun ctx ->
+            use cts = CancellationTokenSource.CreateLinkedTokenSource ctx.Token
+            use gate = match limit with Some n -> new SemaphoreSlim(n, n) | None -> null
+            let errorLock = obj ()
+            let firstError: ExceptionDispatchInfo ref = ref null
+            let fail (e: exn) =
+                lock errorLock (fun () -> if isNull firstError.Value then firstError.Value <- ExceptionDispatchInfo.Capture e)
+                cts.Cancel()
+            let runBranch (branch: ShellStep<'T>) () : 'T option =
+                let child = ctx.Fork cts.Token
+                try
+                    try
+                        if not (isNull gate) then gate.Wait cts.Token
+                        try Some (ShellStep.run child branch)
+                        finally if not (isNull gate) then gate.Release() |> ignore
+                    with
+                    // A sibling failed, or the block was cancelled: not this branch's failure
+                    | :? OperationCanceledException when cts.IsCancellationRequested -> None
+                    | e -> fail e; None
+                finally child.StopBackgrounds()
+            // The branches block on processes, so each gets a thread of its own instead of one from the pool
+            let tasks =
+                branches |> List.map (fun branch ->
+                    Task.Factory.StartNew(runBranch branch, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default))
+            Task.WaitAll(tasks |> List.map (fun t -> t :> Task) |> Array.ofList)
+            if not (isNull firstError.Value) then firstError.Value.Throw()
+            ctx.Token.ThrowIfCancellationRequested()
+            tasks |> List.map (fun t -> t.Result.Value))
+
+    /// <summary>
+    /// Runs the branches at the same time and returns their results in the same order. Each branch starts with a
+    /// copy of the directory and environment, so a <c>cd</c> in one does not reach the others. The first branch
+    /// that fails stops the others, and its exception is the one that propagates.
+    /// <code>
+    /// let! results = concurrently [ steps { sh $"dotnet test a" }; steps { sh $"dotnet test b" } ]
+    /// </code>
+    /// </summary>
+    let concurrently (branches: ShellStep<'T> list) : ShellStep<'T list> = runParallel None branches
+
+    /// <summary>Like <c>concurrently</c>, but runs at most <paramref name="limit"/> branches at a time</summary>
+    let concurrentlyAtMost (limit: int) (branches: ShellStep<'T> list) : ShellStep<'T list> =
+        if limit < 1 then invalidArg (nameof limit) "concurrentlyAtMost needs a limit of at least 1"
+        runParallel (Some limit) branches
+
+    /// <summary>
+    /// Starts <paramref name="cmd"/> in the background and goes on with the block: <c>use! api = background cmd</c>.
+    /// With <c>Cmd.waitFor</c> it first waits for a line that says the process is ready; <c>Cmd.timeout</c> limits
+    /// that wait (default 60 seconds).
+    /// <para>
+    /// When the process exits with an exit code it does not accept (<c>Cmd.validExitCode</c>, default only <c>0</c>),
+    /// the next command of the block throws. <c>use!</c> stops the process at the end of the scope, and the block
+    /// stops whatever is still running when it ends.
+    /// </para>
+    /// </summary>
+    let background (cmd: Cmd) : ShellStep<Background> =
+        ShellStep (fun ctx ->
+            let cmd = ctx.Prepare cmd
+            let cmd = { cmd with SendControlCFirst = Some (defaultArg cmd.SendControlCFirst true) }
+            // StartLongRunning also returns when the process exits before it printed the line, so track it here
+            let ready = ref false
+            let isReady =
+                cmd.StartedConfirmationHandler |> Option.map (fun isReady ->
+                    fun (line: LineOut) -> if isReady line then ready.Value <- true; true else false)
+            let args = Args.longRunning { cmd with StartedConfirmationHandler = isReady }
+            if isReady.IsSome && cmd.StopBufferingAfterStarted.IsNone then args.StopBufferingAfterStarted <- true
+            let startup = cmd.Timeout |> Option.defaultValue (TimeSpan.FromSeconds 60.)
+            let subscription = Proc.StartLongRunning(args, startup, null, ctx.Token)
+            let started = new Background(cmd, subscription)
+            if isReady.IsSome && not ready.Value then
+                started.Stop()
+                let code = started.ExitCode |> Option.map string |> Option.defaultValue "?"
+                raise (ProcExecException(
+                    $"Background process exited with '{code}' before it was ready \"{Runner.describe cmd}\"",
+                    ExitCode = Option.toNullable started.ExitCode))
+            ctx.Backgrounds.Add started
+            started)
+
+    /// <summary>
+    /// Waits until a <c>background</c> process exits, like <c>wait</c> in bash. Throws when its exit code is not
+    /// accepted. The shell no longer checks or stops the process afterwards.
+    /// </summary>
+    let wait (background: Background) : ShellStep<unit> =
+        ShellStep (fun ctx ->
+            background.Subscription.WaitForCompletion(Nullable(), ctx.Token) |> ignore
+            if background.Release() then
+                let cmd = background.Cmd
+                match background.ExitCode with
+                | None -> raise (ProcExecException($"Process did not report an exit code \"{Runner.describe cmd}\""))
+                | Some code ->
+                    let isValid = cmd.ValidExitCodeClassifier |> Option.defaultValue (fun c -> c = 0)
+                    if not (isValid code) then
+                        raise (ProcExecException($"Process exited with '{code}' \"{Runner.describe cmd}\"", ExitCode = Nullable code))
+            else invalidOp $"wait: \"{Runner.describe background.Cmd}\" was already stopped or waited for")
+
     let private currentDirectory (ctx: ShellContext) =
         ctx.WorkingDirectory |> Option.defaultWith Directory.GetCurrentDirectory
 
@@ -131,6 +333,22 @@ module ShellSteps =
 
     let private restoring (restore: unit -> unit) =
         { new IDisposable with member _.Dispose() = restore () }
+
+    /// <summary>
+    /// Runs <paramref name="cmd"/> at the end of the enclosing scope, also when the scope fails, like
+    /// <c>trap … EXIT</c>: <c>use! _ = defer (sh $"docker compose down")</c>. It runs in the directory and
+    /// environment of the moment <c>defer</c> runs, so a later <c>cd</c> does not change it.
+    /// </summary>
+    let defer (cmd: Cmd) : ShellStep<IDisposable> =
+        ShellStep (fun ctx ->
+            let cmd = ctx.Apply cmd
+            let echo = ctx.EchoCommands
+            let ran = ref 0
+            restoring (fun () ->
+                if Interlocked.Exchange(&ran.contents, 1) = 0 then
+                    if echo then Console.Out.WriteLine $"$ {Runner.describe cmd}"
+                    // Not the block's token: clean-up runs even when the block was cancelled
+                    Runner.run CancellationToken.None cmd))
 
     /// <summary>
     /// Changes the working directory for the commands that follow in this <c>shell { }</c> block.

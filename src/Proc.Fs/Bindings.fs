@@ -16,7 +16,7 @@ type ExecBuilder() =
     /// <param name="arguments">the arguments to pass on to the binary being executed</param>
     [<CustomOperation("run")>]
     member this.Execute(opts, binary, [<ParamArray>] arguments: string array) =
-        Runner.run { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
+        Runner.run System.Threading.CancellationToken.None { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
         
     ///<summary>Runs <paramref name="binary"/> using <paramref name="arguments"/> immediately</summary>
     /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
@@ -24,7 +24,7 @@ type ExecBuilder() =
     /// <param name="arguments">the arguments to pass on to the binary being executed</param>
     [<CustomOperation("run")>]
     member this.Execute(opts, binary, arguments: string list) =
-        Runner.run { opts with Binary = binary; Arguments = Some arguments}
+        Runner.run System.Threading.CancellationToken.None { opts with Binary = binary; Arguments = Some arguments}
         
     ///<summary>
     /// Runs the <see cref="ExecOptions"/> the computation build thus far.
@@ -33,7 +33,7 @@ type ExecBuilder() =
     [<CustomOperation("run")>]
     member this.Execute(opts) =
         if opts.Binary = "" then failwithf "No binary specified to exec computation expression"
-        Runner.run opts
+        Runner.run System.Threading.CancellationToken.None opts
         
     ///<summary>Supply external <see cref="ExecOptions"/> to bootstrap</summary>
     [<CustomOperation("options")>]
@@ -162,11 +162,11 @@ type ExecBuilder() =
         
     [<CustomOperation("run_args")>]
     member this.InvokeArgs(opts, [<ParamArray>] arguments: string array) =
-        Runner.run { opts with Arguments = Some (arguments |> List.ofArray) }
+        Runner.run System.Threading.CancellationToken.None { opts with Arguments = Some (arguments |> List.ofArray) }
         
     [<CustomOperation("run_args")>]
     member this.InvokeArgs(opts, arguments: string list) =
-        Runner.run { opts with Arguments = Some arguments }
+        Runner.run System.Threading.CancellationToken.None { opts with Arguments = Some arguments }
         
     [<CustomOperation("exit_code_of")>]
     member this.ReturnStatus(opts, binary, arguments: string list) =

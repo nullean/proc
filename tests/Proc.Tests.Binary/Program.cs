@@ -75,6 +75,12 @@ public static class Program
 			return KillOnParentExitChild(args[1]);
 		if (testCase == nameof(WriteChildPidAndWait).ToLowerInvariant())
 			return WriteChildPidAndWait(args[1]);
+		if (testCase == nameof(ReadyThenWait).ToLowerInvariant())
+			return await ReadyThenWait();
+		if (testCase == nameof(ReadyThenExit).ToLowerInvariant())
+			return await ReadyThenExit(args[1], args[2]);
+		if (testCase == nameof(Sleep).ToLowerInvariant())
+			return await Sleep(args[1]);
 
 		return 1;
 	}
@@ -85,6 +91,31 @@ public static class Program
 		return 0;
 	}
 	private static int ExitWith(string exitCode) => int.Parse(exitCode, CultureInfo.InvariantCulture);
+
+	// Prints "ready" and its process id, then runs until it is stopped. Used as a background server.
+	private static async Task<int> ReadyThenWait()
+	{
+		Console.WriteLine("ready");
+		Console.WriteLine(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+		await Task.Delay(Timeout.Infinite);
+		return 0;
+	}
+
+	// Prints "ready", then exits with the given exit code after the given number of milliseconds.
+	private static async Task<int> ReadyThenExit(string exitCode, string milliseconds)
+	{
+		Console.WriteLine("ready");
+		await Task.Delay(int.Parse(milliseconds, CultureInfo.InvariantCulture));
+		return int.Parse(exitCode, CultureInfo.InvariantCulture);
+	}
+
+	// Sleeps the given number of milliseconds, then prints "slept" and exits with 0.
+	private static async Task<int> Sleep(string milliseconds)
+	{
+		await Task.Delay(int.Parse(milliseconds, CultureInfo.InvariantCulture));
+		Console.WriteLine("slept");
+		return 0;
+	}
 
 	// Counts its runs in the given file and exits with 1 for the first <times> runs, 0 after that.
 	// Prints "attempt N" to standard out and "failed N" to standard error on a failing run.

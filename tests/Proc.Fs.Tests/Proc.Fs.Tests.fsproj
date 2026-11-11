@@ -19,6 +19,7 @@
     <Compile Include="ShellTests.fs" />
     <Compile Include="ShellSyntaxTests.fs" />
     <Compile Include="RedirectRetryTests.fs" />
+    <Compile Include="ConcurrencyTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Core" />

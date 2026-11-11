@@ -23,6 +23,18 @@ public class LongRunningApplicationSubscription : IDisposable
 
 	public ManualResetEvent WaitHandle { get; } = new(false);
 
+	/// <summary>The id of the process, once it started</summary>
+	public int? ProcessId => Process?.ProcessId;
+
+	/// <summary>
+	/// The exit code of the process once it exited on its own. <c>null</c> while it runs, and after it was stopped
+	/// by <see cref="Dispose"/>.
+	/// </summary>
+	public int? ExitCode => Process?.ExitCode;
+
+	/// <inheritdoc cref="ObservableProcessBase{TConsoleOut}.WaitForCompletion(TimeSpan?, CancellationToken)"/>
+	public bool WaitForCompletion(TimeSpan? timeout, CancellationToken ct = default) => Process.WaitForCompletion(timeout, ct);
+
 	/// <inheritdoc cref="ObservableProcessBase{TConsoleOut}.SendControlC(int)"/>>
 	public bool SendControlC(int processId) => Process.SendControlC(processId);
 

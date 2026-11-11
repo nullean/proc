@@ -70,6 +70,57 @@ shell {
 A command's own `Cmd.cwd` resolves against the shell's directory, and its own `Cmd.env` wins over `setEnv`.
 `do!` still works in front of commands and steps, for example `do! cd "src"`.
 
+## Background processes, clean-up and running steps at the same time
+
+```fsharp
+shell {
+    use! api = background (sh $"dotnet run --project api" |> Cmd.waitFor (fun l -> l.Contains "Now listening"))
+    use! _ = defer (sh $"docker compose down")
+    sh $"docker compose up -d db"
+    let! results = concurrently [
+        steps { cd "tests/Unit"; sh $"dotnet test" }
+        steps { cd "tests/Integration"; sh $"dotnet test" }
+    ]
+    return results
+}   // the api gets Ctrl+C, then compose down runs
+```
+
+| Inside `shell { }` | Does |
+|---|---|
+| `use! p = background cmd` | starts `cmd` and goes on; stops it at the end of the scope |
+| `Cmd.waitFor (fun line -> …)` | `background` first waits for a line that says the process is ready |
+| `do! wait p` | waits until the background process exits; throws when its exit code is not accepted |
+| `use! _ = defer cmd` | runs `cmd` at the end of the scope, also when the scope fails, like `trap … EXIT` |
+| `let! rs = concurrently [ … ]` | runs `steps { }` blocks at the same time; results in the same order |
+| `let! rs = concurrentlyAtMost n [ … ]` | the same, at most `n` at a time |
+
+`background`:
+
+- The process uses the block's `cd` and `env`. Its output goes to the console.
+- Without `Cmd.waitFor`, the block goes on straight away. With it, `background` throws when the process exits before
+  it prints the line, or when the line does not come within `Cmd.timeout` (default 60 seconds).
+  On a background command, `Cmd.timeout` only limits that wait, as with `wait_until` in `exec { }`.
+- When the process exits with an exit code that `Cmd.validExitCode` does not accept (by default anything but `0`),
+  the **next command** of the block throws, like `set -e`. An exit code of `0` does not fail the block.
+- Stopping sends Ctrl+C first and kills the process when it has not exited after 10 seconds. Stopping never throws.
+- The block stops background processes that are still running when it ends, also ones bound with `let!`.
+- `p.ProcessId`, `p.HasExited`, `p.ExitCode`, `p.Stop()` and `p.SendControlC()` work on the handle.
+
+`defer` runs its command in the directory and environment of the moment `defer` runs, so a later `cd` does not
+change it. When the scope fails and the deferred command fails too, the scope's exception propagates and the
+failure of the deferred command goes to standard error.
+
+`steps { }` is a `shell { }` block that does not run when it is evaluated. It runs where you use it, with `do!`,
+`let!` or on a line of its own, in the directory and environment of the block that uses it.
+
+`concurrently`:
+
+- Each branch starts with a copy of the directory and environment, so a `cd` in one branch does not reach the
+  others or the block.
+- The first branch that fails stops the others, and its exception is the one that propagates.
+- A background process the block started that fails also fails the branches.
+- Output of the branches interleaves line by line on the console.
+
 ## Writing commands with `sh`
 
 `sh` takes an interpolated string, `$"…"`. It splits **only the text you wrote**:

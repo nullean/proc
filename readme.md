@@ -62,6 +62,27 @@ The static  `Proc.Start` has a timeout of `4 minutes` if not specified.
 
 **NOTE** `ConsoleOut` will always be set regardless of whether an `IConsoleOutWriter` is provided
 
+## Proc.StartLongRunning
+
+Start a process that keeps running, such as a web server or a database, and go on once it says it is ready.
+Disposing the returned subscription stops the process.
+
+```csharp
+var args = new LongRunningArguments("dotnet", "run", "--project", "api")
+{
+	StartedConfirmationHandler = l => l.Line.Contains("Now listening"),
+	SendControlCFirst = true
+};
+using (var api = Proc.StartLongRunning(args, TimeSpan.FromMinutes(1)))
+{
+	// api.ProcessId, api.ExitCode (once it exited on its own), api.WaitForCompletion(timeout)
+}
+```
+
+`StartLongRunning` waits for a line that `StartedConfirmationHandler` accepts. Without a handler it returns straight away.
+When no such line comes in time, it stops the process and throws `ProcExecException`.
+`ExitCode` stays `null` while the process runs, and after disposing stopped it.
+
 ## ObservableProcess
 
 The heart of it all this is an `IObservable<CharactersOut>`. It listens on the output buffers directly and does not wait on 
@@ -166,7 +187,20 @@ let sha = shell {
 }
 ```
 
-See [src/Proc.Fs/README.md](src/Proc.Fs/README.md) for `shell { }`, the `Cmd` module, pipes and the `exec { }` builder.
+A block can also start a background process and stop it at the end of a scope, run clean-up commands, and run blocks
+at the same time:
+
+```fsharp
+shell {
+    use! api = background (sh $"dotnet run --project api" |> Cmd.waitFor (fun l -> l.Contains "Now listening"))
+    use! _ = defer (sh $"docker compose down")
+    let! _ = concurrently [ steps { sh $"dotnet test tests/A" }; steps { sh $"dotnet test tests/B" } ]
+    return ()
+}
+```
+
+See [src/Proc.Fs/README.md](src/Proc.Fs/README.md) for `shell { }`, background processes, the `Cmd` module, pipes and
+the `exec { }` builder.
 
 # .NET 11
 
