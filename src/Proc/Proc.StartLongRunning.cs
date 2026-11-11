@@ -120,6 +120,8 @@ public static partial class Proc
 
 			if (confirmed)
 				return subscription;
+			// Nobody gets the subscription back, so stop the process here instead of leaving it running
+			subscription.Dispose();
 			var pwd = arguments.WorkingDirectory;
 			var args = arguments.Args;
 			var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
