@@ -1,4 +1,4 @@
-# Proc
+﻿# Proc
 
 <a href="https://www.nuget.org/packages/Proc/"><img src="https://img.shields.io/nuget/v/Proc?color=blue&style=plastic" /></a>
 
@@ -152,16 +152,16 @@ instead, which multiplexes `stdout`/`stderr` on a single thread without blocking
 # F# bindings
 
 The `Proc.Fs` package wraps Proc for F#. A `shell { }` block runs commands in order and stops at the first one that fails.
-The `|>|` operator pipes the output of one command into the next.
+Commands are interpolated strings, and each `{value}` is always one argument, so values never need quoting.
 
 ```fsharp
 open Proc.Fs
 
 let sha = shell {
-    do! cmd "dotnet" ["build"]
-    let! sha = cmd "git" ["rev-parse"; "HEAD"] |> Cmd.text
-    for file in cmd "git" ["ls-files"] |>| cmd "grep" ["\\.fs$"] |> Cmd.lines do
-        do! cmd "dotnet" ["fantomas"; file]
+    sh $"dotnet build"
+    let! sha = text $"git rev-parse HEAD"
+    for file in lines $"git ls-files | grep \.fs$" do
+        sh $"dotnet fantomas {file}"
     return sha
 }
 ```

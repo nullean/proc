@@ -48,9 +48,16 @@ module internal ShellStep =
 /// and binds what it reads. The first failing command throws <see cref="ProcNet.ProcExecException"/> and stops the
 /// block. <c>for</c>, <c>while</c>, <c>if</c>, <c>match</c>, <c>try</c> and <c>use</c> work as usual.
 /// The block runs as soon as it is evaluated and returns the value of its <c>return</c>.
+/// <para>A command or a step such as <c>cd "src"</c> on a line of its own runs without <c>do!</c>.</para>
 /// </summary>
-type ShellBuilder() =
+type ShellBuilder(echoCommands: bool) =
+    new() = ShellBuilder(false)
+
     member _.Zero() : ShellStep<unit> = ShellStep ignore
+    /// <summary>A command on a line of its own: runs it and stops the block when it fails</summary>
+    member _.Yield(cmd: Cmd) : ShellStep<unit> = ShellStep (fun ctx -> Runner.run (ctx.Prepare cmd))
+    /// <summary>A step such as <c>cd "src"</c> on a line of its own</summary>
+    member _.Yield(step: ShellStep<unit>) : ShellStep<unit> = step
     member _.Return(value: 'T) : ShellStep<'T> = ShellStep (fun _ -> value)
     member _.ReturnFrom(step: ShellStep<'T>) = step
     member _.ReturnFrom(capture: Capture<'T>) : ShellStep<'T> =
@@ -90,7 +97,7 @@ type ShellBuilder() =
             try ShellStep.run ctx (body resource)
             finally if not (isNull (box resource)) then resource.Dispose())
 
-    member _.Run(step: ShellStep<'T>) : 'T = ShellStep.run (ShellContext()) step
+    member _.Run(step: ShellStep<'T>) : 'T = ShellStep.run (ShellContext(EchoCommands = echoCommands)) step
 
 /// <summary>Brought into scope by <c>open Proc.Fs</c></summary>
 [<AutoOpen>]
@@ -107,6 +114,9 @@ module ShellSteps =
     /// </code>
     /// </summary>
     let shell = ShellBuilder()
+
+    /// <summary>Like <c>shell</c>, but prints <c>$ binary arguments</c> before each command, like <c>set -x</c></summary>
+    let shellx = ShellBuilder(true)
 
     /// <summary>
     /// Changes the working directory for the commands that follow in this <c>shell { }</c> block.
