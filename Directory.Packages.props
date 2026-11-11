@@ -6,7 +6,7 @@
   <!-- the library -->
   <ItemGroup>
     <PackageVersion Include="System.Reactive" Version="5.0.0" />
-    <!-- Proc.Fs's floor for consumers; the tests and the build use the same version -->
+    <!-- Proc.Fs's floor for consumers, which the tests use too; build/scripts overrides it for Nullean.Make.Fs -->
     <PackageVersion Include="FSharp.Core" Version="10.0.100" />
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.3" />
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.3" />
@@ -23,9 +23,8 @@
 
   <!-- build/scripts -->
   <ItemGroup>
-    <PackageVersion Include="Argu" Version="6.0.0" />
-    <PackageVersion Include="Bullseye" Version="6.0.0" />
-    <PackageVersion Include="Fake.Tools.Git" Version="5.15.0" />
-    <PackageVersion Include="Proc" Version="0.9.1" />
+    <PackageVersion Include="Nullean.Make.Fs" Version="0.25.0" />
+    <!-- the released package, which Nullean.Make.Fs would otherwise resolve at its 0.17.0 floor -->
+    <PackageVersion Include="Proc.Fs" Version="0.18.0" />
   </ItemGroup>
 </Project>

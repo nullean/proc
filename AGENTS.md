@@ -12,7 +12,7 @@ and react to output, observable process streams, and graceful `SIGINT`-before-ki
 | `src/Proc.ControlC` | a tiny net40 helper exe that delivers Ctrl+C on Windows; embedded, never packed |
 | `tests/Proc.Tests`, `tests/Proc.Fs.Tests` | tests, on net10.0 and net11.0 |
 | `tests/Proc.Tests.Binary` | a NativeAOT test binary the tests start, so process-lifecycle tests are fast and stable |
-| `build/scripts` | the F# build the `mise` tasks call |
+| `build/scripts` | the F# build ([Nullean.Make.Fs](https://www.nuget.org/packages/Nullean.Make.Fs), net11.0) the `mise` tasks call |
 
 ## Commands
 
@@ -44,3 +44,6 @@ skills have the details. Every pull request carries exactly one release label. P
   that removes or alters public API is a breaking change.
 - `Proc` must stay dependency-free beyond `System.Reactive`. Do not add package references to `src/Proc`.
 - Process-lifecycle tests start `Proc.Tests.Binary`; do not replace it with shell commands, which differ per OS.
+- Build targets are Make.Fs `target { }` blocks in `build/scripts/Program.fs` whose commands are Proc.Fs `sh $"…"`
+  lines; values come from `text`/`lines` inside `shell { }`. Do not call the C# `ProcNet` API from the build. The
+  build uses the released Proc.Fs package, never a project reference to `src`.
