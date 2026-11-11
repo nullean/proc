@@ -16,7 +16,7 @@ description: >-
 | the same, async | `await Proc.ExecAsync(new ExecArguments("dotnet", "build"), ct)` | exit code |
 | its output | `Proc.Start("git", "status", "--short")` | `ProcessCaptureResult`: `Completed`, `ExitCode`, `ConsoleOut` |
 | each line as it arrives | `Proc.StartRedirected(handler, "dotnet", "test")` | `ProcessResult` |
-| a long-running server you wait on | `Proc.StartLongRunning(args, waitForStartedConfirmation)` | a subscription; dispose it to stop |
+| a long-running server you wait on | `Proc.StartLongRunning(args, waitForStartedConfirmation)` | a subscription with `ProcessId` and `ExitCode`; dispose it to stop |
 
 ```csharp
 // options go on ExecArguments / StartArguments

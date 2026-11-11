@@ -37,11 +37,24 @@ shell {
 }
 ```
 
+Background processes, clean-up and steps that run at the same time:
+
+```fsharp
+shell {
+    use! api = background (sh $"dotnet run" |> Cmd.waitFor (fun l -> l.Contains "Now listening")) // stopped at scope end
+    use! _ = defer (sh $"docker compose down")       // runs at scope end, also after a failure
+    let! results = concurrently [ steps { sh $"dotnet test a" }; steps { sh $"dotnet test b" } ]
+    return results
+}
+```
+
 ## Gotchas
 
 - `sh` takes an interpolated string and splits only the text you wrote: whitespace separates arguments, quotes group
   them, and an interpolated value never splits. Do not build the command string with `sprintf` first.
 - Unquoted `>`, `<`, `;` and `&` throw: there is no redirection or chaining. Quote them to pass them literally, and
   use separate `sh` lines instead of `;` or `&&`.
-- A `shell { }` block runs as soon as it is evaluated; wrap it in a function to run it later.
+- A `shell { }` block runs as soon as it is evaluated; use `steps { }` for a block that runs later, where it is used.
+- A background process that exits with a non-zero exit code fails the next command of the block.
+- `parallel` is reserved in F#: the step is `concurrently`.
 - The package's README has the full list of steps, `exec { }` and `Cmd`.
