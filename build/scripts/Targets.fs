@@ -12,7 +12,7 @@ open ProcNet
 let exec binary args =
     Proc.Exec (binary, args |> List.toArray)
     
-let private restoreTools = lazy(exec "dotnet" ["tool"; "restore"])
+let private restoreTools = lazy(exec "dotnet" ["tool"; "restore"; "--disable-parallel"])
 let private currentVersion =
     lazy(
         restoreTools.Value |> ignore
