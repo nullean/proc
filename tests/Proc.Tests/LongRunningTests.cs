@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 
@@ -73,5 +75,30 @@ public class LongRunningTests : TestsBase
 		lines.Should().Contain(s => s == "Started!");
 		lines.Should().Contain(s => s.StartsWith("Data after startup:"));
 		lines.Length.Should().BeGreaterThan(0);
+	}
+
+	[Test]
+	public void LongRunningStopsTheProcessWhenStartupIsNotConfirmedInTime()
+	{
+		var pidFile = Path.Combine(Path.GetTempPath(), $"procnet-{Guid.NewGuid():N}.pid");
+		// Writes its PID, then sleeps 30s without printing the line the handler waits for
+		var args = new LongRunningArguments(GetTestBinaryPath(), "WritePidAndWait", pidFile)
+		{
+			WorkingDirectory = GetWorkingDir(),
+			StartedConfirmationHandler = _ => false
+		};
+
+		Action call = () => Proc.StartLongRunning(args, TimeSpan.FromSeconds(1));
+		call.Should().Throw<ProcExecException>().WithMessage("*Could not yield started confirmation*");
+
+		// Give the OS a moment to register the kill
+		Thread.Sleep(300);
+
+		File.Exists(pidFile).Should().BeTrue("the child process should have written its PID before sleeping");
+		var pid = int.Parse(File.ReadAllText(pidFile));
+		File.Delete(pidFile);
+
+		Action check = () => Process.GetProcessById(pid);
+		check.Should().Throw<ArgumentException>("the process should be stopped when its startup is not confirmed in time");
 	}
 }
