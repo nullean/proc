@@ -23,6 +23,7 @@ namespace Proc.Tests.Binary
 			if (testCase == nameof(PrintArgs).ToLowerInvariant()) return PrintArgs(args.Skip(1).ToArray());
 			if (testCase == nameof(ExitWith).ToLowerInvariant()) return ExitWith(args[1]);
 			if (testCase == nameof(PrintEnv).ToLowerInvariant()) return PrintEnv(args.Skip(1).ToArray());
+			if (testCase == nameof(EchoStdin).ToLowerInvariant()) return EchoStdin(args.Length > 1 ? args[1] : "");
 			if (testCase == nameof(SingleLineNoEnter).ToLowerInvariant()) return SingleLineNoEnter();
 			if (testCase == nameof(TwoWrites).ToLowerInvariant()) return TwoWrites();
 
@@ -56,6 +57,16 @@ namespace Proc.Tests.Binary
 			return 0;
 		}
 		private static int ExitWith(string exitCode) => int.Parse(exitCode, CultureInfo.InvariantCulture);
+
+		// Reads standard input until end of stream and prints every line back with the given prefix.
+		// Used as the downstream end of pipes; exits only once its stdin is closed.
+		private static int EchoStdin(string prefix)
+		{
+			string line;
+			while ((line = Console.ReadLine()) != null)
+				Console.WriteLine(prefix + line);
+			return 0;
+		}
 
 		// Prints the value of each named environment variable on its own line, or <unset> if it is not set.
 		private static int PrintEnv(string[] names)

@@ -38,7 +38,8 @@ for the quick one liners.
 let exitCode = exec { exit_code_of "dotnet" "--help" }
 let output = exec { output_of "dotnet" "--help" }
 ```
-`output` will hold both the exit code and the console output
+`output` will hold both the exit code and the console output.
+`exit_code_of` returns the exit code whatever it is; only `run` and friends throw on a non-zero exit code.
 
 If you need more control on how the process is started 
 you can supply the following options.
@@ -49,15 +50,23 @@ exec {
     binary "dotnet"
     arguments "--help"
     env Map[("key", "value")]
-    workingDirectory "."
+    working_dir "."
     send_control_c false
     timeout (TimeSpan.FromSeconds(10))
-    thread_wrap false
+    kill_on_parent_exit true
     filter_output (fun l -> l.Line.Contains "clean")
-    validExitCode (fun i -> i <> 0)
+    valid_exit_code (fun i -> i <> 0)
     run
 }
 ```
+
+- `timeout`: kill the process if it runs longer. Without it the process may run indefinitely.
+- `valid_exit_code`: which exit codes count as success (default: only `0`). `validExitCode` still works but is obsolete.
+- `kill_on_parent_exit`: terminate the process when yours exits. Only takes effect on .NET 11+ on Windows and Linux.
+- `thread_wrap` is obsolete and has no effect.
+
+Processes whose output is captured (`output`, `output_of`, `filter`, `find`) get their standard input closed
+straight away, so tools that read stdin, such as `grep` or `sort`, finish instead of waiting for input.
 
 `run` will kick off the invocation of the process.
 
@@ -91,7 +100,7 @@ let dotnetHelpExitCode = exec {
 }
 ```
 
-returns just the exit code
+returns just the exit code, without throwing when it is non-zero (unless `valid_exit_code` is given)
 
 ```fsharp
 

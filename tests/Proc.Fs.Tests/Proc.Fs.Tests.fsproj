@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <AssemblyName>Proc.Fs.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <LangVersion>Latest</LangVersion>
+    <!-- The tests deliberately exercise the obsolete aliases too -->
+    <NoWarn>$(NoWarn);FS0044</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="TestBinary.fs" />
+    <Compile Include="ExecTests.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Proc.Fs\Proc.Fs.fsproj" />
+    <!-- Not referenced for its API: makes sure the NativeAOT test binary is built and published first -->
+    <ProjectReference Include="..\Proc.Tests.Binary\Proc.Tests.Binary.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="GitHubActionsTestLogger" Version="2.4.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Nullean.VsTest.Pretty.TestLogger" Version="0.10.0" PrivateAssets="All" />
+  </ItemGroup>
+</Project>

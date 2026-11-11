@@ -23,6 +23,7 @@
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests/Directory.Build.props" />
+    <Project Path="tests/Proc.Fs.Tests/Proc.Fs.Tests.fsproj" />
     <Project Path="tests/Proc.Tests.Binary/Proc.Tests.Binary.csproj" />
     <Project Path="tests/Proc.Tests/Proc.Tests.csproj" />
   </Folder>

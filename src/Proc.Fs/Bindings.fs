@@ -8,64 +8,83 @@ type ExecOptions = {
     Binary: string
     Arguments: string list option
     LineOutFilter: (LineOut -> bool) option
-    Find: (LineOut -> bool) option
     WorkingDirectory: string option
     Environment: Map<string, string> option
-    
-    Timeout: TimeSpan 
+
+    /// <summary>How long to wait for the process to exit. <c>None</c> waits indefinitely.</summary>
+    Timeout: TimeSpan option
     ValidExitCodeClassifier: (int -> bool) option
-    
+
     StartedConfirmationHandler: (LineOut -> bool) option
     StopBufferingAfterStarted: bool option
-    
-    NoWrapInThread: bool option
+
     SendControlCFirst: bool option
     WaitForStreamReadersTimeout: TimeSpan option
+    /// <summary>Terminate the started process when this process exits (.NET 11+ on Windows and Linux only)</summary>
+    KillOnParentExit: bool option
 }
 with
-    static member Empty = 
+    static member Empty =
         {
-            Binary = ""; Arguments = None; Find = None; 
+            Binary = ""; Arguments = None
             LineOutFilter = None; WorkingDirectory = None; Environment = None
-            Timeout = TimeSpan(0, 0, 0, 0, -1)
-            ValidExitCodeClassifier = None; 
-            NoWrapInThread = None; SendControlCFirst = None; WaitForStreamReadersTimeout = None
+            Timeout = None
+            ValidExitCodeClassifier = None
+            SendControlCFirst = None; WaitForStreamReadersTimeout = None
             StartedConfirmationHandler = None; StopBufferingAfterStarted = None
+            KillOnParentExit = None
         }
+
+let private applyBase (opts: ExecOptions) (a: ProcessArgumentsBase) =
+    opts.Environment |> Option.iter(fun e -> a.Environment <- e)
+    opts.WorkingDirectory |> Option.iter(fun d -> a.WorkingDirectory <- d)
+    opts.KillOnParentExit |> Option.iter(fun k -> a.KillOnParentExit <- k)
+
+let private applyStart (opts: ExecOptions) (a: StartArguments) =
+    applyBase opts a
+    opts.LineOutFilter |> Option.iter(fun f -> a.LineOutFilter <- f)
+    opts.SendControlCFirst |> Option.iter(fun b -> a.SendControlCFirst <- b)
+    opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> a.WaitForStreamReadersTimeout <- t)
+    opts.Timeout |> Option.iter(fun t -> a.Timeout <- Nullable t)
+    // Proc always redirects standard input. Nothing in these bindings writes to it, so close it straight away:
+    // tools that read stdin (grep, sort, cat) then see end-of-input instead of waiting forever.
+    a.StandardInputHandler <- StandardInputHandler(fun stdin -> stdin.Close())
 
 let private startArgs (opts: ExecOptions) =
     let args = opts.Arguments |> Option.defaultValue []
     let startArguments = StartArguments(opts.Binary, args)
-    opts.LineOutFilter |> Option.iter(fun f -> startArguments.LineOutFilter <- f)
-    opts.Environment |> Option.iter(fun e -> startArguments.Environment <- e)
-    opts.WorkingDirectory |> Option.iter(fun d -> startArguments.WorkingDirectory <- d)
-    opts.SendControlCFirst |> Option.iter(fun b -> startArguments.SendControlCFirst <- b)
-    opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> startArguments.WaitForStreamReadersTimeout <- t)
-    startArguments.Timeout <- opts.Timeout
+    applyStart opts startArguments
     startArguments
- 
+
 let private execArgs (opts: ExecOptions) =
     let args = opts.Arguments |> Option.defaultValue []
     let execArguments = ExecArguments(opts.Binary, args)
-    opts.Environment |> Option.iter(fun e -> execArguments.Environment <- e)
-    opts.WorkingDirectory |> Option.iter(fun d -> execArguments.WorkingDirectory <- d)
+    applyBase opts execArguments
     opts.ValidExitCodeClassifier |> Option.iter(fun f -> execArguments.ValidExitCodeClassifier <- f)
-    execArguments.Timeout <- opts.Timeout
+    opts.Timeout |> Option.iter(fun t -> execArguments.Timeout <- Nullable t)
     execArguments
-    
+
+/// exit_code returns the code instead of throwing, unless the caller supplied a classifier of their own
+let private acceptAnyExitCode (opts: ExecOptions) =
+    match opts.ValidExitCodeClassifier with
+    | Some _ -> opts
+    | None -> { opts with ValidExitCodeClassifier = Some (fun _ -> true) }
+
 let private longRunningArguments (opts: ExecOptions) =
     let args = opts.Arguments |> Option.defaultValue []
     let longRunningArguments = LongRunningArguments(opts.Binary, args)
+    applyBase opts longRunningArguments
     opts.LineOutFilter |> Option.iter(fun f -> longRunningArguments.LineOutFilter <- f)
-    opts.Environment |> Option.iter(fun e -> longRunningArguments.Environment <- e)
-    opts.WorkingDirectory |> Option.iter(fun d -> longRunningArguments.WorkingDirectory <- d)
     opts.SendControlCFirst |> Option.iter(fun b -> longRunningArguments.SendControlCFirst <- b)
     opts.WaitForStreamReadersTimeout |> Option.iter(fun t -> longRunningArguments.WaitForStreamReadersTimeout <- t)
-    
+
     opts.StartedConfirmationHandler |> Option.iter(fun t -> longRunningArguments.StartedConfirmationHandler <- t)
     opts.StopBufferingAfterStarted |> Option.iter(fun t -> longRunningArguments.StopBufferingAfterStarted <- t)
-    
+
     longRunningArguments
+
+let private startedConfirmationTimeout (opts: ExecOptions) =
+    opts.Timeout |> Option.defaultValue (TimeSpan.FromMilliseconds -1.)
     
 
 type ShellBuilder() =
@@ -81,8 +100,8 @@ type ShellBuilder() =
         { opts with Environment = Some env }
         
     [<CustomOperation("timeout")>]
-    member inline this.Timeout(opts, timeout) =
-        { opts with Timeout = timeout }
+    member inline this.Timeout(opts, timeout: TimeSpan) =
+        { opts with Timeout = Some timeout }
         
     [<CustomOperation("stream_reader_wait_timeout")>]
     member inline this.WaitForStreamReadersTimeout(opts, timeout) =
@@ -92,9 +111,9 @@ type ShellBuilder() =
     member inline this.SendControlCFirst(opts, sendControlCFirst) =
         { opts with SendControlCFirst = Some sendControlCFirst }
         
+    [<Obsolete("Proc no longer wraps processes in a thread; thread_wrap has no effect")>]
     [<CustomOperation("thread_wrap")>]
-    member inline this.NoWrapInThread(opts, threadWrap) =
-        { opts with NoWrapInThread = Some (not threadWrap) }
+    member inline this.NoWrapInThread(opts: ExecOptions, _threadWrap: bool) = opts
         
     [<CustomOperation("exec")>]
     member this.ExecuteWithArguments(opts, binary, [<ParamArray>] args: string array) =
@@ -184,9 +203,10 @@ type ExecBuilder() =
     member this.EnvironmentVariables(opts, env: Map<string, string>) =
         { opts with Environment = Some env }
         
+    ///<summary>How long to wait for the process to exit before killing it</summary>
     [<CustomOperation("timeout")>]
-    member this.Timeout(opts, timeout) =
-        { opts with Timeout = timeout }
+    member this.Timeout(opts, timeout: TimeSpan) =
+        { opts with Timeout = Some timeout }
         
     [<CustomOperation("stream_reader_wait_timeout")>]
     member this.WaitForStreamReadersTimeout(opts, timeout) =
@@ -196,21 +216,31 @@ type ExecBuilder() =
     member this.SendControlCFirst(opts, sendControlCFirst) =
         { opts with SendControlCFirst = Some sendControlCFirst }
         
+    [<Obsolete("Proc no longer wraps processes in a thread; thread_wrap has no effect")>]
     [<CustomOperation("thread_wrap")>]
-    member this.NoWrapInThread(opts, threadWrap) =
-        { opts with NoWrapInThread = Some (not threadWrap) }
+    member this.NoWrapInThread(opts: ExecOptions, _threadWrap: bool) = opts
+
+    ///<summary>Terminate the process when this process exits (.NET 11+ on Windows and Linux only)</summary>
+    [<CustomOperation("kill_on_parent_exit")>]
+    member this.KillOnParentExit(opts, killOnParentExit: bool) =
+        { opts with KillOnParentExit = Some killOnParentExit }
         
     [<CustomOperation("filter_output")>]
     member this.FilterOutput(opts, find: LineOut -> bool) =
         { opts with LineOutFilter = Some find }
         
-    [<CustomOperation("validExitCode")>]
+    ///<summary>Decides which exit codes count as success. Defaults to only <c>0</c></summary>
+    [<CustomOperation("valid_exit_code")>]
     member this.ValidExitCode(opts, exitCodeClassifier: int -> bool) =
         { opts with ValidExitCodeClassifier = Some exitCodeClassifier }
-    
+
+    [<Obsolete("Use valid_exit_code")>]
+    [<CustomOperation("validExitCode")>]
+    member this.ValidExitCodeLegacy(opts, exitCodeClassifier: int -> bool) =
+        { opts with ValidExitCodeClassifier = Some exitCodeClassifier }
+
     [<CustomOperation("find")>]
     member this.Find(opts, find: LineOut -> bool) =
-        let opts = { opts with Find = Some find }
         let startArguments = startArgs opts
         let result = Proc.Start(startArguments)
         result.ConsoleOut
@@ -218,7 +248,6 @@ type ExecBuilder() =
         
     [<CustomOperation("filter")>]
     member this.Filter(opts, find: LineOut -> bool) =
-        let opts = { opts with Find = Some find }
         let startArguments = startArgs opts
         let result = Proc.Start(startArguments)
         result.ConsoleOut
@@ -244,19 +273,19 @@ type ExecBuilder() =
         
     [<CustomOperation("exit_code_of")>]
     member this.ReturnStatus(opts, binary, arguments: string list) =
-        let opts = { opts with Binary = binary; Arguments = Some arguments}
+        let opts = { opts with Binary = binary; Arguments = Some arguments} |> acceptAnyExitCode
         let execArgs = execArgs opts
         Proc.Exec(execArgs)
         
     [<CustomOperation("exit_code_of")>]
     member this.ReturnStatus(opts, binary, [<ParamArray>] arguments: string array) =
-        let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
+        let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)} |> acceptAnyExitCode
         let execArgs = execArgs opts
         Proc.Exec(execArgs)
         
     [<CustomOperation("exit_code")>]
     member this.ReturnStatus(opts) =
-        let execArgs = execArgs opts
+        let execArgs = execArgs (acceptAnyExitCode opts)
         Proc.Exec(execArgs)
         
     [<CustomOperation("output_of")>]
@@ -264,7 +293,12 @@ type ExecBuilder() =
         let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
         let execArgs = startArgs opts
         Proc.Start(execArgs)
-        
+
+    [<CustomOperation("output_of")>]
+    member this.ReturnOutput(opts, binary, arguments: string list) =
+        let opts = { opts with Binary = binary; Arguments = Some arguments}
+        Proc.Start(startArgs opts)
+
     [<CustomOperation("output_of")>]
     member this.ReturnOutput(opts) =
         let startArgs = startArgs opts
@@ -274,7 +308,7 @@ type ExecBuilder() =
     member this.WaitUntil(opts, startedConfirmation: LineOut -> bool) =
         let opts = { opts with StartedConfirmationHandler = Some startedConfirmation }
         let longRunningArguments = longRunningArguments opts
-        Proc.StartLongRunning(longRunningArguments, opts.Timeout)
+        Proc.StartLongRunning(longRunningArguments, startedConfirmationTimeout opts)
         
     [<CustomOperation("wait_until_and_disconnect")>]
     member this.WaitUntilQuietAfter(opts, startedConfirmation: LineOut -> bool) =
@@ -285,7 +319,7 @@ type ExecBuilder() =
                      StopBufferingAfterStarted = Some true 
             }
         let longRunningArguments = longRunningArguments opts
-        Proc.StartLongRunning(longRunningArguments, opts.Timeout)
+        Proc.StartLongRunning(longRunningArguments, startedConfirmationTimeout opts)
         
         
 
