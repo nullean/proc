@@ -163,7 +163,8 @@ namespace ProcNet
 			{
 				foreach (var kv in s.Environment)
 				{
-					processStartInfo.Environment[kv.Key] = kv.Value;
+					if (kv.Value == null) processStartInfo.Environment.Remove(kv.Key);
+					else processStartInfo.Environment[kv.Key] = kv.Value;
 				}
 			}
 
