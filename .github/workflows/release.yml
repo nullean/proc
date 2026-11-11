@@ -1,0 +1,22 @@
+# Publishing the release-drafter draft (web UI or phone) is what releases. See nullean/.github release.yml.
+name: release
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+
+jobs:
+  release:
+    uses: nullean/.github/.github/workflows/release.yml@6ce0ea47d99c74643d10071025121dd59668e245 # v1.1.0
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      packages-path: build/output
+    secrets:
+      NUGET_USER: ${{ secrets.NUGET_USER }}

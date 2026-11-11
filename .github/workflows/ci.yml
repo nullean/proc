@@ -4,7 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-    tags: ["*.*.*"]
   workflow_dispatch:
 
 permissions: {}
@@ -50,52 +49,3 @@ jobs:
             -s https://nuget.pkg.github.com/nullean/index.json --skip-duplicate --no-symbols; do
             echo "Retrying"; sleep 1
           done
-
-  # a pushed tag releases: release notes, the GitHub release, then nuget.org
-  release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write # create the GitHub release
-      issues: write # release-notes creates labels for its categories
-      id-token: write # NuGet trusted publishing: exchange the workflow's OIDC token for a short-lived key
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
-        with:
-          cache: false # a release never restores a cache PR builds could have written
-        env:
-          MISE_JOBS: "1" # dotnet versions share one DOTNET_ROOT; installing them in parallel races
-
-      - name: Pack, validate and report public API changes
-        run: mise run pack
-
-      - name: Generate release notes for the tag
-        run: dotnet run --project build/scripts -- generatereleasenotes -s true
-
-      - name: Create or update the release for the tag on GitHub
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: dotnet run --project build/scripts -- createreleaseongithub -s true --token "$GITHUB_TOKEN"
-
-      # Trusted publishing: nuget.org trusts this repository's ci.yml (a policy owned by the nullean
-      # organization), so there is no long-lived API key to expire. The key it returns lasts an hour, so the
-      # login sits right before the push. NUGET_USER is the nuget.org profile name, set at the org level.
-      - name: Log in to nuget.org (trusted publishing)
-        id: nuget-login
-        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
-        with:
-          user: ${{ secrets.NUGET_USER }}
-
-      - name: Release to nuget.org
-        env:
-          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
-        run: |
-          dotnet nuget push 'build/output/*.nupkg' -k "$NUGET_API_KEY" \
-            -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols

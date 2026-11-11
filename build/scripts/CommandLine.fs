@@ -9,20 +9,11 @@ type Arguments =
     | [<CliPrefix(CliPrefix.None);SubCommand>] Test
     | [<CliPrefix(CliPrefix.None);SubCommand>] Pack
     | [<CliPrefix(CliPrefix.None);SubCommand>] Ci
-    
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] PristineCheck 
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GeneratePackages
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidatePackages 
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateReleaseNotes 
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateApiChanges 
-    | [<CliPrefix(CliPrefix.None);SubCommand>] Release
-    
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] CreateReleaseOnGithub 
-    | [<CliPrefix(CliPrefix.None);SubCommand>] Publish
     
     | [<Inherit;AltCommandLine("-s")>] SingleTarget of bool
-    | [<Inherit>] Token of string 
-    | [<Inherit;AltCommandLine("-c")>] CleanCheckout of bool
 with
     interface IArgParserTemplate with
         member this.Usage =
@@ -32,19 +23,12 @@ with
             | Test -> "Runs build then tests"
             | Pack -> "Runs build, then creates and validates the packages and reports public API changes"
             | Ci -> "Runs tests, then creates and validates the packages: exactly what CI runs"
-            | Release -> "runs build, tests, and create and validates the packages shy of publishing them"
-            | Publish -> "Runs the full release"
             
             | SingleTarget _ -> "Runs the provided sub command without running their dependencies"
-            | Token _ -> "Token to be used to authenticate with github"
-            | CleanCheckout _ -> "Skip the clean checkout check that guards the release/publish targets"
             
-            | PristineCheck  
             | GeneratePackages
-            | ValidatePackages 
-            | GenerateReleaseNotes
+            | ValidatePackages
             | GenerateApiChanges
-            | CreateReleaseOnGithub 
                 -> "Undocumented, dependent target"
     member this.Name =
         match FSharpValue.GetUnionFields(this, typeof<Arguments>) with
