@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Net.Sockets;
@@ -6,286 +6,310 @@ using System.Threading;
 using System.Threading.Tasks;
 using ProcNet;
 
-namespace Proc.Tests.Binary
+namespace Proc.Tests.Binary;
+
+public static class Program
 {
-	public static class Program
+	public static async Task<int> Main(string[] args)
 	{
-		public static async Task<int> Main(string[] args)
+		if (args.Length == 0)
 		{
-			if (args.Length == 0)
-			{
-				Console.Error.WriteLine("no testcase specified");
-				return 1;
-			}
-
-			var testCase = args[0].ToLowerInvariant();
-
-			if (testCase == nameof(PrintArgs).ToLowerInvariant()) return PrintArgs(args.Skip(1).ToArray());
-			if (testCase == nameof(ExitWith).ToLowerInvariant()) return ExitWith(args[1]);
-			if (testCase == nameof(PrintEnv).ToLowerInvariant()) return PrintEnv(args.Skip(1).ToArray());
-			if (testCase == nameof(EchoStdin).ToLowerInvariant()) return EchoStdin(args.Length > 1 ? args[1] : "");
-			if (testCase == nameof(PrintCwd).ToLowerInvariant()) return PrintCwd();
-			if (testCase == nameof(FailTimes).ToLowerInvariant()) return FailTimes(args[1], args[2]);
-			if (testCase == nameof(SingleLineNoEnter).ToLowerInvariant()) return SingleLineNoEnter();
-			if (testCase == nameof(TwoWrites).ToLowerInvariant()) return TwoWrites();
-
-			if (testCase == nameof(SingleLine).ToLowerInvariant()) return SingleLine();
-
-			if (testCase == nameof(DelayedWriter).ToLowerInvariant()) return DelayedWriter();
-
-			if (testCase == nameof(ReadKeyFirst).ToLowerInvariant()) return ReadKeyFirst();
-			if (testCase == nameof(ReadKeyAfter).ToLowerInvariant()) return ReadKeyAfter();
-			if (testCase == nameof(SlowOutput).ToLowerInvariant()) return SlowOutput();
-			if (testCase == nameof(ReadLineFirst).ToLowerInvariant()) return ReadLineFirst();
-			if (testCase == nameof(ReadLineAfter).ToLowerInvariant()) return ReadLineAfter();
-			if (testCase == nameof(MoreText).ToLowerInvariant()) return MoreText();
-			if (testCase == nameof(TrailingLines).ToLowerInvariant()) return TrailingLines();
-			if (testCase == nameof(ControlC).ToLowerInvariant()) return ControlC();
-			if (testCase == nameof(ControlCNoWait).ToLowerInvariant()) return ControlCNoWait();
-			if (testCase == nameof(OverwriteLines).ToLowerInvariant()) return OverwriteLines();
-			if (testCase == nameof(InterMixedOutAndError).ToLowerInvariant()) return InterMixedOutAndError();
-			if (testCase == nameof(LongRunning).ToLowerInvariant()) return await LongRunning();
-			if (testCase == nameof(TrulyLongRunning).ToLowerInvariant()) return await TrulyLongRunning();
-			if (testCase == nameof(WritePidAndWait).ToLowerInvariant()) return WritePidAndWait(args[1]);
-			if (testCase == nameof(KillOnParentExitChild).ToLowerInvariant()) return KillOnParentExitChild(args[1]);
-			if (testCase == nameof(WriteChildPidAndWait).ToLowerInvariant()) return WriteChildPidAndWait(args[1]);
-
-			return 1;
-		}
-		private static int PrintArgs(string[] args)
-		{
-			foreach (var arg in args)
-				Console.WriteLine(arg);
-			return 0;
-		}
-		private static int ExitWith(string exitCode) => int.Parse(exitCode, CultureInfo.InvariantCulture);
-
-		// Counts its runs in the given file and exits with 1 for the first <times> runs, 0 after that.
-		// Prints "attempt N" to standard out and "failed N" to standard error on a failing run.
-		private static int FailTimes(string counterFile, string times)
-		{
-			var attempt = (System.IO.File.Exists(counterFile) ? int.Parse(System.IO.File.ReadAllText(counterFile), CultureInfo.InvariantCulture) : 0) + 1;
-			System.IO.File.WriteAllText(counterFile, attempt.ToString(CultureInfo.InvariantCulture));
-			Console.WriteLine($"attempt {attempt}");
-			if (attempt > int.Parse(times, CultureInfo.InvariantCulture)) return 0;
-			Console.Error.WriteLine($"failed {attempt}");
+			Console.Error.WriteLine("no testcase specified");
 			return 1;
 		}
 
-		private static int PrintCwd()
-		{
-			Console.WriteLine(Environment.CurrentDirectory);
-			return 0;
-		}
+		var testCase = args[0].ToLowerInvariant();
 
-		// Reads standard input until end of stream and prints every line back with the given prefix.
-		// Used as the downstream end of pipes; exits only once its stdin is closed.
-		private static int EchoStdin(string prefix)
-		{
-			string line;
-			while ((line = Console.ReadLine()) != null)
-				Console.WriteLine(prefix + line);
-			return 0;
-		}
+		if (testCase == nameof(PrintArgs).ToLowerInvariant())
+			return PrintArgs(args.Skip(1).ToArray());
+		if (testCase == nameof(ExitWith).ToLowerInvariant())
+			return ExitWith(args[1]);
+		if (testCase == nameof(PrintEnv).ToLowerInvariant())
+			return PrintEnv(args.Skip(1).ToArray());
+		if (testCase == nameof(EchoStdin).ToLowerInvariant())
+			return EchoStdin(args.Length > 1 ? args[1] : "");
+		if (testCase == nameof(PrintCwd).ToLowerInvariant())
+			return PrintCwd();
+		if (testCase == nameof(FailTimes).ToLowerInvariant())
+			return FailTimes(args[1], args[2]);
+		if (testCase == nameof(SingleLineNoEnter).ToLowerInvariant())
+			return SingleLineNoEnter();
+		if (testCase == nameof(TwoWrites).ToLowerInvariant())
+			return TwoWrites();
 
-		// Prints the value of each named environment variable on its own line, or <unset> if it is not set.
-		private static int PrintEnv(string[] names)
-		{
-			foreach (var name in names)
-				Console.WriteLine(Environment.GetEnvironmentVariable(name) ?? "<unset>");
-			return 0;
-		}
-		private static int DelayedWriter()
-		{
-			Thread.Sleep(3000);
-			Console.Write(nameof(DelayedWriter));
-			return 20;
-		}
-		private static int SingleLineNoEnter()
-		{
-			Console.Write(nameof(SingleLineNoEnter));
-			return 0;
-		}
-		private static int TwoWrites()
-		{
-			Console.Write(nameof(TwoWrites));
-			Console.Write(nameof(TwoWrites));
-			return 0;
-		}
-		private static int InterMixedOutAndError()
-		{
-			for (var i = 0; i < 200; i += 2)
-			{
-                Console.Out.WriteLine(new string(i.ToString()[0], 10));
-                Console.Error.WriteLine(new string((i + 1).ToString()[0], 10));
-				Task.Delay(1).Wait();
-			}
-			return 0;
-		}
-		private static int SingleLine()
-		{
-			Console.WriteLine(nameof(SingleLine));
-			return 0;
-		}
-		private static int OverwriteLines()
-		{
-			for (var i = 0; i < 10; i++)
-			{
+		if (testCase == nameof(SingleLine).ToLowerInvariant())
+			return SingleLine();
 
-				Console.Write($"\r{nameof(OverwriteLines)} {i}");
-				Thread.Sleep(100);
-			}
-			return 102;
-		}
-		private static int ReadKeyFirst()
-		{
-			var read = Convert.ToChar(Console.Read());
-			Console.Write($"{read}{nameof(ReadKeyFirst)}");
-			return 21;
-		}
-		private static int ReadKeyAfter()
-		{
-			Console.Write("input:");
-			Console.Read();
-			Console.Write(nameof(ReadKeyAfter));
-			return 21;
-		}
-		private static int SlowOutput()
-		{
-			for (var i = 1; i <= 10; i++)
-			{
-				Console.WriteLine("x:" + i);
-				Thread.Sleep(500);
-			}
-			return 121;
-		}
-		private static int ReadLineFirst()
-		{
-			Console.ReadLine();
-			Console.Write(nameof(ReadLineFirst));
-			return 21;
-		}
-		private static int ReadLineAfter()
-		{
-			Console.Write("input:");
-			Console.ReadLine();
-			Console.Write(nameof(ReadLineAfter));
-			return 21;
-		}
-		private static int ControlC()
-		{
-			Console.WriteLine("Written before control+c");
-			Console.CancelKeyPress += (sender, args) =>
-			{
-				Console.WriteLine("Written after control+c");
-			};
-			Console.ReadLine();
-			return 70;
-		}
-		private static int ControlCNoWait()
-		{
-			Console.WriteLine("Written before control+c");
-			Console.CancelKeyPress += (sender, args) =>
-			{
-				Console.WriteLine("Written after control+c");
-			};
-			return 71;
-		}
+		if (testCase == nameof(DelayedWriter).ToLowerInvariant())
+			return DelayedWriter();
 
-		private static int TrailingLines()
+		if (testCase == nameof(ReadKeyFirst).ToLowerInvariant())
+			return ReadKeyFirst();
+		if (testCase == nameof(ReadKeyAfter).ToLowerInvariant())
+			return ReadKeyAfter();
+		if (testCase == nameof(SlowOutput).ToLowerInvariant())
+			return SlowOutput();
+		if (testCase == nameof(ReadLineFirst).ToLowerInvariant())
+			return ReadLineFirst();
+		if (testCase == nameof(ReadLineAfter).ToLowerInvariant())
+			return ReadLineAfter();
+		if (testCase == nameof(MoreText).ToLowerInvariant())
+			return MoreText();
+		if (testCase == nameof(TrailingLines).ToLowerInvariant())
+			return TrailingLines();
+		if (testCase == nameof(ControlC).ToLowerInvariant())
+			return ControlC();
+		if (testCase == nameof(ControlCNoWait).ToLowerInvariant())
+			return ControlCNoWait();
+		if (testCase == nameof(OverwriteLines).ToLowerInvariant())
+			return OverwriteLines();
+		if (testCase == nameof(InterMixedOutAndError).ToLowerInvariant())
+			return InterMixedOutAndError();
+		if (testCase == nameof(LongRunning).ToLowerInvariant())
+			return await LongRunning();
+		if (testCase == nameof(TrulyLongRunning).ToLowerInvariant())
+			return await TrulyLongRunning();
+		if (testCase == nameof(WritePidAndWait).ToLowerInvariant())
+			return WritePidAndWait(args[1]);
+		if (testCase == nameof(KillOnParentExitChild).ToLowerInvariant())
+			return KillOnParentExitChild(args[1]);
+		if (testCase == nameof(WriteChildPidAndWait).ToLowerInvariant())
+			return WriteChildPidAndWait(args[1]);
+
+		return 1;
+	}
+	private static int PrintArgs(string[] args)
+	{
+		foreach (var arg in args)
+			Console.WriteLine(arg);
+		return 0;
+	}
+	private static int ExitWith(string exitCode) => int.Parse(exitCode, CultureInfo.InvariantCulture);
+
+	// Counts its runs in the given file and exits with 1 for the first <times> runs, 0 after that.
+	// Prints "attempt N" to standard out and "failed N" to standard error on a failing run.
+	private static int FailTimes(string counterFile, string times)
+	{
+		var attempt = (System.IO.File.Exists(counterFile) ? int.Parse(System.IO.File.ReadAllText(counterFile), CultureInfo.InvariantCulture) : 0) + 1;
+		System.IO.File.WriteAllText(counterFile, attempt.ToString(CultureInfo.InvariantCulture));
+		Console.WriteLine($"attempt {attempt}");
+		if (attempt > int.Parse(times, CultureInfo.InvariantCulture))
+			return 0;
+		Console.Error.WriteLine($"failed {attempt}");
+		return 1;
+	}
+
+	private static int PrintCwd()
+	{
+		Console.WriteLine(Environment.CurrentDirectory);
+		return 0;
+	}
+
+	// Reads standard input until end of stream and prints every line back with the given prefix.
+	// Used as the downstream end of pipes; exits only once its stdin is closed.
+	private static int EchoStdin(string prefix)
+	{
+		string line;
+		while ((line = Console.ReadLine()) != null)
+			Console.WriteLine(prefix + line);
+		return 0;
+	}
+
+	// Prints the value of each named environment variable on its own line, or <unset> if it is not set.
+	private static int PrintEnv(string[] names)
+	{
+		foreach (var name in names)
+			Console.WriteLine(Environment.GetEnvironmentVariable(name) ?? "<unset>");
+		return 0;
+	}
+	private static int DelayedWriter()
+	{
+		Thread.Sleep(3000);
+		Console.Write(nameof(DelayedWriter));
+		return 20;
+	}
+	private static int SingleLineNoEnter()
+	{
+		Console.Write(nameof(SingleLineNoEnter));
+		return 0;
+	}
+	private static int TwoWrites()
+	{
+		Console.Write(nameof(TwoWrites));
+		Console.Write(nameof(TwoWrites));
+		return 0;
+	}
+	private static int InterMixedOutAndError()
+	{
+		for (var i = 0; i < 200; i += 2)
 		{
-			var output = @"Windows IP Configuration
+			Console.Out.WriteLine(new string(i.ToString()[0], 10));
+			Console.Error.WriteLine(new string((i + 1).ToString()[0], 10));
+			Task.Delay(1).Wait();
+		}
+		return 0;
+	}
+	private static int SingleLine()
+	{
+		Console.WriteLine(nameof(SingleLine));
+		return 0;
+	}
+	private static int OverwriteLines()
+	{
+		for (var i = 0; i < 10; i++)
+		{
+			Console.Write($"\r{nameof(OverwriteLines)} {i}");
+			Thread.Sleep(100);
+		}
+		return 102;
+	}
+	private static int ReadKeyFirst()
+	{
+		var read = Convert.ToChar(Console.Read());
+		Console.Write($"{read}{nameof(ReadKeyFirst)}");
+		return 21;
+	}
+	private static int ReadKeyAfter()
+	{
+		Console.Write("input:");
+		Console.Read();
+		Console.Write(nameof(ReadKeyAfter));
+		return 21;
+	}
+	private static int SlowOutput()
+	{
+		for (var i = 1; i <= 10; i++)
+		{
+			Console.WriteLine("x:" + i);
+			Thread.Sleep(500);
+		}
+		return 121;
+	}
+	private static int ReadLineFirst()
+	{
+		Console.ReadLine();
+		Console.Write(nameof(ReadLineFirst));
+		return 21;
+	}
+	private static int ReadLineAfter()
+	{
+		Console.Write("input:");
+		Console.ReadLine();
+		Console.Write(nameof(ReadLineAfter));
+		return 21;
+	}
+	private static int ControlC()
+	{
+		Console.WriteLine("Written before control+c");
+		Console.CancelKeyPress += (sender, args) =>
+		{
+			Console.WriteLine("Written after control+c");
+		};
+		Console.ReadLine();
+		return 70;
+	}
+	private static int ControlCNoWait()
+	{
+		Console.WriteLine("Written before control+c");
+		Console.CancelKeyPress += (sender, args) =>
+		{
+			Console.WriteLine("Written after control+c");
+		};
+		return 71;
+	}
+
+	private static int TrailingLines()
+	{
+		var output = @"Windows IP Configuration
 
 
 ";
-			Console.Write(output);
+		Console.Write(output);
 
-			return 60;
-		}
+		return 60;
+	}
 
-		private static async Task<int> LongRunning()
+	private static async Task<int> LongRunning()
+	{
+		for (var i = 0; i < 10; i++)
 		{
-			for (var i = 0; i < 10; i++)
-			{
-				Console.WriteLine($"Starting up: {i}");
-				await Task.Delay(20);
-			}
-			Console.WriteLine($"Started!");
+			Console.WriteLine($"Starting up: {i}");
 			await Task.Delay(20);
-			for (var i = 0; i < 10; i++)
-			{
-				Console.WriteLine($"Data after startup: {i}");
-				await Task.Delay(20);
-			}
-
-
-			return 0;
+		}
+		Console.WriteLine($"Started!");
+		await Task.Delay(20);
+		for (var i = 0; i < 10; i++)
+		{
+			Console.WriteLine($"Data after startup: {i}");
+			await Task.Delay(20);
 		}
 
-		private static async Task<int> TrulyLongRunning()
+		return 0;
+	}
+
+	private static async Task<int> TrulyLongRunning()
+	{
+		for (var i = 0; i < 2; i++)
 		{
-			for (var i = 0; i < 2; i++)
-			{
-				Console.WriteLine($"Starting up: {i}");
-				await Task.Delay(TimeSpan.FromSeconds(1));
-			}
-			Console.WriteLine($"Started!");
-			await Task.Delay(TimeSpan.FromSeconds(3));
-			for (var i = 0; i < 10; i++)
-			{
-				Console.WriteLine($"Data after startup: {i}");
-				await Task.Delay(TimeSpan.FromSeconds(10));
-			}
-			return 0;
+			Console.WriteLine($"Starting up: {i}");
+			await Task.Delay(TimeSpan.FromSeconds(1));
 		}
-
-		// The test passes a pid file path unique to itself: the net10.0 and net11.0 test runs execute concurrently,
-		// and a shared path let one run read the PID of the other run's still-living child.
-		private static int WritePidAndWait(string pidFile)
+		Console.WriteLine($"Started!");
+		await Task.Delay(TimeSpan.FromSeconds(3));
+		for (var i = 0; i < 10; i++)
 		{
-			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
-			Thread.Sleep(TimeSpan.FromSeconds(30));
-			return 0;
+			Console.WriteLine($"Data after startup: {i}");
+			await Task.Delay(TimeSpan.FromSeconds(10));
 		}
+		return 0;
+	}
 
-		// Acts as the "middle" process for KillOnParentExit tests: starts a grandchild with
-		// StartArguments.KillOnParentExit = true and then exits, so the test can observe whether the
-		// grandchild was killed along with it.
-		private static int KillOnParentExitChild(string pidFile)
-		{
-			if (System.IO.File.Exists(pidFile)) System.IO.File.Delete(pidFile);
+	// The test passes a pid file path unique to itself: the net10.0 and net11.0 test runs execute concurrently,
+	// and a shared path let one run read the PID of the other run's still-living child.
+	private static int WritePidAndWait(string pidFile)
+	{
+		System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
+		Thread.Sleep(TimeSpan.FromSeconds(30));
+		return 0;
+	}
 
-			// Environment.ProcessPath (rather than Assembly.Location, which is always empty for
-			// NativeAOT/single-file apps) is the path to this very executable, so it can spawn another
-			// instance of itself as the grandchild.
-			var selfExe = Environment.ProcessPath;
-			var childArgs = new StartArguments(selfExe, nameof(WriteChildPidAndWait), pidFile)
-			{
-				KillOnParentExit = true,
-				WaitForExit = null
-			};
-			var process = new ObservableProcess(childArgs);
-			process.Subscribe(_ => { }); // cold observable; subscribing starts the underlying process
+	// Acts as the "middle" process for KillOnParentExit tests: starts a grandchild with
+	// StartArguments.KillOnParentExit = true and then exits, so the test can observe whether the
+	// grandchild was killed along with it.
+	private static int KillOnParentExitChild(string pidFile)
+	{
+		if (System.IO.File.Exists(pidFile))
+			System.IO.File.Delete(pidFile);
 
-			// Poll for evidence the grandchild has actually started (written its PID) instead of guessing a
-			// fixed sleep duration, so this isn't sensitive to how long process startup takes on a given machine.
-			var deadline = DateTime.UtcNow.AddSeconds(10);
-			while (!System.IO.File.Exists(pidFile) && DateTime.UtcNow < deadline)
-				Thread.Sleep(25);
+		// Environment.ProcessPath (rather than Assembly.Location, which is always empty for
+		// NativeAOT/single-file apps) is the path to this very executable, so it can spawn another
+		// instance of itself as the grandchild.
+		var selfExe = Environment.ProcessPath;
+		var childArgs = new StartArguments(selfExe, nameof(WriteChildPidAndWait), pidFile) { KillOnParentExit = true, WaitForExit = null };
+		var process = new ObservableProcess(childArgs);
+		process.Subscribe(_ =>
+		{ }); // cold observable; subscribing starts the underlying process
 
-			return 0;
-		}
+		// Poll for evidence the grandchild has actually started (written its PID) instead of guessing a
+		// fixed sleep duration, so this isn't sensitive to how long process startup takes on a given machine.
+		var deadline = DateTime.UtcNow.AddSeconds(10);
+		while (!System.IO.File.Exists(pidFile) && DateTime.UtcNow < deadline)
+			Thread.Sleep(25);
 
-		private static int WriteChildPidAndWait(string pidFile)
-		{
-			System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
-			Thread.Sleep(TimeSpan.FromSeconds(30));
-			return 0;
-		}
+		return 0;
+	}
 
-		private static int MoreText()
-		{
-			var output = @"
+	private static int WriteChildPidAndWait(string pidFile)
+	{
+		System.IO.File.WriteAllText(pidFile, System.Diagnostics.Process.GetCurrentProcess().Id.ToString());
+		Thread.Sleep(TimeSpan.FromSeconds(30));
+		return 0;
+	}
+
+	private static int MoreText()
+	{
+		var output =
+			@"
 Windows IP Configuration
 
 
@@ -322,9 +346,8 @@ Ethernet adapter Bluetooth Network Connection:
    Media State . . . . . . . . . . . : Media disconnected
    Connection-specific DNS Suffix  . :
 ";
-			Console.Write(output);
+		Console.Write(output);
 
-			return 40;
-		}
+		return 40;
 	}
 }

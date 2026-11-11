@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -6,23 +6,25 @@ using System.Threading.Tasks;
 using AwesomeAssertions;
 using ProcNet.Std;
 
-namespace ProcNet.Tests
+namespace ProcNet.Tests;
+
+public class AsyncReadsStartStopTests : TestsBase
 {
-	public class AsyncReadsStartStopTests : TestsBase
+	[Test]
+	public void SlowOutput()
 	{
-		[Test]
-		public void SlowOutput()
-		{
-			var args = TestCaseArguments(nameof(SlowOutput));
-			var process = new ObservableProcess(args);
-			var consoleOut = new List<LineOut>();
-			Exception seenException = null;
-			bool? readingBeforeCancelling = null;
-			bool? readingAfterCancelling = null;
-			process.SubscribeLines(c =>
+		var args = TestCaseArguments(nameof(SlowOutput));
+		var process = new ObservableProcess(args);
+		var consoleOut = new List<LineOut>();
+		Exception seenException = null;
+		bool? readingBeforeCancelling = null;
+		bool? readingAfterCancelling = null;
+		process.SubscribeLines(
+			c =>
 			{
 				consoleOut.Add(c);
-				if (!c.Line.EndsWith("3")) return;
+				if (!c.Line.EndsWith("3"))
+					return;
 
 				readingBeforeCancelling = process.IsActivelyReading;
 
@@ -33,20 +35,18 @@ namespace ProcNet.Tests
 
 					readingAfterCancelling = process.IsActivelyReading;
 					process.StartAsyncReads();
-
 				});
-			}, e=> seenException = e);
+			},
+			e => seenException = e
+		);
 
-			process.WaitForCompletion(TimeSpan.FromSeconds(20));
+		process.WaitForCompletion(TimeSpan.FromSeconds(20));
 
-			process.ExitCode.Should().HaveValue().And.Be(121);
-			seenException.Should().BeNull();
-			consoleOut.Should().NotBeEmpty()
-				.And.Contain(l => l.Line.EndsWith("9"));
+		process.ExitCode.Should().HaveValue().And.Be(121);
+		seenException.Should().BeNull();
+		consoleOut.Should().NotBeEmpty().And.Contain(l => l.Line.EndsWith("9"));
 
-			readingBeforeCancelling.Should().HaveValue().And.BeTrue();
-			readingAfterCancelling.Should().HaveValue().And.BeFalse();
-		}
+		readingBeforeCancelling.Should().HaveValue().And.BeTrue();
+		readingAfterCancelling.Should().HaveValue().And.BeFalse();
 	}
-
 }

@@ -3,49 +3,48 @@ using System.Diagnostics;
 using System.Linq;
 using ProcNet.Extensions;
 
-namespace ProcNet
+namespace ProcNet;
+
+public static partial class Proc
 {
-	public static partial class Proc
+	/// <summary>
+	/// This simply executes <paramref name="binary"/> and returns the exit code or throws if the binary failed to start
+	/// <para>This method shares the same console and does not capture the output</para>
+	/// <para>Use <see cref="Start(string,string[])"/> or overloads if you want to capture output and write to console in realtime</para>
+	/// </summary>
+	/// <exception cref="Exception">If the application fails to start</exception>
+	/// <returns>The exit code of the binary being run</returns>
+	public static int Exec(string binary, params string[] arguments) => Exec(new ExecArguments(binary, arguments));
+
+	/// <summary>
+	/// This simply executes a binary and returns the exit code or throws if the binary failed to start
+	/// <para>This method shares the same console and does not capture the output</para>
+	/// <para>Use <see cref="Start(string,string[])"/> or overloads if you want to capture output and write to console in realtime</para>
+	/// </summary>
+	/// <exception cref="Exception">If the application fails to start</exception>
+	/// <returns>The exit code of the binary being run</returns>
+	public static int Exec(ExecArguments arguments)
 	{
-
-		/// <summary>
-		/// This simply executes <paramref name="binary"/> and returns the exit code or throws if the binary failed to start
-		/// <para>This method shares the same console and does not capture the output</para>
-		/// <para>Use <see cref="Start(string,string[])"/> or overloads if you want to capture output and write to console in realtime</para>
-		/// </summary>
-		/// <exception cref="Exception">If the application fails to start</exception>
-		/// <returns>The exit code of the binary being run</returns>
-		public static int Exec(string binary, params string[] arguments) => Exec(new ExecArguments(binary, arguments));
-
-		/// <summary>
-		/// This simply executes a binary and returns the exit code or throws if the binary failed to start
-		/// <para>This method shares the same console and does not capture the output</para>
-		/// <para>Use <see cref="Start(string,string[])"/> or overloads if you want to capture output and write to console in realtime</para>
-		/// </summary>
-		/// <exception cref="Exception">If the application fails to start</exception>
-		/// <returns>The exit code of the binary being run</returns>
-		public static int Exec(ExecArguments arguments)
-		{
-			var args = arguments.Args?.ToArray() ?? [];
-			var info = new ProcessStartInfo(arguments.Binary)
-			{
-				UseShellExecute = false
-			};
+		var args = arguments.Args?.ToArray() ?? [];
+		var info = new ProcessStartInfo(arguments.Binary) { UseShellExecute = false };
 #if !STRING_ARGS
-			foreach (var arg in args)
-				info.ArgumentList.Add(arg);
+		foreach (var arg in args)
+			info.ArgumentList.Add(arg);
 #else
 			info.Arguments = args != null ? string.Join(" ", args) : string.Empty;
 #endif
 
-			var pwd = arguments.WorkingDirectory;
-			if (!string.IsNullOrWhiteSpace(pwd)) info.WorkingDirectory = pwd;
-			if (arguments.Environment != null)
-				foreach (var kv in arguments.Environment)
-				{
-					if (kv.Value == null) info.Environment.Remove(kv.Key);
-					else info.Environment[kv.Key] = kv.Value;
-				}
+		var pwd = arguments.WorkingDirectory;
+		if (!string.IsNullOrWhiteSpace(pwd))
+			info.WorkingDirectory = pwd;
+		if (arguments.Environment != null)
+			foreach (var kv in arguments.Environment)
+			{
+				if (kv.Value == null)
+					info.Environment.Remove(kv.Key);
+				else
+					info.Environment[kv.Key] = kv.Value;
+			}
 
 #if NET11_0_OR_GREATER
 			if (arguments.KillOnParentExit && (OperatingSystem.IsWindows() || OperatingSystem.IsLinux()))
@@ -54,9 +53,9 @@ namespace ProcNet
 				info.InheritedHandles = arguments.InheritedHandles;
 #endif
 
-			var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
-				? $"\"{arguments.Binary}\""
-				: $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
+		var printBinary = arguments.OnlyPrintBinaryInExceptionMessage
+			? $"\"{arguments.Binary}\""
+			: $"\"{arguments.Binary} {args.NaivelyQuoteArguments()}\"{(pwd == null ? string.Empty : $" pwd: {pwd}")}";
 
 #if NET11_0_OR_GREATER
 			// Without a timeout this is exactly Process.Run: start with inherited stdio, block until exit, return the
@@ -66,45 +65,40 @@ namespace ProcNet
 				return ValidateExitCode(arguments, Process.Run(info).ExitCode, printBinary);
 #endif
 
-			using var process = new Process { StartInfo = info };
-			if (!process.Start())
-				throw new ProcExecException($"Failed to start {printBinary}");
+		using var process = new Process { StartInfo = info };
+		if (!process.Start())
+			throw new ProcExecException($"Failed to start {printBinary}");
 
-			if (arguments.Timeout.HasValue)
+		if (arguments.Timeout.HasValue)
+		{
+			var t = arguments.Timeout.Value;
+			var completedBeforeTimeout = process.WaitForExit((int)t.TotalMilliseconds);
+			if (!completedBeforeTimeout)
 			{
-				var t = arguments.Timeout.Value;
-				var completedBeforeTimeout = process.WaitForExit((int)t.TotalMilliseconds);
-				if (!completedBeforeTimeout)
+				try
 				{
-					try
-					{
 #if NET5_0_OR_GREATER
 						process.Kill(entireProcessTree: true);
 #else
-						process.Kill();
+					process.Kill();
 #endif
-					}
-					catch { /* best effort */ }
-					process.HardWaitForExit(TimeSpan.FromSeconds(3));
-					throw new ProcExecException($"Timeout {t} occured while running {printBinary}");
 				}
+				catch { /* best effort */ }
+				process.HardWaitForExit(TimeSpan.FromSeconds(3));
+				throw new ProcExecException($"Timeout {t} occured while running {printBinary}");
 			}
-			else
-				process.WaitForExit();
-
-			return ValidateExitCode(arguments, process.ExitCode, printBinary);
 		}
+		else
+			process.WaitForExit();
 
-		private static int ValidateExitCode(ExecArguments arguments, int exitCode, string printBinary)
-		{
-			if (!arguments.ValidExitCodeClassifier(exitCode))
-				throw new ProcExecException($"Process exited with '{exitCode}' {printBinary}")
-				{
-					ExitCode = exitCode
-				};
+		return ValidateExitCode(arguments, process.ExitCode, printBinary);
+	}
 
-			return exitCode;
-		}
+	private static int ValidateExitCode(ExecArguments arguments, int exitCode, string printBinary)
+	{
+		if (!arguments.ValidExitCodeClassifier(exitCode))
+			throw new ProcExecException($"Process exited with '{exitCode}' {printBinary}") { ExitCode = exitCode };
 
+		return exitCode;
 	}
 }

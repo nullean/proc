@@ -1,4 +1,4 @@
-﻿using AwesomeAssertions;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests;
 
@@ -57,5 +57,4 @@ public class PrintArgsTests : TestsBase
 		for (var i = 0; i < result.ConsoleOut.Count; i++)
 			result.ConsoleOut[i].Line.Should().Be(testArgs[i], i.ToString());
 	}
-
 }

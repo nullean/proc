@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Security.Permissions;
@@ -27,15 +27,20 @@ namespace Proc.ControlC
 
 		public static bool Send(int processId)
 		{
-			if (!IsAProcessAndIsRunning(processId)) return false;
+			if (!IsAProcessAndIsRunning(processId))
+				return false;
 
-			if (!FreeConsole()) throw new Win32Exception();
-			if (!AttachConsole((uint) processId)) throw new Win32Exception();
+			if (!FreeConsole())
+				throw new Win32Exception();
+			if (!AttachConsole((uint)processId))
+				throw new Win32Exception();
 
-			if (!SetConsoleCtrlHandler(null, true)) throw new Win32Exception();
+			if (!SetConsoleCtrlHandler(null, true))
+				throw new Win32Exception();
 			try
 			{
-				if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0)) throw new Win32Exception();
+				if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0))
+					throw new Win32Exception();
 			}
 			finally
 			{

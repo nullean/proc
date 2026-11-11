@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 
 namespace Proc.ControlC
@@ -8,8 +8,10 @@ namespace Proc.ControlC
 		public static int Main(string[] args)
 		{
 			Console.WriteLine("Calling" + string.Join(" ", args));
-			if (args.Length == 0) return 1;
-			if (!int.TryParse(args[0], out var processId)) return 2;
+			if (args.Length == 0)
+				return 1;
+			if (!int.TryParse(args[0], out var processId))
+				return 2;
 
 			try
 			{
@@ -27,7 +29,6 @@ namespace Proc.ControlC
 				Console.WriteLine(e.Message);
 				return 4;
 			}
-
 		}
 	}
 }

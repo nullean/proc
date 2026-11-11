@@ -1,44 +1,43 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using AwesomeAssertions;
 using ProcNet.Std;
 
-namespace ProcNet.Tests
+namespace ProcNet.Tests;
+
+public class ProcTestCases : TestsBase
 {
-	public class ProcTestCases : TestsBase
+	public class TestConsoleOutWriter : IConsoleOutWriter
 	{
-		public class TestConsoleOutWriter : IConsoleOutWriter
-		{
-			public Exception SeenException { get; private set; }
+		public Exception SeenException { get; private set; }
 
-			public List<ConsoleOut> Out { get; } = new List<ConsoleOut>();
+		public List<ConsoleOut> Out { get; } = new List<ConsoleOut>();
 
-			public void Write(Exception e) => SeenException = e;
+		public void Write(Exception e) => SeenException = e;
 
-			public void Write(ConsoleOut consoleOut) => Out.Add(consoleOut);
-		}
+		public void Write(ConsoleOut consoleOut) => Out.Add(consoleOut);
+	}
 
-		[Test]
-		public void ReadKeyFirst()
-		{
-			var args = TestCaseArguments(nameof(ReadKeyFirst));
-			args.StandardInputHandler = s => s.Write("y");
-			var writer = new TestConsoleOutWriter();
-			args.ConsoleOutWriter = writer;
-			var result = Proc.Start(args);
-			result.Completed.Should().BeTrue("completed");
-			result.ExitCode.Should().HaveValue();
-			result.ConsoleOut.Should().NotBeEmpty();
-			writer.Out.Should().NotBeEmpty();
-		}
+	[Test]
+	public void ReadKeyFirst()
+	{
+		var args = TestCaseArguments(nameof(ReadKeyFirst));
+		args.StandardInputHandler = s => s.Write("y");
+		var writer = new TestConsoleOutWriter();
+		args.ConsoleOutWriter = writer;
+		var result = Proc.Start(args);
+		result.Completed.Should().BeTrue("completed");
+		result.ExitCode.Should().HaveValue();
+		result.ConsoleOut.Should().NotBeEmpty();
+		writer.Out.Should().NotBeEmpty();
+	}
 
-		[Test]
-		public void BadBinary()
-		{
-			Action call = () => Proc.Start("this-does-not-exist.exe");
-			var shouldThrow = call.Should().Throw<ObservableProcessException>();
-			shouldThrow.And.InnerException?.Message.Should().NotBeEmpty();
-			shouldThrow.And.Message.Should().Contain("this-does-not-exist.exe");
-		}
+	[Test]
+	public void BadBinary()
+	{
+		Action call = () => Proc.Start("this-does-not-exist.exe");
+		var shouldThrow = call.Should().Throw<ObservableProcessException>();
+		shouldThrow.And.InnerException?.Message.Should().NotBeEmpty();
+		shouldThrow.And.Message.Should().Contain("this-does-not-exist.exe");
 	}
 }

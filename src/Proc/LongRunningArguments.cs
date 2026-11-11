@@ -6,9 +6,11 @@ namespace ProcNet;
 
 public class LongRunningArguments : StartArguments
 {
-	public LongRunningArguments(string binary, IEnumerable<string> args) : base(binary, args) { }
+	public LongRunningArguments(string binary, IEnumerable<string> args) : base(binary, args)
+	{ }
 
-	public LongRunningArguments(string binary, params string[] args) : base(binary, args) { }
+	public LongRunningArguments(string binary, params string[] args) : base(binary, args)
+	{ }
 
 	/// <summary>
 	/// A handler that will delay return of the <see cref="IDisposable"/> process until startup is confirmed over

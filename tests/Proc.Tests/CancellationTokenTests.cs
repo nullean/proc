@@ -5,101 +5,98 @@ using System.Threading;
 using AwesomeAssertions;
 using ProcNet.Std;
 
-namespace ProcNet.Tests
+namespace ProcNet.Tests;
+
+public class CancellationTokenTests : TestsBase
 {
-	public class CancellationTokenTests : TestsBase
+	// ── Proc.Start ────────────────────────────────────────────────────────────
+
+	[Test]
+	public void Start_WhenCancelled_StopsPromptlyAndThrows()
 	{
-		// ── Proc.Start ────────────────────────────────────────────────────────────
+		// Before fix: Start() had no CancellationToken parameter — callers had no way
+		// to abort a long-running process other than setting a Timeout on StartArguments.
+		// After fix: Start(args, ct) stops the process and throws OperationCanceledException.
+		var args = TestCaseArguments("SlowOutput"); // runs for ~5 seconds
+		args.Timeout = null; // remove the default 5s timeout so only ct drives the abort
 
-		[Test]
-		public void Start_WhenCancelled_StopsPromptlyAndThrows()
-		{
-			// Before fix: Start() had no CancellationToken parameter — callers had no way
-			// to abort a long-running process other than setting a Timeout on StartArguments.
-			// After fix: Start(args, ct) stops the process and throws OperationCanceledException.
-			var args = TestCaseArguments("SlowOutput"); // runs for ~5 seconds
-			args.Timeout = null; // remove the default 5s timeout so only ct drives the abort
+		using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+		var sw = Stopwatch.StartNew();
 
-			using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-			var sw = Stopwatch.StartNew();
+		Action call = () => Proc.Start(args, cts.Token);
+		call.Should().Throw<OperationCanceledException>();
 
-			Action call = () => Proc.Start(args, cts.Token);
-			call.Should().Throw<OperationCanceledException>();
+		sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3), "cancellation should abort the wait well before SlowOutput's 5-second run");
+	}
 
-			sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3),
-				"cancellation should abort the wait well before SlowOutput's 5-second run");
-		}
+	// ── Proc.StartRedirected ──────────────────────────────────────────────────
 
-		// ── Proc.StartRedirected ──────────────────────────────────────────────────
+	[Test]
+	public void StartRedirected_WhenCancelled_StopsPromptlyAndThrows()
+	{
+		// Same design gap as Start — no CancellationToken support.
+		var args = TestCaseArguments("SlowOutput");
+		args.Timeout = null;
 
-		[Test]
-		public void StartRedirected_WhenCancelled_StopsPromptlyAndThrows()
-		{
-			// Same design gap as Start — no CancellationToken support.
-			var args = TestCaseArguments("SlowOutput");
-			args.Timeout = null;
+		var lines = new List<LineOut>();
+		var handler = new CapturingHandler(lines);
 
-			var lines = new List<LineOut>();
-			var handler = new CapturingHandler(lines);
+		using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+		var sw = Stopwatch.StartNew();
 
-			using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-			var sw = Stopwatch.StartNew();
+		Action call = () => Proc.StartRedirected(args, handler, cts.Token);
+		call.Should().Throw<OperationCanceledException>();
 
-			Action call = () => Proc.StartRedirected(args, handler, cts.Token);
-			call.Should().Throw<OperationCanceledException>();
+		sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3));
+	}
 
-			sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3));
-		}
+	// ── Proc.StartLongRunning ─────────────────────────────────────────────────
 
-		// ── Proc.StartLongRunning ─────────────────────────────────────────────────
+	[Test]
+	public void StartLongRunning_WhenCancelledDuringStartupWait_ThrowsAndCleansUp()
+	{
+		// Before fix: StartLongRunning() had no CancellationToken — the only escape from
+		// the startup confirmation wait was for it to time out.
+		// After fix: pass ct; if cancelled during the confirmation wait the subscription
+		// is disposed and OperationCanceledException is thrown.
+		var args = LongRunningTestCaseArguments("TrulyLongRunning"); // takes ~2s to print "Started!"
+		args.StartedConfirmationHandler = l => l.Line == "Started!";
 
-		[Test]
-		public void StartLongRunning_WhenCancelledDuringStartupWait_ThrowsAndCleansUp()
-		{
-			// Before fix: StartLongRunning() had no CancellationToken — the only escape from
-			// the startup confirmation wait was for it to time out.
-			// After fix: pass ct; if cancelled during the confirmation wait the subscription
-			// is disposed and OperationCanceledException is thrown.
-			var args = LongRunningTestCaseArguments("TrulyLongRunning"); // takes ~2s to print "Started!"
-			args.StartedConfirmationHandler = l => l.Line == "Started!";
+		using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+		var sw = Stopwatch.StartNew();
 
-			using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
-			var sw = Stopwatch.StartNew();
+		Action call = () => Proc.StartLongRunning(args, WaitTimeout, ct: cts.Token);
+		call.Should().Throw<OperationCanceledException>();
 
-			Action call = () => Proc.StartLongRunning(args, WaitTimeout, ct: cts.Token);
-			call.Should().Throw<OperationCanceledException>();
+		sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3), "cancellation should abort the confirmation wait early");
+	}
 
-			sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3),
-				"cancellation should abort the confirmation wait early");
-		}
+	// ── WaitForCompletion ─────────────────────────────────────────────────────
 
-		// ── WaitForCompletion ─────────────────────────────────────────────────────
+	[Test]
+	public void WaitForCompletion_WhenCancelled_ThrowsAndStopsProcess()
+	{
+		// Direct test of the WaitForCompletion(TimeSpan?, CancellationToken) overload.
+		var process = new ObservableProcess(TestCaseArguments("SlowOutput"));
+		var lines = new List<string>();
+		process.SubscribeLines(l => lines.Add(l.Line));
 
-		[Test]
-		public void WaitForCompletion_WhenCancelled_ThrowsAndStopsProcess()
-		{
-			// Direct test of the WaitForCompletion(TimeSpan?, CancellationToken) overload.
-			var process = new ObservableProcess(TestCaseArguments("SlowOutput"));
-			var lines = new List<string>();
-			process.SubscribeLines(l => lines.Add(l.Line));
+		using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+		var sw = Stopwatch.StartNew();
 
-			using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-			var sw = Stopwatch.StartNew();
+		Action wait = () => process.WaitForCompletion(null, cts.Token);
+		wait.Should().Throw<OperationCanceledException>();
 
-			Action wait = () => process.WaitForCompletion(null, cts.Token);
-			wait.Should().Throw<OperationCanceledException>();
+		sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3), "process should be stopped promptly when the cancellation token fires");
+		process.ExitCode.Should().HaveValue("Stop() should have been called, giving the process an exit code");
+	}
 
-			sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3),
-				"process should be stopped promptly when the cancellation token fires");
-			process.ExitCode.Should().HaveValue("Stop() should have been called, giving the process an exit code");
-		}
-
-		private class CapturingHandler : IConsoleLineHandler
-		{
-			private readonly List<LineOut> _lines;
-			public CapturingHandler(List<LineOut> lines) => _lines = lines;
-			public void Handle(LineOut line) => _lines.Add(line);
-			public void Handle(Exception e) { }
-		}
+	private class CapturingHandler : IConsoleLineHandler
+	{
+		private readonly List<LineOut> _lines;
+		public CapturingHandler(List<LineOut> lines) => _lines = lines;
+		public void Handle(LineOut line) => _lines.Add(line);
+		public void Handle(Exception e)
+		{ }
 	}
 }

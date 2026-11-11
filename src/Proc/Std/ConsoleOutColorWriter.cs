@@ -26,7 +26,8 @@ public class ConsoleOutColorWriter : ConsoleOutWriter
 
 	public override void Write(Exception e)
 	{
-		if (!(e is CleanExitExceptionBase ee)) throw e;
+		if (!(e is CleanExitExceptionBase ee))
+			throw e;
 		lock (_lock)
 		{
 			Console.ResetColor();

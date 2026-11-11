@@ -1,79 +1,77 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 
-namespace ProcNet.Tests
+namespace ProcNet.Tests;
+
+public class LongRunningTests : TestsBase
 {
-	public class LongRunningTests : TestsBase
+	[Test]
+	public async Task LongRunningShouldSeeAllOutput()
 	{
-		[Test]
-		public async Task LongRunningShouldSeeAllOutput()
+		var args = LongRunningTestCaseArguments("LongRunning");
+		args.StartedConfirmationHandler = l => l.Line == "Started!";
+
+		var outputWriter = new TestConsoleOutWriter();
+
+		using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
 		{
-			var args = LongRunningTestCaseArguments("LongRunning");
-			args.StartedConfirmationHandler = l => l.Line == "Started!";
+			process.Running.Should().BeTrue();
+			await Task.Delay(TimeSpan.FromSeconds(2));
+			process.Running.Should().BeFalse();
+		}
 
-			var outputWriter = new TestConsoleOutWriter();
+		var lines = outputWriter.Lines;
+		lines.Length.Should().BeGreaterThan(0);
+		lines.Should().Contain(s => s.StartsWith("Starting up:"));
+		lines.Should().Contain(s => s == "Started!");
+		lines.Should().Contain(s => s.StartsWith("Data after startup:"));
+	}
 
-			using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
-			{
-				process.Running.Should().BeTrue();
-				await Task.Delay(TimeSpan.FromSeconds(2));
-				process.Running.Should().BeFalse();
-			}
+	[Test]
+	public async Task LongRunningShouldStopBufferingOutputWhenAsked()
+	{
+		var args = LongRunningTestCaseArguments("TrulyLongRunning");
+		args.StartedConfirmationHandler = l => l.Line == "Started!";
+		args.StopBufferingAfterStarted = true;
 
+		var outputWriter = new TestConsoleOutWriter();
+		var sw = Stopwatch.StartNew();
+
+		using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
+		{
+			process.Running.Should().BeTrue();
+			sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(1));
 			var lines = outputWriter.Lines;
 			lines.Length.Should().BeGreaterThan(0);
 			lines.Should().Contain(s => s.StartsWith("Starting up:"));
 			lines.Should().Contain(s => s == "Started!");
-			lines.Should().Contain(s => s.StartsWith("Data after startup:"));
+			lines.Should().NotContain(s => s.StartsWith("Data after startup:"));
+			await Task.Delay(TimeSpan.FromSeconds(2));
+			lines.Should().NotContain(s => s.StartsWith("Data after startup:"));
 		}
 
-		[Test]
-		public async Task LongRunningShouldStopBufferingOutputWhenAsked()
+		// we dispose before the program's completion
+		sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(20));
+	}
+
+	[Test]
+	public async Task LongRunningWithoutConfirmationHandler()
+	{
+		var args = LongRunningTestCaseArguments("LongRunning");
+		var outputWriter = new TestConsoleOutWriter();
+
+		using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
 		{
-			var args = LongRunningTestCaseArguments("TrulyLongRunning");
-			args.StartedConfirmationHandler = l => l.Line == "Started!";
-			args.StopBufferingAfterStarted = true;
-
-			var outputWriter = new TestConsoleOutWriter();
-			var sw = Stopwatch.StartNew();
-
-			using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
-			{
-				process.Running.Should().BeTrue();
-				sw.Elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(1));
-				var lines = outputWriter.Lines;
-				lines.Length.Should().BeGreaterThan(0);
-				lines.Should().Contain(s => s.StartsWith("Starting up:"));
-				lines.Should().Contain(s => s == "Started!");
-				lines.Should().NotContain(s => s.StartsWith("Data after startup:"));
-				await Task.Delay(TimeSpan.FromSeconds(2));
-				lines.Should().NotContain(s => s.StartsWith("Data after startup:"));
-			}
-
-			// we dispose before the program's completion
-			sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(20));
-
+			process.Running.Should().BeTrue();
+			await Task.Delay(TimeSpan.FromSeconds(2));
 		}
 
-		[Test]
-		public async Task LongRunningWithoutConfirmationHandler()
-		{
-			var args = LongRunningTestCaseArguments("LongRunning");
-			var outputWriter = new TestConsoleOutWriter();
-
-			using (var process = Proc.StartLongRunning(args, WaitTimeout, outputWriter))
-			{
-				process.Running.Should().BeTrue();
-				await Task.Delay(TimeSpan.FromSeconds(2));
-			}
-
-			var lines = outputWriter.Lines;
-			lines.Should().Contain(s => s.StartsWith("Starting up:"));
-			lines.Should().Contain(s => s == "Started!");
-			lines.Should().Contain(s => s.StartsWith("Data after startup:"));
-			lines.Length.Should().BeGreaterThan(0);
-		}
+		var lines = outputWriter.Lines;
+		lines.Should().Contain(s => s.StartsWith("Starting up:"));
+		lines.Should().Contain(s => s == "Started!");
+		lines.Should().Contain(s => s.StartsWith("Data after startup:"));
+		lines.Length.Should().BeGreaterThan(0);
 	}
 }
