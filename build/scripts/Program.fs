@@ -7,7 +7,7 @@ open CommandLine
     
 [<EntryPoint>]
 let main argv =
-    let parser = ArgumentParser.Create<Arguments>(programName = "./build.sh")
+    let parser = ArgumentParser.Create<Arguments>(programName = "dotnet run --project build/scripts --")
     let parsed = 
         try
             let parsed = parser.ParseCommandLine(inputs = argv, raiseOnUsage = true)

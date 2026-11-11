@@ -1,10 +1,10 @@
 <Solution>
   <Folder Name="/build/">
     <File Path=".editorconfig" />
+    <File Path="AGENTS.md" />
     <File Path=".github/workflows/ci.yml" />
     <File Path=".gitignore" />
-    <File Path="build.bat" />
-    <File Path="build.sh" />
+    <File Path="mise.toml" />
     <File Path="Directory.Build.props" />
     <File Path="dotnet-tools.json" />
     <File Path="global.json" />

@@ -7,6 +7,8 @@ type Arguments =
     | [<CliPrefix(CliPrefix.None);SubCommand>] Clean
     | [<CliPrefix(CliPrefix.None);SubCommand>] Build
     | [<CliPrefix(CliPrefix.None);SubCommand>] Test
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Pack
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Ci
     
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] PristineCheck 
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GeneratePackages
@@ -28,6 +30,8 @@ with
             | Clean -> "clean known output locations"
             | Build -> "Run build"
             | Test -> "Runs build then tests"
+            | Pack -> "Runs build, then creates and validates the packages and reports public API changes"
+            | Ci -> "Runs tests, then creates and validates the packages: exactly what CI runs"
             | Release -> "runs build, tests, and create and validates the packages shy of publishing them"
             | Publish -> "Runs the full release"
             
