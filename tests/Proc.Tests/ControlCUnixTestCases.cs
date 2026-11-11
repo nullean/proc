@@ -1,7 +1,7 @@
 #if NET11_0_OR_GREATER
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
@@ -12,7 +12,7 @@ namespace ProcNet.Tests
 	/// </summary>
 	public class ControlCUnixTestCases : TestsBase
 	{
-		[SkipOnWindowsFact]
+		[Test, SkipOnWindows]
 		public void ControlC()
 		{
 			var args = TestCaseArguments(nameof(ControlC));
@@ -28,7 +28,7 @@ namespace ProcNet.Tests
 			seen[1].Should().Be("Written after control+c");
 		}
 
-		[SkipOnWindowsFact]
+		[Test, SkipOnWindows]
 		public void ControlCSend()
 		{
 			var args = TestCaseArguments(nameof(ControlC));

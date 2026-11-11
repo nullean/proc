@@ -38,7 +38,9 @@ let private clean (arguments:ParseResults<Arguments>) =
 let private build (arguments:ParseResults<Arguments>) = exec "dotnet" ["build"; "-c"; "Release"] |> ignore
 
 let private test (arguments:ParseResults<Arguments>) =
-    exec "dotnet" ["test"; "-c"; "RELEASE"; "--logger:GithubActions"; "--logger:pretty"] |> ignore
+    // global.json selects Microsoft.Testing.Platform, so this runs the TUnit test executables directly; on GitHub Actions
+    // TUnit writes its own summary of the run to GITHUB_STEP_SUMMARY
+    exec "dotnet" ["test"; "-c"; "Release"] |> ignore
 
 let private generatePackages (arguments:ParseResults<Arguments>) =
     let output = Paths.RootRelative Paths.Output.FullName

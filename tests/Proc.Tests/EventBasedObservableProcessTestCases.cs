@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class EventBasedObservableProcessTestCases : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void SingleLineNoEnter()
 		{
 			var seen = new List<string>();
@@ -19,7 +18,7 @@ namespace ProcNet.Tests
 			seen[0].Should().Be(nameof(SingleLineNoEnter));
 		}
 
-		[Fact]
+		[Test]
 		public void SingleLine()
 		{
 			var seen = new List<string>();

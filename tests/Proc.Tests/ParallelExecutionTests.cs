@@ -3,9 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProcNet.Std;
-using Xunit;
 
 namespace ProcNet.Tests
 {
@@ -22,7 +21,7 @@ namespace ProcNet.Tests
 		// Longer timeout for parallel tests - processes compete for resources
 		private static readonly TimeSpan ParallelTimeout = TimeSpan.FromSeconds(30);
 
-		[Fact]
+		[Test]
 		public async Task ObservableProcess_CanRunInParallel()
 		{
 			var results = new ConcurrentBag<(int index, List<string> lines, int? exitCode)>();
@@ -47,7 +46,7 @@ namespace ProcNet.Tests
 			}
 		}
 
-		[Fact]
+		[Test]
 		public async Task EventBasedObservableProcess_CanRunInParallel()
 		{
 			var results = new ConcurrentBag<(int index, List<string> lines, int? exitCode)>();
@@ -72,7 +71,7 @@ namespace ProcNet.Tests
 			}
 		}
 
-		[Fact]
+		[Test]
 		public async Task ProcStart_CanRunInParallel()
 		{
 			var results = new ConcurrentBag<ProcessCaptureResult>();
@@ -98,7 +97,7 @@ namespace ProcNet.Tests
 			}
 		}
 
-		[Fact]
+		[Test]
 		public async Task ProcStartRedirected_CanRunInParallel()
 		{
 			var results = new ConcurrentBag<(ProcessResult result, List<string> lines)>();
@@ -125,7 +124,7 @@ namespace ProcNet.Tests
 			}
 		}
 
-		[Fact]
+		[Test]
 		public async Task MixedProcessTypes_CanRunInParallel()
 		{
 			var observableResults = new ConcurrentBag<int?>();
@@ -172,7 +171,7 @@ namespace ProcNet.Tests
 			procStartResults.Should().HaveCount(ParallelCount).And.OnlyContain(x => x == 0);
 		}
 
-		[Fact]
+		[Test]
 		public async Task ObservableProcess_WithOutput_CanRunInParallel()
 		{
 			// SlowOutput takes ~5s (10 lines * 500ms delay). With 5 parallel processes, allow extra time.
@@ -203,7 +202,7 @@ namespace ProcNet.Tests
 			}
 		}
 
-		[Fact]
+		[Test]
 		public async Task EventBasedObservableProcess_WithOutput_CanRunInParallel()
 		{
 			// SlowOutput takes ~5s (10 lines * 500ms delay). With 5 parallel processes, allow extra time.

@@ -1,12 +1,10 @@
-﻿using FluentAssertions;
-using Xunit;
-using Xunit.Abstractions;
+﻿using AwesomeAssertions;
 
 namespace ProcNet.Tests;
 
-public class PrintArgsTests(ITestOutputHelper output) : TestsBase
+public class PrintArgsTests : TestsBase
 {
-	[Fact]
+	[Test]
 	public void ProcSendsAllArguments()
 	{
 		string[] testArgs = ["hello", "world"];
@@ -14,20 +12,20 @@ public class PrintArgsTests(ITestOutputHelper output) : TestsBase
 	}
 
 #if NETSTANDARD2_1
-	[Fact]
+	[Test]
 	public void ArgumentsWithSpaceAreNotSplit()
 	{
 		string[] testArgs = ["hello", "world", "this argument has spaces"];
 		AssertOutput(testArgs);
 	}
 
-	[Fact]
+	[Test]
 	public void ArgumentsSeesArgumentsAfterQuoted()
 	{
 		string[] testArgs = ["this argument has spaces", "hello", "world"];
 		AssertOutput(testArgs);
 	}
-	[Fact]
+	[Test]
 	public void EscapedQuotes()
 	{
 		string[] testArgs = ["\"this argument has spaces\"", "hello", "world"];
@@ -35,12 +33,12 @@ public class PrintArgsTests(ITestOutputHelper output) : TestsBase
 	}
 
 #else
-	[Fact]
+	[Test]
 	public void EscapedQuotes()
 	{
 		string[] testArgs = ["\"this argument has spaces\"", "hello", "world"];
 		var args = TestCaseArguments("PrintArgs", testArgs);
-		var outputWriter = new TestConsoleOutWriter(output);
+		var outputWriter = new TestConsoleOutWriter();
 		args.ConsoleOutWriter = outputWriter;
 		var result = Proc.Start(args);
 		result.ExitCode.Should().Be(0);
@@ -51,7 +49,7 @@ public class PrintArgsTests(ITestOutputHelper output) : TestsBase
 	private void AssertOutput(string[] testArgs)
 	{
 		var args = TestCaseArguments("PrintArgs", testArgs);
-		var outputWriter = new TestConsoleOutWriter(output);
+		var outputWriter = new TestConsoleOutWriter();
 		args.ConsoleOutWriter = outputWriter;
 		var result = Proc.Start(args);
 		result.ExitCode.Should().Be(0);

@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProcNet.Std;
-using Xunit;
 
 namespace ProcNet.Tests
 {
@@ -12,7 +11,7 @@ namespace ProcNet.Tests
 	{
 		// ── Proc.Start ────────────────────────────────────────────────────────────
 
-		[Fact]
+		[Test]
 		public void Start_WhenCancelled_StopsPromptlyAndThrows()
 		{
 			// Before fix: Start() had no CancellationToken parameter — callers had no way
@@ -33,7 +32,7 @@ namespace ProcNet.Tests
 
 		// ── Proc.StartRedirected ──────────────────────────────────────────────────
 
-		[Fact]
+		[Test]
 		public void StartRedirected_WhenCancelled_StopsPromptlyAndThrows()
 		{
 			// Same design gap as Start — no CancellationToken support.
@@ -54,7 +53,7 @@ namespace ProcNet.Tests
 
 		// ── Proc.StartLongRunning ─────────────────────────────────────────────────
 
-		[Fact]
+		[Test]
 		public void StartLongRunning_WhenCancelledDuringStartupWait_ThrowsAndCleansUp()
 		{
 			// Before fix: StartLongRunning() had no CancellationToken — the only escape from
@@ -76,7 +75,7 @@ namespace ProcNet.Tests
 
 		// ── WaitForCompletion ─────────────────────────────────────────────────────
 
-		[Fact]
+		[Test]
 		public void WaitForCompletion_WhenCancelled_ThrowsAndStopsProcess()
 		{
 			// Direct test of the WaitForCompletion(TimeSpan?, CancellationToken) overload.

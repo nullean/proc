@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class BufferedObservableProcessBugTests : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void ObservableProcess_FastExitingProcess_AlwaysCompletesObservable()
 		{
 			// Bug (TOCTOU): in BufferedObservableProcess.KickOff(), the process is checked for
@@ -31,7 +30,7 @@ namespace ProcNet.Tests
 				"WaitForCompletion should always return true — TOCTOU race prevents OnExit from firing");
 		}
 
-		[Fact]
+		[Test]
 		public void ProcStart_NativeFastExitingProcess_DoesNotObserveDisposedProcess()
 		{
 			// Bug: KickOff() subscribed Process.Exited before StartAsyncReads(). A process that exits in that

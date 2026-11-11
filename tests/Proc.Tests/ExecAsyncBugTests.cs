@@ -3,14 +3,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Xunit;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class ExecAsyncBugTests : TestsBase
 	{
-		[Fact]
+		[Test]
 		public async Task ExecAsync_WithTimeout_CancellationTokenIsRespected()
 		{
 			// Bug: timeout branch uses synchronous WaitForExit(int) which blocks the thread
@@ -23,15 +22,15 @@ namespace ProcNet.Tests
 			using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
 
 			var sw = Stopwatch.StartNew();
-			await Assert.ThrowsAnyAsync<OperationCanceledException>(
-				() => Proc.ExecAsync(args, cts.Token));
+			Func<Task> exec = () => Proc.ExecAsync(args, cts.Token);
+			await exec.Should().ThrowAsync<OperationCanceledException>();
 			sw.Stop();
 
 			sw.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(5),
 				"the CancellationToken should abort the wait, not block for the full 30s timeout");
 		}
 
-		[Fact]
+		[Test]
 		public async Task ExecAsync_OnCancellation_KillsChildProcess()
 		{
 			// Bug: on OperationCanceledException the using-block disposes the Process handle,
@@ -43,8 +42,8 @@ namespace ProcNet.Tests
 			var args = ExecTestCaseArguments("WritePidAndWait", pidFile); // writes PID then sleeps 30s
 			using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
 
-			await Assert.ThrowsAnyAsync<OperationCanceledException>(
-				() => Proc.ExecAsync(args, cts.Token));
+			Func<Task> exec = () => Proc.ExecAsync(args, cts.Token);
+			await exec.Should().ThrowAsync<OperationCanceledException>();
 
 			// Give the OS a moment to register the kill
 			await Task.Delay(300);

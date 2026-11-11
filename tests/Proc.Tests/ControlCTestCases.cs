@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace ProcNet.Tests
 {
 	public class ControlCTestCases : TestsBase
 	{
-		[SkipOnNonWindowsFact] public void ControlC()
+		[Test, SkipOnNonWindows] public void ControlC()
 		{
 			var args = TestCaseArguments(nameof(ControlC));
 			args.SendControlCFirst = true;
@@ -25,7 +25,7 @@ namespace ProcNet.Tests
 			seen[1].Should().Be("Written after control+c");
 		}
 
-		[SkipOnNonWindowsFact] public void ControlCSend()
+		[Test, SkipOnNonWindows] public void ControlCSend()
 		{
 			var args = TestCaseArguments(nameof(ControlC));
 			args.SendControlCFirst = true;
@@ -44,7 +44,7 @@ namespace ProcNet.Tests
 			seen[1].Should().Be("Written after control+c");
 		}
 
-		[SkipOnNonWindowsFact] public void ControlCNoWait()
+		[Test, SkipOnNonWindows] public void ControlCNoWait()
 		{
 			var args = TestCaseArguments(nameof(ControlCNoWait));
 			args.SendControlCFirst = true;
@@ -62,7 +62,7 @@ namespace ProcNet.Tests
 			seen[0].Should().Be("Written before control+c");
 		}
 
-		[SkipOnNonWindowsFact]
+		[Test, SkipOnNonWindows]
 		public void ControlCIngoredByCmd() {
 			var args = CmdTestCaseArguments("TrulyLongRunning");
 			args.SendControlCFirst = true;

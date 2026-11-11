@@ -15,14 +15,10 @@
 
   <!-- tests -->
   <ItemGroup>
+    <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="CsCheck" Version="5.0.1" />
-    <PackageVersion Include="FluentAssertions" Version="7.2.0" />
-    <PackageVersion Include="GitHubActionsTestLogger" Version="2.4.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageVersion Include="Nullean.VsTest.Pretty.TestLogger" Version="0.10.0" />
     <PackageVersion Include="System.Reactive.Linq" Version="4.4.1" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="TUnit" Version="1.83.0" />
   </ItemGroup>
 
   <!-- build/scripts -->

@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProcNet.Std;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace ProcNet.Tests
 {
 	public class CharacterOutputTestCases : TestsBase
 	{
-		[Fact]
+		[Test]
 		public void OverwriteLines()
 		{
 			var args = TestCaseArguments(nameof(OverwriteLines));
@@ -19,7 +17,7 @@ namespace ProcNet.Tests
 	}
 
 
-	public class LineOutputTestCases(ITestOutputHelper output) : TestsBase
+	public class LineOutputTestCases : TestsBase
 	{
 		private static readonly string _expected = @"
 Windows IP Configuration
@@ -60,7 +58,7 @@ Ethernet adapter Bluetooth Network Connection:
 
 		private readonly string[] _expectedLines = _expected.Replace("\r\n", "\n").Split(new [] {"\n"}, StringSplitOptions.None);
 
-		[Fact]
+		[Test]
 		public void ProcSeesAllLines()
 		{
 			var args = TestCaseArguments("MoreText");
@@ -72,7 +70,7 @@ Ethernet adapter Bluetooth Network Connection:
 				result.ConsoleOut[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}
 
-		[Fact]
+		[Test]
 		public void ProcSeesAllLinesWithoutConsoleOutWriter()
 		{
 			var args = TestCaseArguments("MoreText");
@@ -85,7 +83,7 @@ Ethernet adapter Bluetooth Network Connection:
 				result.ConsoleOut[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}
 
-		[Fact]
+		[Test]
 		public void SubscribeLinesSeesAllLines()
 		{
 			var args = TestCaseArguments("MoreText");
@@ -97,10 +95,10 @@ Ethernet adapter Bluetooth Network Connection:
 			for (var i = 0; i < seen.Count; i++)
 				seen[i].Line.Should().Be(_expectedLines[i], i.ToString());
 		}
-		[Fact]
+		[Test]
 		public void ConsoleWriterSeesAllLines()
 		{
-			var writer = new TestConsoleOutWriter(output);
+			var writer = new TestConsoleOutWriter();
 			var args = TestCaseArguments("MoreText");
 			args.ConsoleOutWriter = writer;
 			var result = Proc.Start(args);
