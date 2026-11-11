@@ -2,21 +2,22 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
+    <!-- Nullean.Make.Fs reads the target descriptions from the /// comments in Program.fs -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="FSharp.Core" />
-    <PackageReference Include="Argu" />
-    <PackageReference Include="Bullseye" />
-    <PackageReference Include="Proc" />
-    <PackageReference Include="Fake.Tools.Git" />
+    <!-- Nullean.Make.Fs needs FSharp.Core 11.0.100 or later; the central 10.0.100 is Proc.Fs's floor for consumers -->
+    <PackageReference Include="FSharp.Core" VersionOverride="11.0.100" />
+    <PackageReference Include="Nullean.Make.Fs" />
+    <!-- the released Proc.Fs, never the one in src: the build must not depend on the code it builds -->
+    <PackageReference Include="Proc.Fs" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="Paths.fs" />
-    <Compile Include="CommandLine.fs" />
-    <Compile Include="Targets.fs" />
+    <Compile Include="Versions.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
