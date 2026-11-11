@@ -16,9 +16,7 @@ type ExecBuilder() =
     /// <param name="arguments">the arguments to pass on to the binary being executed</param>
     [<CustomOperation("run")>]
     member this.Execute(opts, binary, [<ParamArray>] arguments: string array) =
-        let opts = { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
-        let execArgs = Args.exec opts
-        Proc.Exec(execArgs) |> ignore
+        Runner.run { opts with Binary = binary; Arguments = Some (arguments |> List.ofArray)}
         
     ///<summary>Runs <paramref name="binary"/> using <paramref name="arguments"/> immediately</summary>
     /// <param name="opts"><see cref="ExecOptions"/> the computation build thus far, not specified directly</param>
@@ -26,9 +24,7 @@ type ExecBuilder() =
     /// <param name="arguments">the arguments to pass on to the binary being executed</param>
     [<CustomOperation("run")>]
     member this.Execute(opts, binary, arguments: string list) =
-        let opts = { opts with Binary = binary; Arguments = Some arguments}
-        let execArgs = Args.exec opts
-        Proc.Exec(execArgs) |> ignore
+        Runner.run { opts with Binary = binary; Arguments = Some arguments}
         
     ///<summary>
     /// Runs the <see cref="ExecOptions"/> the computation build thus far.
@@ -37,8 +33,7 @@ type ExecBuilder() =
     [<CustomOperation("run")>]
     member this.Execute(opts) =
         if opts.Binary = "" then failwithf "No binary specified to exec computation expression"
-        let execArgs = Args.exec opts
-        Proc.Exec(execArgs) |> ignore
+        Runner.run opts
         
     ///<summary>Supply external <see cref="ExecOptions"/> to bootstrap</summary>
     [<CustomOperation("options")>]
@@ -113,6 +108,38 @@ type ExecBuilder() =
     member this.ValidExitCodeLegacy(opts, exitCodeClassifier: int -> bool) =
         { opts with ValidExitCodeClassifier = Some exitCodeClassifier }
 
+    ///<summary>Accepts any exit code, like <c>|| true</c>. A timeout still throws.</summary>
+    [<CustomOperation("allow_failure")>]
+    member this.AllowFailure(opts: ExecOptions) = Cmd.allowFailure opts
+
+    ///<summary>Hides what the process prints unless it fails. Only <c>run</c> supports it.</summary>
+    [<CustomOperation("quiet")>]
+    member this.Quiet(opts: ExecOptions) = Cmd.quiet opts
+
+    ///<summary>Runs the process up to <paramref name="retries"/> more times while it fails. Only <c>run</c> supports it.</summary>
+    [<CustomOperation("retry")>]
+    member this.Retry(opts: ExecOptions, retries: int) = Cmd.retry retries opts
+
+    ///<summary>Waits <paramref name="delay"/> before each new attempt of <c>retry</c></summary>
+    [<CustomOperation("retry_delay")>]
+    member this.RetryDelay(opts: ExecOptions, delay: TimeSpan) = Cmd.retryDelay delay opts
+
+    ///<summary>Writes standard out to a file, replacing it, like <c>&gt; file</c>. Only <c>run</c> supports it.</summary>
+    [<CustomOperation("to_file")>]
+    member this.ToFile(opts: ExecOptions, path: string) = Cmd.toFile path opts
+
+    ///<summary>Adds standard out to the end of a file, like <c>&gt;&gt; file</c>. Only <c>run</c> supports it.</summary>
+    [<CustomOperation("append_to_file")>]
+    member this.AppendToFile(opts: ExecOptions, path: string) = Cmd.appendToFile path opts
+
+    ///<summary>Reads standard input from a file, like <c>&lt; file</c>. Only <c>run</c> supports it.</summary>
+    [<CustomOperation("stdin_file")>]
+    member this.StdinFile(opts: ExecOptions, path: string) = Cmd.stdinFile path opts
+
+    ///<summary>Writes these lines to standard input, then closes it. Only <c>run</c> supports it.</summary>
+    [<CustomOperation("stdin")>]
+    member this.Stdin(opts: ExecOptions, lines: string list) = Cmd.stdin lines opts
+
     [<CustomOperation("find")>]
     member this.Find(opts, find: LineOut -> bool) =
         let startArguments = Args.start opts
@@ -135,15 +162,11 @@ type ExecBuilder() =
         
     [<CustomOperation("run_args")>]
     member this.InvokeArgs(opts, [<ParamArray>] arguments: string array) =
-        let opts = { opts with Arguments = Some (arguments |> List.ofArray) }
-        let execArgs = Args.exec opts
-        Proc.Exec(execArgs) |> ignore
+        Runner.run { opts with Arguments = Some (arguments |> List.ofArray) }
         
     [<CustomOperation("run_args")>]
     member this.InvokeArgs(opts, arguments: string list) =
-        let opts = { opts with Arguments = Some arguments}
-        let execArgs = Args.exec opts
-        Proc.Exec(execArgs) |> ignore
+        Runner.run { opts with Arguments = Some arguments }
         
     [<CustomOperation("exit_code_of")>]
     member this.ReturnStatus(opts, binary, arguments: string list) =

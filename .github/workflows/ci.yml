@@ -1,9 +1,13 @@
 name: ci
 
+# nuget.org's trusted publishing policies name this file, so releasing happens here too: publishing the
+# release-drafter draft (web UI or phone) fires `release: published`, and the release job below runs on it.
 on:
   pull_request:
   push:
     branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions: {}
@@ -14,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    uses: nullean/.github/.github/workflows/dotnet-ci.yml@f6c87e1598a3e21ae0404577cadd975783f79579 # v1.0.0
+    uses: nullean/.github/.github/workflows/dotnet-ci.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
     permissions:
       contents: read
     with:
@@ -23,7 +27,7 @@ jobs:
       packages-path: build/output
 
   zizmor:
-    uses: nullean/.github/.github/workflows/zizmor.yml@f6c87e1598a3e21ae0404577cadd975783f79579 # v1.0.0
+    uses: nullean/.github/.github/workflows/zizmor.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
     permissions:
       contents: read
 
@@ -49,3 +53,15 @@ jobs:
             -s https://nuget.pkg.github.com/nullean/index.json --skip-duplicate --no-symbols; do
             echo "Retrying"; sleep 1
           done
+
+  release:
+    if: github.event_name == 'release'
+    needs: [build, zizmor]
+    uses: nullean/.github/.github/workflows/release.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      packages-path: build/output
+    secrets:
+      NUGET_USER: ${{ secrets.NUGET_USER }}

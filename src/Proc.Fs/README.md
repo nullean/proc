@@ -49,6 +49,8 @@ shell {
     echoCommands true             // print "$ binary arguments" before each command, like set -x
     let! here = pwd
     let! home = getEnv "HOME"     // string option: the block's value, else this process's
+    require "dotnet"              // stops the block when dotnet is not on the PATH
+    let! docker = which "docker"  // string option: the full path, using the block's PATH
     sh $"dotnet build"
 }
 ```
@@ -76,7 +78,10 @@ A command's own `Cmd.cwd` resolves against the shell's directory, and its own `C
 - `'…'` and `"…"` group words into one argument. Inside `"…"`, `\"` and `\\` are escapes.
 - An unquoted `|` pipes into the next command.
 - A `\` at the end of a line continues the command, so commands copied from bash scripts work.
-- Unquoted `>`, `<`, `;` and `&` throw. Quote them to pass them as arguments.
+- `< file` reads standard input from a file, on the first command of a pipe.
+  `> file` writes standard out to a file and `>> file` adds to one, on the last command.
+  A relative file name resolves against the working directory of the command. `2>` is not supported.
+- Unquoted `;` and `&` throw. Quote them, or `<` and `>`, to pass them as arguments.
 
 Each `{value}` is always part of exactly one argument, whatever it contains: spaces, quotes, `|` or `$(…)`.
 A list standing alone, such as `{files}`, adds one argument per item. Formats such as `{n:F2}` use the invariant culture.
@@ -88,6 +93,7 @@ No shell runs, so a value can never start another command, and there is no glob 
 | `sh $"git commit -m {msg}"` with `msg = "fix; rm -rf ~"` | `git` with `commit`, `-m`, `fix; rm -rf ~` |
 | `sh $"dotnet test {projects}"` with a list | `dotnet` with `test`, then one argument per project |
 | `sh $"grep 'a\|b' {f}"` | one command: `grep` with `a\|b` and the file |
+| `sh $"sort < {input} > {output}"` | `sort` reading `input` and writing `output`, whatever their names contain |
 
 Triple-quoted strings span lines and contain `"` without escaping:
 
@@ -141,6 +147,33 @@ cmd "dotnet" ["test"] |> Cmd.iter (fun line -> if line.Contains "Failed" then pr
 
 `Cmd.validExitCode` decides which exit codes count as success; the default is only `0`.
 
+## Files, failures and retries
+
+| Function | Does | Like |
+|---|---|---|
+| `Cmd.toFile path` | writes standard out to the file, replacing it | `> file` |
+| `Cmd.appendToFile path` | adds standard out to the end of the file | `>> file` |
+| `Cmd.stdinFile path` | reads standard input from the file | `< file` |
+| `Cmd.allowFailure` | accepts any exit code, also from commands piped into it. A timeout still throws. | `\|\| true` |
+| `Cmd.quiet` | hides all output; when the command fails, prints it all before throwing | |
+| `Cmd.retry n` | runs a failing command up to `n` more times; a pipe runs again as a whole | |
+| `Cmd.retryDelay t` | waits `t` before each new attempt | |
+| `Cmd.which name` | the full path of a program on the PATH, or `None` | `which` |
+
+```fsharp
+shell {
+    require "docker"
+    sh $"docker pull {image}" |> Cmd.retry 3 |> Cmd.retryDelay (TimeSpan.FromSeconds 5.)
+    sh $"dotnet restore" |> Cmd.quiet
+    sh $"git log --oneline > {changelog}"
+    sh $"docker rm -f {name}" |> Cmd.allowFailure
+}
+```
+
+Relative file names resolve against the working directory of the command, so inside `shell { }` against its `cd`.
+Standard error stays on the console. A capture such as `Cmd.lines` reads nothing from a command whose standard out goes to a file.
+`Cmd.iter` passes lines on again when a retried command runs again.
+
 ## Pipes
 
 `|>|` streams the standard out of one command into the standard input of the next, like `|` in a shell:
@@ -185,7 +218,7 @@ let exitCode = exec { exit_code_of "dotnet" "--help" }
 let output = exec { output_of "dotnet" "--help" }
 ```
 `output` will hold both the exit code and the console output.
-`exec { }` blocks build the same `Cmd` value as `cmd`, so `options` accepts one. Run piped commands with `Cmd` or `shell { }`.
+`exec { }` blocks build the same `Cmd` value as `cmd`, so `options` accepts one, including a pipe.
 `exit_code_of` returns the exit code whatever it is; only `run` and friends throw on a non-zero exit code.
 
 If you need more control on how the process is started 
@@ -211,6 +244,22 @@ exec {
 - `valid_exit_code`: which exit codes count as success (default: only `0`). `validExitCode` still works but is obsolete.
 - `kill_on_parent_exit`: terminate the process when yours exits. Only takes effect on .NET 11+ on Windows and Linux.
 - `thread_wrap` is obsolete and has no effect.
+
+`run` also supports these, like the `Cmd` functions of the same name. The other keywords throw when they are set.
+
+```fsharp
+exec {
+    binary "dotnet"
+    arguments "restore"
+    retry 2                                   // Cmd.retry
+    retry_delay (TimeSpan.FromSeconds 5.)     // Cmd.retryDelay
+    quiet                                     // Cmd.quiet
+    allow_failure                             // Cmd.allowFailure
+    stdin_file "input.txt"                    // Cmd.stdinFile; stdin ["a"; "b"] is Cmd.stdin
+    to_file "restore.log"                     // Cmd.toFile; append_to_file is Cmd.appendToFile
+    run
+}
+```
 
 Processes whose output is captured (`output`, `output_of`, `filter`, `find`) get their standard input closed
 straight away, so tools that read stdin, such as `grep` or `sort`, finish instead of waiting for input.

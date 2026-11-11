@@ -13,9 +13,10 @@ type CmdTests() =
 
     [<Test>]
     member _.``lines captures standard out only`` () =
-        let lines = test [ "InterMixedOutAndError" ] |> Cmd.lines |> Cmd.get
-        Assert.NotEmpty lines
-        Assert.All(lines, fun l -> Assert.DoesNotContain("Error", l))
+        // FailTimes prints "attempt 1" to standard out and "failed 1" to standard error
+        use dir = new TestBinary.TempDir()
+        let lines = test [ "FailTimes"; dir.File "count"; "1" ] |> Cmd.allowFailure |> Cmd.lines |> Cmd.get
+        Assert.Equal<string list>([ "attempt 1" ], lines)
 
     [<Test>]
     member _.``text joins the lines and trims whitespace`` () =
@@ -132,6 +133,8 @@ type CmdTests() =
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds 2., $"upstream kept running for {sw.Elapsed} after downstream exited")
 
     [<Test>]
-    member _.``exec {} refuses a command with standard input instead of ignoring it`` () =
-        let piped = test [ "PrintArgs"; "a" ] |>| test [ "EchoStdin" ]
-        Assert.Throws<ArgumentException>(fun () -> exec { options piped; run }) |> ignore
+    member _.``exec {} runs a piped command, and keywords that can not feed standard input refuse it`` () =
+        let piped = test [ "PrintArgs"; "a" ] |>| test [ "ExitWith"; "4" ]
+        let ex = Assert.Throws<ProcExecException>(fun () -> exec { options piped; run })
+        Assert.Equal(Nullable 4, ex.ExitCode)
+        Assert.Throws<ArgumentException>(fun () -> exec { options piped; output } |> ignore) |> ignore

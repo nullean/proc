@@ -8,6 +8,22 @@ open System.Threading.Tasks
 open ProcNet
 open ProcNet.Std
 
+/// <summary>Where a command writes its standard out instead of the console</summary>
+[<RequireQualifiedAccess>]
+type StdoutTarget =
+    /// <summary>Write to this file, replacing it, like <c>&gt; file</c>. A relative path resolves against the working directory of the command.</summary>
+    | File of path: string
+    /// <summary>Add to the end of this file, like <c>&gt;&gt; file</c>. A relative path resolves against the working directory of the command.</summary>
+    | Append of path: string
+
+/// <summary>How often to run a failing command again</summary>
+type RetryPolicy = {
+    /// <summary>How many more times to run the command after it fails</summary>
+    Retries: int
+    /// <summary>How long to wait before each new attempt</summary>
+    Delay: TimeSpan
+}
+
 /// <summary>What a command reads on its standard input</summary>
 [<RequireQualifiedAccess>]
 type StdinSource =
@@ -15,6 +31,8 @@ type StdinSource =
     | Lines of string seq
     /// <summary>Stream the standard output of another command into this one, like a shell pipe</summary>
     | Upstream of Cmd
+    /// <summary>Read this file, like <c>&lt; file</c>. A relative path resolves against the working directory of the command.</summary>
+    | File of path: string
 
 /// <summary>
 /// A command to run: the binary, its arguments and how to run it. Nothing runs until the command is passed to
@@ -41,6 +59,12 @@ and Cmd = {
 
     /// <summary>What to write to the standard input of the process. <c>None</c> closes it straight away.</summary>
     Stdin: StdinSource option
+    /// <summary>Where standard out goes instead of the console or a capture. <c>None</c> keeps it.</summary>
+    Stdout: StdoutTarget option
+    /// <summary>Hide everything the command prints unless it fails</summary>
+    Quiet: bool option
+    /// <summary>Run the command again when it fails</summary>
+    Retry: RetryPolicy option
 }
 with
     static member Empty =
@@ -52,7 +76,7 @@ with
             SendControlCFirst = None; WaitForStreamReadersTimeout = None
             StartedConfirmationHandler = None; StopBufferingAfterStarted = None
             KillOnParentExit = None
-            Stdin = None
+            Stdin = None; Stdout = None; Quiet = None; Retry = None
         }
 
 /// <summary>The options an <c>exec { }</c> block builds. The same type as <see cref="Cmd"/>.</summary>
@@ -85,9 +109,16 @@ module internal Args =
 
     let private arguments (cmd: Cmd) = cmd.Arguments |> Option.defaultValue []
 
+    /// Proc.Exec and Proc.Start can not do these; Runner can
     let private ensureNoStdin (cmd: Cmd) =
-        if cmd.Stdin.IsSome then
-            invalidArg (nameof cmd) $"exec {{ }} can not feed standard input to '{cmd.Binary}'. Run piped commands with Cmd.run, Cmd.get or shell {{ }}."
+        let unsupported =
+            [ if cmd.Stdin.IsSome then "reads standard input"
+              if cmd.Stdout.IsSome then "writes standard out to a file"
+              if cmd.Quiet = Some true then "is quiet"
+              if cmd.Retry.IsSome then "retries" ]
+        if not unsupported.IsEmpty then
+            let what = String.Join(" and ", unsupported)
+            invalidArg (nameof cmd) $"'{cmd.Binary}' {what}, which only exec {{ run }}, Cmd.run, Cmd.get, Cmd.iter and shell {{ }} support."
 
     /// StartArguments without a standard input handler; the caller decides what happens to stdin
     let startRaw (cmd: Cmd) =
@@ -144,10 +175,21 @@ module internal Runner =
             match cmd.Arguments with
             | None | Some [] -> cmd.Binary
             | Some args -> cmd.Binary + " " + String.Join(" ", args |> List.map quote)
+        let self =
+            match cmd.Stdout with
+            | Some (StdoutTarget.File path) -> $"{self} > {quote path}"
+            | Some (StdoutTarget.Append path) -> $"{self} >> {quote path}"
+            | None -> self
         match cmd.Stdin with
         | Some (StdinSource.Upstream upstream) -> $"{describe upstream} | {self}"
         | Some (StdinSource.Lines _) -> $"<stdin> | {self}"
+        | Some (StdinSource.File path) -> $"{self} < {quote path}"
         | None -> self
+
+    /// A path relative to the working directory of the command, as the process itself would see it
+    let resolve (cmd: Cmd) (path: string) =
+        let directory = cmd.WorkingDirectory |> Option.defaultWith Directory.GetCurrentDirectory
+        Path.GetFullPath(Path.Combine(directory, path))
 
     /// Throws ProcExecException when the process timed out or exited with an exit code the command does not accept
     let validate (cmd: Cmd) (result: ProcessResult) =
@@ -170,16 +212,59 @@ module internal Runner =
     let printLine (line: LineOut) =
         if line.Error then Console.Error.WriteLine line.Line else Console.Out.WriteLine line.Line
 
-    let private printStderr (line: LineOut) =
-        if line.Error then Console.Error.WriteLine line.Line
+    /// <summary>
+    /// Runs <paramref name="body"/> with where the command prints to. A quiet command prints into a buffer instead,
+    /// and the buffer goes to <paramref name="console"/> only when <paramref name="body"/> throws.
+    /// </summary>
+    let withConsole (cmd: Cmd) (console: LineOut -> unit) (body: (LineOut -> unit) -> 'T) : 'T =
+        if cmd.Quiet <> Some true then body console
+        else
+            let buffer = ResizeArray<LineOut>()
+            try body (fun line -> lock buffer (fun () -> buffer.Add line))
+            with _ ->
+                lock buffer (fun () -> for line in buffer do console line)
+                reraise ()
+
+    /// Runs attempt again while it throws ProcExecException and the command's retry policy allows
+    let retrying (cmd: Cmd) (attempt: unit -> 'T) : 'T =
+        let policy = cmd.Retry |> Option.defaultValue { Retries = 0; Delay = TimeSpan.Zero }
+        let rec go tries =
+            try attempt ()
+            with :? ProcExecException as e when tries < policy.Retries ->
+                if cmd.Quiet <> Some true then
+                    Console.Error.WriteLine $"Retrying ({tries + 1} of {policy.Retries}) after: {e.Message}"
+                if policy.Delay > TimeSpan.Zero then Thread.Sleep policy.Delay
+                go (tries + 1)
+        go 0
 
     /// <summary>
     /// Runs <paramref name="cmd"/> and calls <paramref name="onLine"/> for every line it prints, as it prints it.
+    /// Standard out goes to the file of <c>cmd.Stdout</c> instead, when it has one.
+    /// Upstream commands print their standard error to <paramref name="console"/>.
     /// Does not validate the exit code of <paramref name="cmd"/> itself, but does validate every upstream command.
     /// </summary>
-    let rec stream (cmd: Cmd) (ct: CancellationToken) (onLine: LineOut -> unit) : ProcessResult =
+    let rec stream (cmd: Cmd) (ct: CancellationToken) (console: LineOut -> unit) (onLine: LineOut -> unit) : ProcessResult =
         let args = Args.startRaw cmd
-        match cmd.Stdin with
+        // Open files before the process starts, so a missing one fails before anything runs
+        use stdoutFile =
+            match cmd.Stdout with
+            | Some (StdoutTarget.File path) -> new StreamWriter(resolve cmd path, false)
+            | Some (StdoutTarget.Append path) -> new StreamWriter(resolve cmd path, true)
+            | None -> null
+        let onLine =
+            match stdoutFile with
+            | null -> onLine
+            | file -> fun (line: LineOut) -> if line.Error then onLine line else lock file (fun () -> file.WriteLine line.Line)
+        use stdinFile =
+            match cmd.Stdin with
+            | Some (StdinSource.File path) -> new StreamReader(resolve cmd path)
+            | _ -> null
+        let source =
+            match cmd.Stdin with
+            | Some (StdinSource.File _) ->
+                Some (StdinSource.Lines (Seq.unfold (fun () -> match stdinFile.ReadLine() with null -> None | l -> Some (l, ())) ()))
+            | other -> other
+        match source with
         | None ->
             Proc.StartRedirected(args, StandardInputHandler(fun stdin -> stdin.Close()), lineHandler onLine, ct)
         | Some source ->
@@ -190,7 +275,7 @@ module internal Runner =
             let feeder =
                 Task.Run(Action(fun () ->
                     let stdin = ready.Task.Result
-                    try feed source stdin feedCts
+                    try feed source stdin feedCts console
                     finally (try stdin.Close() with _ -> ())))
             let result =
                 try Proc.StartRedirected(args, StandardInputHandler(fun stdin -> ready.TrySetResult stdin |> ignore), lineHandler onLine, ct)
@@ -204,7 +289,7 @@ module internal Runner =
             result
 
     /// Writes the source into stdin. Stops, without failing, when the reading process exits early.
-    and private feed (source: StdinSource) (stdin: StreamWriter) (feedCts: CancellationTokenSource) =
+    and private feed (source: StdinSource) (stdin: StreamWriter) (feedCts: CancellationTokenSource) (console: LineOut -> unit) =
         let write (line: string) =
             if not feedCts.IsCancellationRequested then
                 try stdin.WriteLine line
@@ -215,46 +300,86 @@ module internal Runner =
         | StdinSource.Lines lines ->
             use e = lines.GetEnumerator()
             while not feedCts.IsCancellationRequested && e.MoveNext() do write e.Current
+        | StdinSource.File _ -> invalidOp "stream reads the file and feeds its lines"
         | StdinSource.Upstream upstream ->
-            let completed =
-                try
-                    Some (stream upstream feedCts.Token (fun line -> if line.Error then printStderr line else write line.Line))
-                // The downstream process exited before reading everything: like a shell, that is not a failure
-                with :? OperationCanceledException when feedCts.IsCancellationRequested -> None
-            completed |> Option.iter (validate upstream)
+            withConsole upstream console (fun console ->
+                let completed =
+                    try
+                        Some (stream upstream feedCts.Token console (fun line -> if line.Error then console line else write line.Line))
+                    // The downstream process exited before reading everything: like a shell, that is not a failure
+                    with :? OperationCanceledException when feedCts.IsCancellationRequested -> None
+                completed |> Option.iter (validate upstream))
 
     /// Runs the command on the shared console and throws when it fails
     let run (cmd: Cmd) =
-        match cmd.Stdin with
-        | None -> Proc.Exec(Args.exec cmd) |> ignore
-        | Some _ -> stream cmd CancellationToken.None printLine |> validate cmd
+        retrying cmd (fun () ->
+            match cmd with
+            | { Stdin = None; Stdout = None; Quiet = (None | Some false) } ->
+                Proc.Exec(Args.exec { cmd with Retry = None }) |> ignore
+            | _ ->
+                withConsole cmd printLine (fun console ->
+                    stream cmd CancellationToken.None console console |> validate cmd))
 
     /// Calls f for each line of standard out as it is printed; standard error goes to the console
     let iter (f: string -> unit) (cmd: Cmd) =
-        let mutable error: exn = null
-        use cts = new CancellationTokenSource()
-        let onLine (line: LineOut) =
-            if line.Error then printStderr line
-            elif isNull error then
-                try f line.Line
-                with e ->
-                    error <- e
-                    cts.Cancel()
-        let result =
-            try Some (stream cmd cts.Token onLine)
-            with :? OperationCanceledException when not (isNull error) -> None
-        if not (isNull error) then ExceptionDispatchInfo.Capture(error).Throw()
-        result |> Option.iter (validate cmd)
+        retrying cmd (fun () ->
+            withConsole cmd printLine (fun console ->
+                let mutable error: exn = null
+                use cts = new CancellationTokenSource()
+                let onLine (line: LineOut) =
+                    if line.Error then console line
+                    elif isNull error then
+                        try f line.Line
+                        with e ->
+                            error <- e
+                            cts.Cancel()
+                let result =
+                    try Some (stream cmd cts.Token console onLine)
+                    with :? OperationCanceledException when not (isNull error) -> None
+                if not (isNull error) then ExceptionDispatchInfo.Capture(error).Throw()
+                result |> Option.iter (validate cmd)))
 
     /// Runs the command, collecting every line, and reads the result
     let get (capture: Capture<'T>) : 'T =
-        let lines = ResizeArray<LineOut>()
-        let onLine (line: LineOut) =
-            lock lines (fun () -> lines.Add line)
-            if line.Error || capture.EchoStdout then printLine line
-        let result = stream capture.Cmd CancellationToken.None onLine
-        validate capture.Cmd result
-        capture.Read (ProcessCaptureResult(result.Completed, lines, result.ExitCode))
+        retrying capture.Cmd (fun () ->
+            withConsole capture.Cmd printLine (fun console ->
+                let lines = ResizeArray<LineOut>()
+                let onLine (line: LineOut) =
+                    lock lines (fun () -> lines.Add line)
+                    if line.Error || capture.EchoStdout then console line
+                let result = stream capture.Cmd CancellationToken.None console onLine
+                validate capture.Cmd result
+                capture.Read (ProcessCaptureResult(result.Completed, lines, result.ExitCode))))
+
+/// Finds programs on the PATH, like the which command
+module internal Which =
+    let private isExecutable (path: string) =
+        File.Exists path
+        && (OperatingSystem.IsWindows()
+            || File.GetUnixFileMode path &&& (UnixFileMode.UserExecute ||| UnixFileMode.GroupExecute ||| UnixFileMode.OtherExecute) <> UnixFileMode.None)
+
+    /// <summary>
+    /// The full path of <paramref name="name"/>: a path when it holds a directory separator, else the first match
+    /// in <paramref name="path"/>. On Windows a name without an extension also tries each extension in PATHEXT.
+    /// </summary>
+    let find (baseDirectory: string) (path: string option) (pathExt: string option) (name: string) : string option =
+        let candidates (file: string) =
+            if OperatingSystem.IsWindows() && not (Path.HasExtension file) then
+                let extensions = pathExt |> Option.defaultValue ".COM;.EXE;.BAT;.CMD"
+                [ for ext in extensions.Split(';', StringSplitOptions.RemoveEmptyEntries) -> file + ext ]
+            else [ file ]
+        if String.IsNullOrWhiteSpace name then None
+        elif name.Contains '/' || name.Contains Path.DirectorySeparatorChar then
+            candidates (Path.GetFullPath(Path.Combine(baseDirectory, name))) |> List.tryFind isExecutable
+        else
+            let directories = (path |> Option.defaultValue "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            seq {
+                for directory in directories do
+                    let directory = directory.Trim('"')
+                    if Path.IsPathFullyQualified directory then
+                        for candidate in candidates (Path.Combine(directory, name)) -> candidate
+            }
+            |> Seq.tryFind isExecutable
 
 /// <summary>Functions to build, combine and run <see cref="Cmd"/> values; they read well with <c>|&gt;</c></summary>
 [<RequireQualifiedAccess>]
@@ -271,18 +396,25 @@ module Cmd =
     /// </summary>
     let pipe (downstream: Cmd) (upstream: Cmd) = { downstream with Stdin = Some (StdinSource.Upstream upstream) }
 
-    /// One command per stage, piped together
-    let internal ofStages (stages: string list list) =
-        stages
-        |> List.map (fun stage -> create (List.head stage) (List.tail stage))
-        |> List.reduce (fun upstream downstream -> pipe downstream upstream)
+    /// One command per stage, piped together, with the redirects of the text
+    let internal ofParsed (parsed: ShellSyntax.Parsed) =
+        let stages = parsed.Stages |> List.map (fun stage -> create (List.head stage) (List.tail stage))
+        let stages =
+            match parsed.StdinFile, stages with
+            | Some file, first :: rest -> { first with Stdin = Some (StdinSource.File file) } :: rest
+            | _ -> stages
+        let piped = stages |> List.reduce (fun upstream downstream -> pipe downstream upstream)
+        match parsed.StdoutFile with
+        | Some (file, false) -> { piped with Stdout = Some (StdoutTarget.File file) }
+        | Some (file, true) -> { piped with Stdout = Some (StdoutTarget.Append file) }
+        | None -> piped
 
     /// <summary>
     /// Parses command text that only exists at runtime, such as a value read from configuration.
     /// The whole string is split like the literal text of <c>sh</c>, so prefer <c>sh $"…"</c> for values.
     /// </summary>
     let ofString (command: string) =
-        ShellSyntax.parse command [ ShellSyntax.Text command ] |> ofStages
+        ShellSyntax.parse command [ ShellSyntax.Text command ] |> ofParsed
 
     /// <summary>Appends arguments</summary>
     let args (arguments: string list) (cmd: Cmd) =
@@ -307,6 +439,61 @@ module Cmd =
 
     /// <summary>Writes <paramref name="lines"/> to the standard input of the process, then closes it</summary>
     let stdin (lines: string seq) (cmd: Cmd) = { cmd with Stdin = Some (StdinSource.Lines lines) }
+
+    /// <summary>
+    /// Reads standard input from <paramref name="path"/>, like <c>&lt; file</c>.
+    /// A relative path resolves against the working directory of the command.
+    /// </summary>
+    let stdinFile (path: string) (cmd: Cmd) = { cmd with Stdin = Some (StdinSource.File path) }
+
+    /// <summary>
+    /// Writes standard out to <paramref name="path"/>, replacing the file, like <c>&gt; file</c>. Standard error
+    /// still goes to the console. A relative path resolves against the working directory of the command.
+    /// A capture such as <c>Cmd.lines</c> then reads no lines, as in a shell.
+    /// </summary>
+    let toFile (path: string) (cmd: Cmd) = { cmd with Stdout = Some (StdoutTarget.File path) }
+
+    /// <summary>Like <c>toFile</c>, but adds to the end of the file, like <c>&gt;&gt; file</c></summary>
+    let appendToFile (path: string) (cmd: Cmd) = { cmd with Stdout = Some (StdoutTarget.Append path) }
+
+    /// <summary>
+    /// Accepts any exit code from the command and from every command piped into it, like <c>|| true</c>.
+    /// A timeout still throws.
+    /// </summary>
+    let rec allowFailure (cmd: Cmd) =
+        let stdin =
+            match cmd.Stdin with
+            | Some (StdinSource.Upstream upstream) -> Some (StdinSource.Upstream (allowFailure upstream))
+            | other -> other
+        { cmd with ValidExitCodeClassifier = Some (fun _ -> true); Stdin = stdin }
+
+    /// <summary>
+    /// Hides what the command, and every command piped into it, prints. When it fails, everything it printed
+    /// goes to the console before the exception, so CI logs show only what went wrong.
+    /// </summary>
+    let quiet (cmd: Cmd) = { cmd with Quiet = Some true }
+
+    /// <summary>
+    /// Runs the command up to <paramref name="retries"/> more times while it fails. <c>Cmd.retry 2</c> runs it at
+    /// most three times. A pipe runs again as a whole. Lines <c>Cmd.iter</c> already passed on are passed on again.
+    /// </summary>
+    let retry (retries: int) (cmd: Cmd) =
+        if retries < 0 then invalidArg (nameof retries) "can not be negative"
+        let delay = cmd.Retry |> Option.map (fun r -> r.Delay) |> Option.defaultValue TimeSpan.Zero
+        { cmd with Retry = Some { Retries = retries; Delay = delay } }
+
+    /// <summary>Waits <paramref name="delay"/> before each new attempt of <c>Cmd.retry</c></summary>
+    let retryDelay (delay: TimeSpan) (cmd: Cmd) =
+        let retries = cmd.Retry |> Option.map (fun r -> r.Retries) |> Option.defaultValue 0
+        { cmd with Retry = Some { Retries = retries; Delay = delay } }
+
+    /// <summary>
+    /// The full path of the program <paramref name="name"/> on the PATH, or <c>None</c>.
+    /// On Windows a name without an extension also tries the extensions in PATHEXT.
+    /// </summary>
+    let which (name: string) : string option =
+        Which.find (Directory.GetCurrentDirectory()) (Option.ofObj (Environment.GetEnvironmentVariable "PATH"))
+            (Option.ofObj (Environment.GetEnvironmentVariable "PATHEXT")) name
 
     /// <summary>Captures the lines the command writes to standard out. Fails when the command fails.</summary>
     let lines (cmd: Cmd) : Capture<string list> =
@@ -380,7 +567,7 @@ module CmdOperators =
     /// </summary>
     let sh (command: FormattableString) : Cmd =
         let segments = ShellSyntax.segmentsOf command.Format (command.GetArguments())
-        ShellSyntax.parse command.Format segments |> Cmd.ofStages
+        ShellSyntax.parse command.Format segments |> Cmd.ofParsed
 
     /// <summary>Runs <c>sh</c> and captures standard out as one trimmed string, for <c>let!</c> or <c>Cmd.get</c></summary>
     let text (command: FormattableString) = sh command |> Cmd.text

@@ -29,6 +29,14 @@ let private word = Gen.String[plainChar, 1, 12]
 let private words = arrayOf word 1 6
 let private separator = Gen.String[Gen.Char[" \t\n"], 1, 3]
 
+let private stdinFile (c: Cmd) =
+    let rec first (c: Cmd) =
+        match c.Stdin with
+        | Some (StdinSource.Upstream u) -> first u
+        | Some (StdinSource.File f) -> Some f
+        | _ -> None
+    first c
+
 // ---- properties ----
 
 type ShellSyntaxTests() =
@@ -86,7 +94,35 @@ type ShellSyntaxTests() =
         Gen.String.Sample(fun (v: string) ->
             eq [ [ "a"; v ]; [ "b" ] ] (stages (sh $"a {v} | b")))
 
+    [<Test>]
+    member _.``any value is exactly the file name of a redirect`` () =
+        Gen.String.Sample(fun (v: string) ->
+            let c = sh $"a < {v} | b >> {v}"
+            eq [ [ "a" ]; [ "b" ] ] (stages c)
+            eq (Some v) (stdinFile c)
+            eq (Some (StdoutTarget.Append v)) c.Stdout)
+
+    [<Test>]
+    member _.``a value can never add a redirect`` () =
+        Gen.String.Sample(fun (v: string) ->
+            let c = sh $"a {v}"
+            eq None c.Stdout
+            eq None c.Stdin)
+
     // ---- examples ----
+
+    [<Test>]
+    member _.``redirects attach to the first and last command`` () =
+        let c = Cmd.ofString "sort -r < 'in file.txt' | uniq > out.txt"
+        eq [ [ "sort"; "-r" ]; [ "uniq" ] ] (stages c)
+        eq (Some "in file.txt") (stdinFile c)
+        eq (Some (StdoutTarget.File "out.txt")) c.Stdout
+        let c = Cmd.ofString "a >>log.txt b"
+        eq [ "b" ] (args c)
+        eq (Some (StdoutTarget.Append "log.txt")) c.Stdout
+        let files = [ "a"; "b" ]
+        Assert.Throws<ArgumentException>(fun () -> sh $"a > {files}" |> ignore) |> ignore
+
 
     [<Test>]
     member _.``the README examples parse as documented`` () =
@@ -153,8 +189,19 @@ type ShellSyntaxTests() =
     [<Arguments("a || b")>]
     [<Arguments("a 'b")>]
     [<Arguments("a \"b")>]
-    [<Arguments("echo hi > out.txt")>]
-    [<Arguments("a < in.txt")>]
+    [<Arguments("a >")>]
+    [<Arguments("a <")>]
+    [<Arguments("a > | b")>]
+    [<Arguments("a > out | b")>]
+    [<Arguments("a | b < in")>]
+    [<Arguments("a > x > y")>]
+    [<Arguments("a >> x > y")>]
+    [<Arguments("a < x < y")>]
+    [<Arguments("a > > b")>]
+    [<Arguments("a >>> b")>]
+    [<Arguments("a 2> err")>]
+    [<Arguments("a>b")>]
+    [<Arguments("> out")>]
     [<Arguments("a; b")>]
     [<Arguments("a && b")>]
     [<Arguments("a &")>]
