@@ -1,0 +1,35 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- the library -->
+  <ItemGroup>
+    <PackageVersion Include="System.Reactive" Version="5.0.0" />
+    <!-- Proc.Fs's floor for consumers; the tests and the build use the same version -->
+    <PackageVersion Include="FSharp.Core" Version="10.0.100" />
+    <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.3" />
+    <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.3" />
+    <PackageVersion Include="MinVer" Version="6.0.0" />
+  </ItemGroup>
+
+  <!-- tests -->
+  <ItemGroup>
+    <PackageVersion Include="CsCheck" Version="5.0.1" />
+    <PackageVersion Include="FluentAssertions" Version="7.2.0" />
+    <PackageVersion Include="GitHubActionsTestLogger" Version="2.4.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageVersion Include="Nullean.VsTest.Pretty.TestLogger" Version="0.10.0" />
+    <PackageVersion Include="System.Reactive.Linq" Version="4.4.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- build/scripts -->
+  <ItemGroup>
+    <PackageVersion Include="Argu" Version="6.0.0" />
+    <PackageVersion Include="Bullseye" Version="6.0.0" />
+    <PackageVersion Include="Fake.Tools.Git" Version="5.15.0" />
+    <PackageVersion Include="Proc" Version="0.9.1" />
+  </ItemGroup>
+</Project>
