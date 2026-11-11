@@ -158,6 +158,10 @@ when running on that TFM. These are all opt-in/no-op elsewhere, so there's nothi
 * `SendControlC`/`SendControlCFirst` deliver `SIGINT` on Linux/macOS via `SafeProcessHandle.Signal` instead of shelling out
   to the `kill` binary.
 * `EventBasedObservableProcess` reads through `Process.ReadAllLinesAsync` (see above).
+* `Proc.Exec` without a `Timeout` calls `Process.Run` directly, and `Proc.ExecAsync` without a `Timeout` and with a
+  token that cannot be cancelled calls `Process.RunAsync` directly. With a timeout or a cancellable token both keep
+  using Proc's own wait loop: on timeout or cancellation `Process.Run`/`RunAsync` kill only the started process,
+  whereas Proc kills its entire process tree and throws.
 * Two new options on `StartArguments`/`ExecArguments`, both no-ops on older TFMs or unsupported platforms:
 
 ```csharp
