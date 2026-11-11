@@ -21,6 +21,8 @@ namespace Proc.Tests.Binary
 			var testCase = args[0].ToLowerInvariant();
 
 			if (testCase == nameof(PrintArgs).ToLowerInvariant()) return PrintArgs(args.Skip(1).ToArray());
+			if (testCase == nameof(ExitWith).ToLowerInvariant()) return ExitWith(args[1]);
+			if (testCase == nameof(PrintEnv).ToLowerInvariant()) return PrintEnv(args.Skip(1).ToArray());
 			if (testCase == nameof(SingleLineNoEnter).ToLowerInvariant()) return SingleLineNoEnter();
 			if (testCase == nameof(TwoWrites).ToLowerInvariant()) return TwoWrites();
 
@@ -51,6 +53,15 @@ namespace Proc.Tests.Binary
 		{
 			foreach (var arg in args)
 				Console.WriteLine(arg);
+			return 0;
+		}
+		private static int ExitWith(string exitCode) => int.Parse(exitCode, CultureInfo.InvariantCulture);
+
+		// Prints the value of each named environment variable on its own line, or <unset> if it is not set.
+		private static int PrintEnv(string[] names)
+		{
+			foreach (var name in names)
+				Console.WriteLine(Environment.GetEnvironmentVariable(name) ?? "<unset>");
 			return 0;
 		}
 		private static int DelayedWriter()
