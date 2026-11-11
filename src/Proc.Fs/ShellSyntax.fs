@@ -53,6 +53,17 @@ let private formatValue (command: string) (value: obj) (spec: string) =
     | :? string as s when spec = "" -> s
     | v -> String.Format(CultureInfo.InvariantCulture, "{0" + spec + "}", v)
 
+/// The commands of a pipe plus the files its first command reads and its last command writes
+type Parsed = {
+    Stages: string list list
+    /// <c>&lt; file</c> on the first command
+    StdinFile: string option
+    /// <c>&gt; file</c>, or <c>&gt;&gt; file</c> when the flag is true, on the last command
+    StdoutFile: (string * bool) option
+}
+
+type private Redirect = In | Out | Append
+
 let private isList (value: obj) =
     match value with
     | :? string -> false
@@ -63,8 +74,9 @@ let private isList (value: obj) =
 /// Splits the segments into one argument list per piped command.
 /// <para>Text splits on whitespace; <c>'…'</c> and <c>"…"</c> group; an unquoted <c>|</c> starts the next command.</para>
 /// <para>A value always lands inside one argument, never split. A list value standing alone becomes several.</para>
+/// <para><c>&lt; file</c> on the first command, <c>&gt; file</c> or <c>&gt;&gt; file</c> on the last one redirect.</para>
 /// </summary>
-let parse (command: string) (segments: Segment list) : string list list =
+let parse (command: string) (segments: Segment list) : Parsed =
     let stages = ResizeArray<string list>()
     let args = ResizeArray<string>()
     let token = StringBuilder()
@@ -73,6 +85,10 @@ let parse (command: string) (segments: Segment list) : string list list =
     let mutable quote: char option = None
     let mutable escape = false   // a backslash inside double quotes
     let mutable continuation = false   // an unquoted backslash, which only means something before a newline
+    let mutable redirect: Redirect option = None   // a '<', '>' or '>>' still waiting for its file name
+    let mutable justRedirected = false   // the previous character was the '>' of a redirect
+    let mutable stdinFile: string option = None
+    let mutable stdoutFile: (string * bool) option = None
 
     let noPendingList () =
         if pendingList.IsSome then fail command "a list placeholder must be a whole argument on its own"
@@ -81,13 +97,23 @@ let parse (command: string) (segments: Segment list) : string list list =
         token.Append s |> ignore
         hasToken <- true
     let endToken () =
-        match pendingList with
-        | Some items -> args.AddRange items
-        | None -> if hasToken then args.Add(token.ToString())
+        match redirect, pendingList with
+        | Some _, Some _ -> fail command "a list placeholder can not be a file name"
+        | Some r, None when hasToken ->
+            let file = token.ToString()
+            match r with
+            | In -> stdinFile <- Some file
+            | Out -> stdoutFile <- Some (file, false)
+            | Append -> stdoutFile <- Some (file, true)
+            redirect <- None
+        | Some _, None -> ()   // whitespace between '>' and the file name
+        | None, Some items -> args.AddRange items
+        | None, None -> if hasToken then args.Add(token.ToString())
         token.Clear() |> ignore
         hasToken <- false
         pendingList <- None
     let endStage () =
+        if redirect.IsSome then fail command "a '<' or '>' has no file name after it"
         if args.Count = 0 then fail command (if stages.Count = 0 then "it is empty" else "a pipe has an empty command")
         stages.Add(List.ofSeq args)
         args.Clear()
@@ -103,6 +129,7 @@ let parse (command: string) (segments: Segment list) : string list list =
             if escape then
                 escape <- false
                 append "\\"
+            justRedirected <- false
             if isList value then
                 if quote.IsSome || hasToken || pendingList.IsSome then
                     fail command "a list placeholder must be a whole argument on its own"
@@ -110,6 +137,8 @@ let parse (command: string) (segments: Segment list) : string list list =
             else append (formatValue command value spec)
         | Text text ->
             for c in text do
+                let afterRedirect = justRedirected
+                justRedirected <- false
                 match quote with
                 | Some '\'' ->
                     if c = '\'' then quote <- None else append (string c)
@@ -133,13 +162,26 @@ let parse (command: string) (segments: Segment list) : string list list =
                     | '|' ->
                         endToken ()
                         endStage ()
+                        if stdoutFile.IsSome then fail command "'>' only works on the last command of a pipe"
+                    | '>' when afterRedirect && redirect = Some Out && not hasToken ->
+                        redirect <- Some Append
+                    | '>' | '<' when hasToken || pendingList.IsSome ->
+                        fail command $"write a space before '{c}'; redirecting standard error, as in 2>, is not supported"
+                    | '>' | '<' when redirect.IsSome -> fail command "a '<' or '>' has no file name after it"
+                    | '<' when stages.Count > 0 -> fail command "'<' only works on the first command of a pipe"
+                    | '<' when stdinFile.IsSome -> fail command "only one '<' is allowed"
+                    | '>' when stdoutFile.IsSome -> fail command "only one '>' is allowed"
+                    | '<' -> redirect <- Some In
+                    | '>' ->
+                        redirect <- Some Out
+                        justRedirected <- true
                     | '\'' | '"' ->
                         noPendingList ()
                         quote <- Some c
                         hasToken <- true
                     | '\\' -> continuation <- true
-                    | '>' | '<' | ';' | '&' ->
-                        fail command $"'{c}' is not supported; quote it to pass it as an argument, or use Cmd.toFile, Cmd.stdin or a new line"
+                    | ';' | '&' ->
+                        fail command $"'{c}' is not supported; quote it to pass it as an argument, or put the next command on a new line"
                     | c -> append (string c)
 
     if quote.IsSome then fail command "a quote is not closed"
@@ -147,4 +189,4 @@ let parse (command: string) (segments: Segment list) : string list list =
     flushContinuation ()
     endToken ()
     endStage ()
-    List.ofSeq stages
+    { Stages = List.ofSeq stages; StdinFile = stdinFile; StdoutFile = stdoutFile }

@@ -13,6 +13,7 @@
     <Compile Include="CmdTests.fs" />
     <Compile Include="ShellTests.fs" />
     <Compile Include="ShellSyntaxTests.fs" />
+    <Compile Include="RedirectRetryTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
