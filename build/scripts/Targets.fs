@@ -54,10 +54,10 @@ let private validatePackages (arguments:ParseResults<Arguments>) =
         |> Seq.map (fun p -> Paths.RootRelative p.FullName)
         
     let jenkinsOnWindowsArgs =
-        if Fake.Core.Environment.hasEnvironVar "JENKINS_URL" && Fake.Core.Environment.isWindows then ["-r"; "true"] else []
+        if Fake.Core.Environment.hasEnvironVar "JENKINS_URL" && Fake.Core.Environment.isWindows then ["-r"] else []
     
     let args = ["-v"; currentVersionInformational.Value; "-k"; Paths.SignKey; "-t"; output] @ jenkinsOnWindowsArgs
-    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["nupkg-validator"; p] @ args) |> ignore)
+    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["nupkg-validator"; "validate"; p] @ args) |> ignore)
     
 
 let private generateApiChanges (arguments:ParseResults<Arguments>) =
