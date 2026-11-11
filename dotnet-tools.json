@@ -9,13 +9,6 @@
       ],
       "rollForward": false
     },
-    "release-notes": {
-      "version": "0.10.0",
-      "commands": [
-        "release-notes"
-      ],
-      "rollForward": false
-    },
     "assembly-differ": {
       "version": "0.16.0",
       "commands": [

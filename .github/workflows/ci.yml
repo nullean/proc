@@ -1,10 +1,13 @@
 name: ci
 
+# nuget.org's trusted publishing policies name this file, so releasing happens here too: publishing the
+# release-drafter draft (web UI or phone) fires `release: published`, and the release job below runs on it.
 on:
   pull_request:
   push:
     branches: [main]
-    tags: ["*.*.*"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions: {}
@@ -15,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    uses: nullean/.github/.github/workflows/dotnet-ci.yml@f6c87e1598a3e21ae0404577cadd975783f79579 # v1.0.0
+    uses: nullean/.github/.github/workflows/dotnet-ci.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
     permissions:
       contents: read
     with:
@@ -24,7 +27,7 @@ jobs:
       packages-path: build/output
 
   zizmor:
-    uses: nullean/.github/.github/workflows/zizmor.yml@f6c87e1598a3e21ae0404577cadd975783f79579 # v1.0.0
+    uses: nullean/.github/.github/workflows/zizmor.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
     permissions:
       contents: read
 
@@ -51,51 +54,14 @@ jobs:
             echo "Retrying"; sleep 1
           done
 
-  # a pushed tag releases: release notes, the GitHub release, then nuget.org
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    if: github.event_name == 'release'
+    needs: [build, zizmor]
+    uses: nullean/.github/.github/workflows/release.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
     permissions:
-      contents: write # create the GitHub release
-      issues: write # release-notes creates labels for its categories
-      id-token: write # NuGet trusted publishing: exchange the workflow's OIDC token for a short-lived key
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
-        with:
-          cache: false # a release never restores a cache PR builds could have written
-        env:
-          MISE_JOBS: "1" # dotnet versions share one DOTNET_ROOT; installing them in parallel races
-
-      - name: Pack, validate and report public API changes
-        run: mise run pack
-
-      - name: Generate release notes for the tag
-        run: dotnet run --project build/scripts -- generatereleasenotes -s true
-
-      - name: Create or update the release for the tag on GitHub
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: dotnet run --project build/scripts -- createreleaseongithub -s true --token "$GITHUB_TOKEN"
-
-      # Trusted publishing: nuget.org trusts this repository's ci.yml (a policy owned by the nullean
-      # organization), so there is no long-lived API key to expire. The key it returns lasts an hour, so the
-      # login sits right before the push. NUGET_USER is the nuget.org profile name, set at the org level.
-      - name: Log in to nuget.org (trusted publishing)
-        id: nuget-login
-        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
-        with:
-          user: ${{ secrets.NUGET_USER }}
-
-      - name: Release to nuget.org
-        env:
-          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
-        run: |
-          dotnet nuget push 'build/output/*.nupkg' -k "$NUGET_API_KEY" \
-            -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
+      contents: write
+      id-token: write
+    with:
+      packages-path: build/output
+    secrets:
+      NUGET_USER: ${{ secrets.NUGET_USER }}
