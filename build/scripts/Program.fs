@@ -67,9 +67,9 @@ let main argv =
               for package in packages () do
                   let package = Paths.RootRelative package.FullName
                   if jenkinsOnWindows then
-                      sh $"dotnet tool exec nupkg-validator@0.11.5 --source https://api.nuget.org/v3/index.json -- validate {package} -v {version} -k {Paths.SignKey} -t {output} -r"
+                      sh $"dotnet tool exec nupkg-validator@0.11.6 --source https://api.nuget.org/v3/index.json -- validate {package} -v {version} -k {Paths.SignKey} -t {output} -r"
                   else
-                      sh $"dotnet tool exec nupkg-validator@0.11.5 --source https://api.nuget.org/v3/index.json -- validate {package} -v {version} -k {Paths.SignKey} -t {output}" }
+                      sh $"dotnet tool exec nupkg-validator@0.11.6 --source https://api.nuget.org/v3/index.json -- validate {package} -v {version} -k {Paths.SignKey} -t {output}" }
         | Generateapichanges -> target [] {
               let version = Versions.current.Value
               for package in packages () do
@@ -78,6 +78,6 @@ let main argv =
                   // Proc.Fs only targets modern .NET: compare its net10.0 build against the previous netstandard2.0 package
                   let tfm = if Directory.Exists $"src/{id}/bin/Release/{Paths.MainTFM}" then Paths.MainTFM else "net10.0"
                   // quoted: an unquoted | would pipe
-                  sh $"dotnet assembly-differ 'previous-nuget|{id}|{version}|{Paths.MainTFM}' 'directory|src/{id}/bin/Release/{tfm}' -a true --target {id} -f github-comment --output {report}" }
+                  sh $"dotnet assembly-differ diff 'previous-nuget|{id}|{version}|{Paths.MainTFM}' 'directory|src/{id}/bin/Release/{tfm}' -a --target {id} -f github-comment --output {report}" }
 
     app.RunAsync(argv).GetAwaiter().GetResult()

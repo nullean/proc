@@ -10,14 +10,14 @@
       "rollForward": false
     },
     "assembly-differ": {
-      "version": "0.17.0",
+      "version": "0.18.2",
       "commands": [
         "assembly-differ"
       ],
       "rollForward": false
     },
     "curb-cli": {
-      "version": "0.14.1",
+      "version": "0.14.2",
       "commands": [
         "curb"
       ],
