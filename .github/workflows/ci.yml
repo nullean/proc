@@ -17,17 +17,23 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # macOS runners are scarce: pull requests test on Linux, main adds macOS. A release runs no tests of its own; its
+  # main-green gate requires main's full run, macOS included, to have passed on the released commit.
   build:
-    uses: nullean/.github/.github/workflows/dotnet-ci.yml@d850ce6eee9efa9f81b410d15fcd480409518d19 # v1.5.0
+    if: github.event_name != 'release'
+    uses: nullean/.github/.github/workflows/dotnet-ci.yml@e21d5f59405aa7078e51825cd4c407191e28562f # v1.6.1
     permissions:
       contents: read
     with:
       # Windows: a test run can still hold Proc.Tests.Binary.exe while the next target framework republishes it
-      os: '["ubuntu-latest", "macos-latest"]'
+      os: >-
+        ${{ github.event_name == 'push'
+          && '["ubuntu-latest", "macos-latest"]'
+          || '["ubuntu-latest"]' }}
       packages-path: build/output
 
   zizmor:
-    uses: nullean/.github/.github/workflows/zizmor.yml@d850ce6eee9efa9f81b410d15fcd480409518d19 # v1.5.0
+    uses: nullean/.github/.github/workflows/zizmor.yml@e21d5f59405aa7078e51825cd4c407191e28562f # v1.6.1
     permissions:
       contents: read
 
@@ -54,12 +60,14 @@ jobs:
             echo "Retrying"; sleep 1
           done
 
-  # packs at the release's tag in the shared workflow...
+  # packs at the release's tag in the shared workflow, which first fails unless main's ci.yml passed on the released
+  # commit (its main-green job)...
   release:
     if: github.event_name == 'release'
-    needs: [build, zizmor]
-    uses: nullean/.github/.github/workflows/release.yml@d850ce6eee9efa9f81b410d15fcd480409518d19 # v1.5.0
+    needs: zizmor
+    uses: nullean/.github/.github/workflows/release.yml@e21d5f59405aa7078e51825cd4c407191e28562f # v1.6.1
     permissions:
+      actions: read # the main-green gate reads main's runs
       contents: write
     with:
       packages-path: build/output
@@ -79,7 +87,7 @@ jobs:
         with:
           name: release-packages
           path: packages
-      - uses: nullean/.github/actions/nuget-publish@d850ce6eee9efa9f81b410d15fcd480409518d19 # v1.5.0
+      - uses: nullean/.github/actions/nuget-publish@e21d5f59405aa7078e51825cd4c407191e28562f # v1.6.1
         with:
           user: ${{ secrets.NUGET_USER }}
           packages-path: packages
