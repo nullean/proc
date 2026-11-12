@@ -5,26 +5,27 @@
 
   <!-- the library -->
   <ItemGroup>
-    <PackageVersion Include="System.Reactive" Version="5.0.0" />
-    <!-- Proc.Fs's floor for consumers, which the tests use too; build/scripts overrides it for Nullean.Make.Fs -->
-    <PackageVersion Include="FSharp.Core" Version="10.0.100" />
+    <PackageVersion Include="System.Reactive" Version="7.0.0" Condition="'$(TargetFramework)' != 'net461'" />
+    <!-- Rx 7 pulls System.Threading.Tasks.Extensions 4.6.3, which no longer supports net461; 6.1.0 is the last that fits -->
+    <PackageVersion Include="System.Reactive" Version="6.1.0" Condition="'$(TargetFramework)' == 'net461'" />
+    <!-- Proc.Fs's floor for consumers, which the tests and build/scripts use too -->
+    <PackageVersion Include="FSharp.Core" Version="11.0.101" />
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.3" />
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.3" />
-    <PackageVersion Include="MinVer" Version="6.0.0" />
+    <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
 
   <!-- tests -->
   <ItemGroup>
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="CsCheck" Version="5.0.1" />
-    <PackageVersion Include="System.Reactive.Linq" Version="4.4.1" />
-    <PackageVersion Include="TUnit" Version="1.83.0" />
+    <PackageVersion Include="TUnit" Version="1.83.8" />
   </ItemGroup>
 
   <!-- build/scripts -->
   <ItemGroup>
-    <PackageVersion Include="Nullean.Make.Fs" Version="0.25.0" />
+    <PackageVersion Include="Nullean.Make.Fs" Version="0.27.2" />
     <!-- the released package, which Nullean.Make.Fs would otherwise resolve at its 0.17.0 floor -->
-    <PackageVersion Include="Proc.Fs" Version="0.18.0" />
+    <PackageVersion Include="Proc.Fs" Version="0.20.0" />
   </ItemGroup>
 </Project>
