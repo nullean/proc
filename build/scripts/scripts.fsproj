@@ -8,8 +8,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Nullean.Make.Fs needs FSharp.Core 11.0.100 or later; the central 10.0.100 is Proc.Fs's floor for consumers -->
-    <PackageReference Include="FSharp.Core" VersionOverride="11.0.100" />
+    <PackageReference Include="FSharp.Core" />
     <PackageReference Include="Nullean.Make.Fs" />
     <!-- the released Proc.Fs, never the one in src: the build must not depend on the code it builds -->
     <PackageReference Include="Proc.Fs" />
