@@ -149,6 +149,20 @@ failure of the deferred command goes to standard error.
 - A background process the block started that fails also fails the branches.
 - Output of the branches interleaves line by line on the console.
 
+### Running a block until a token is cancelled
+
+`ShellBuilder().Run(steps { … }, cancellationToken)` runs a block that a caller can stop. Cancelling the token stops
+the running command and throws `OperationCanceledException`; no command after it starts:
+
+```fsharp
+use cts = new CancellationTokenSource(TimeSpan.FromMinutes 5.)
+ShellBuilder().Run(steps { sh $"dotnet test" }, cts.Token)
+```
+
+While the token can be cancelled, commands print through `Console.Out` and `Console.Error` line by line instead of
+sharing the console. A host that replaces those writers, for example to prefix each line, sees every line. The output
+is then a pipe, so a tool that colours only for a terminal prints without colour.
+
 ### Writing commands with `sh`
 
 `sh` takes an interpolated string, `$"…"`. It splits **only the text you wrote**:

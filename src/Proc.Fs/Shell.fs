@@ -184,8 +184,16 @@ type ShellBuilder(echoCommands: bool) =
             result)
 
     /// <summary>Runs the block. Background processes still running at its end are stopped.</summary>
-    member _.Run(step: ShellStep<'T>) : 'T =
-        let ctx = ShellContext(EchoCommands = echoCommands)
+    member b.Run(step: ShellStep<'T>) : 'T = b.Run(step, CancellationToken.None)
+
+    /// <summary>
+    /// Runs the block until <paramref name="cancellationToken"/> is cancelled: cancelling it stops the running command
+    /// and throws <see cref="OperationCanceledException"/>, and no command after it starts. While the token can be
+    /// cancelled, commands print through <see cref="Console.Out"/> and <see cref="Console.Error"/> line by line instead
+    /// of sharing the console, so a host that replaces those writers sees every line.
+    /// </summary>
+    member _.Run(step: ShellStep<'T>, cancellationToken: CancellationToken) : 'T =
+        let ctx = ShellContext(EchoCommands = echoCommands, Token = cancellationToken)
         try ShellStep.run ctx step
         finally ctx.StopBackgrounds()
 

@@ -3,6 +3,7 @@ module Proc.Fs.Tests.ConcurrencyTests
 open System
 open System.Diagnostics
 open System.IO
+open System.Threading
 open ProcNet
 open Proc.Fs
 open Proc.Fs.Tests.TestBinary
@@ -295,3 +296,38 @@ type ConcurrentlyTests() =
                 return ()
             })
         Assert.Equal(Nullable 6, ex.ExitCode)
+
+[<NotInParallel>]
+type CancellationTests() =
+
+    [<Test>]
+    member _.``cancelling the token stops the running command and the ones after it`` () =
+        use cts = new CancellationTokenSource(TimeSpan.FromSeconds 1.)
+        let started = Stopwatch.StartNew()
+        let ranAfter = ref false
+        let ex =
+            try
+                ShellBuilder().Run(
+                    steps {
+                        do! test [ "Sleep"; "30000" ]
+                        ranAfter.Value <- true
+                    },
+                    cts.Token)
+                None
+            with e -> Some e
+        Assert.True(
+            (match ex with Some (:? OperationCanceledException) -> true | _ -> false),
+            $"expected a cancellation, got {ex}")
+        Assert.False(ranAfter.Value, "a command after the cancelled one ran")
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds 15., $"took {started.Elapsed}")
+
+    [<Test>]
+    member _.``with a token that can be cancelled the output goes through Console.Out`` () =
+        use cts = new CancellationTokenSource()
+        let writer = new StringWriter()
+        let original = Console.Out
+        Console.SetOut writer
+        try ShellBuilder().Run(steps { do! test [ "PrintArgs"; "through-console-out" ] }, cts.Token)
+        finally Console.SetOut original
+        let printed = string writer
+        Assert.True(printed.Contains "through-console-out", $"Console.Out saw: {printed}")
