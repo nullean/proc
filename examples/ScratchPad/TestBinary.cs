@@ -26,7 +26,7 @@ public static class TestBinary
 
 	private static string GetDll()
 	{
-		var dll = Path.Combine("bin", GetRunningConfiguration(), "net10.0", _procTestBinary + ".dll");
+		var dll = Path.Combine("bin", GetRunningConfiguration(), "net11.0", _procTestBinary + ".dll");
 		var fullPath = Path.Combine(GetWorkingDir(), dll);
 		if (!File.Exists(fullPath))
 			throw new Exception($"Can not find {fullPath}");
