@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    uses: nullean/.github/.github/workflows/dotnet-ci.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
+    uses: nullean/.github/.github/workflows/dotnet-ci.yml@d850ce6eee9efa9f81b410d15fcd480409518d19 # v1.5.0
     permissions:
       contents: read
     with:
@@ -27,7 +27,7 @@ jobs:
       packages-path: build/output
 
   zizmor:
-    uses: nullean/.github/.github/workflows/zizmor.yml@83ef343759c443afe1964e9c33327527f8677b05 # v1.3.0
+    uses: nullean/.github/.github/workflows/zizmor.yml@d850ce6eee9efa9f81b410d15fcd480409518d19 # v1.5.0
     permissions:
       contents: read
 
@@ -58,7 +58,7 @@ jobs:
   release:
     if: github.event_name == 'release'
     needs: [build, zizmor]
-    uses: nullean/.github/.github/workflows/release.yml@2454f9081f3c06f5533805afa8f44e6bb67c39c5 # v1.4.0
+    uses: nullean/.github/.github/workflows/release.yml@d850ce6eee9efa9f81b410d15fcd480409518d19 # v1.5.0
     permissions:
       contents: write
     with:
@@ -79,7 +79,7 @@ jobs:
         with:
           name: release-packages
           path: packages
-      - uses: nullean/.github/actions/nuget-publish@2454f9081f3c06f5533805afa8f44e6bb67c39c5 # v1.4.0
+      - uses: nullean/.github/actions/nuget-publish@d850ce6eee9efa9f81b410d15fcd480409518d19 # v1.5.0
         with:
           user: ${{ secrets.NUGET_USER }}
           packages-path: packages

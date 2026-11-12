@@ -14,7 +14,6 @@
     <ProjectReference Include="..\..\src\Proc\Proc.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Reactive.Linq" />
     <PackageReference Include="CsCheck" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="TUnit" />
