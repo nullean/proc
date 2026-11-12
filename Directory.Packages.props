@@ -24,8 +24,8 @@
 
   <!-- build/scripts -->
   <ItemGroup>
-    <PackageVersion Include="Nullean.Make.Fs" Version="0.27.2" />
-    <!-- the released package, which Nullean.Make.Fs would otherwise resolve at its 0.17.0 floor -->
-    <PackageVersion Include="Proc.Fs" Version="0.20.0" />
+    <PackageVersion Include="Nullean.Make.Fs" Version="0.28.0" />
+    <!-- the released package, never the one in src; build/scripts references it directly -->
+    <PackageVersion Include="Proc.Fs" Version="0.21.0" />
   </ItemGroup>
 </Project>
