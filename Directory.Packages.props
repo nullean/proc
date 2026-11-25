@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <PackageVersion Include="CsCheck" Version="5.0.1" />
-    <PackageVersion Include="TUnit" Version="1.83.8" />
+    <PackageVersion Include="TUnit" Version="1.86.6" />
   </ItemGroup>
 
   <!-- build/scripts -->
